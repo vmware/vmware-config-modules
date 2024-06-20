@@ -1,0 +1,21 @@
+-r prod-requirements.txt
+-r api-requirements.txt
+
+pytest~=8.2.1; python_version>="3.8"
+pytest~=7.4.4; python_version<="3.7"
+
+mock~=5.1.0
+
+coverage~=7.5.1; python_version>="3.8"
+coverage~=7.2.7; python_version<="3.7"
+
+pytest-mock~=3.14.0; python_version>="3.8"
+pytest-mock~=3.11.1; python_version<="3.7"
+
+pytest-console-scripts~=1.4.1; python_version>="3.8"
+pytest-console-scripts==1.4.0; python_version<="3.7"
+
+requests-mock~=1.12.1
+
+httpx~=0.27.0; python_version>="3.8"
+httpx~=0.24.1; python_version<="3.7"

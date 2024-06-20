@@ -1,0 +1,3055 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Compliance Reference Schema",
+  "description": "Version 1.0.0; last updated 4-Jan-2024",
+  "type": "object",
+  "properties": {
+    "compliance_config": {
+      "type": "object",
+      "title": "Compliance configuration",
+      "description": "Includes all products and compliance controls under those products",
+      "properties": {
+        "vcenter": {
+          "type": "object",
+          "title": "Compliance controls related to vcenter",
+          "properties": {
+            "syslog": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "object",
+                  "properties": {
+                    "servers": {
+                      "type": "array",
+                      "description": "A valid list of syslog servers",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "hostname": {
+                            "type": "string"
+                          },
+                          "port": {
+                            "type": "number"
+                          },
+                          "protocol": {
+                            "enum": [
+                              "TLS",
+                              "UDP",
+                              "RELP",
+                              "TCP"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "hostname",
+                          "port",
+                          "protocol"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "minItems": 1
+                    }
+                  },
+                  "required": [
+                    "servers"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "alarm_sso_account_actions": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "$ref": "#/definitions/alarm_config"
+                }
+              },
+              "additionalProperties": false
+            },
+            "alarm_esx_remote_syslog_failure": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "$ref": "#/definitions/alarm_config"
+                }
+              },
+              "additionalProperties": false
+            },
+            "ntp": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "object",
+                  "properties": {
+                    "mode": {
+                      "description": "NTP mode",
+                      "enum": [
+                        "DISABLED",
+                        "NTP",
+                        "HOST"
+                      ]
+                    },
+                    "servers": {
+                      "type": "array",
+                      "description": "A valid list of reachable NTP servers",
+                      "items": {
+                        "type": "string"
+                      },
+                      "uniqueItems": true
+                    }
+                  },
+                  "if": {
+                    "properties": {
+                      "mode": {
+                        "enum": [
+                          "NTP",
+                          "HOST"
+                        ]
+                      }
+                    }
+                  },
+                  "then": {
+                    "required": [
+                      "servers"
+                    ]
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "dns": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "object",
+                  "properties": {
+                    "mode": {
+                      "description": "DNS mode",
+                      "enum": [
+                        "dhcp",
+                        "is_static"
+                      ]
+                    },
+                    "servers": {
+                      "type": "array",
+                      "description": "A valid list of reachable DNS servers",
+                      "items": {
+                        "type": "string"
+                      },
+                      "minItems": 1,
+                      "uniqueItems": true
+                    }
+                  },
+                  "required": [
+                    "servers"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "vsan_proxy": {
+              "type": "object",
+              "title": "Proxy configuration for vSAN",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "object",
+                  "properties": {
+                    "internet_access_enabled": {
+                      "type": "boolean",
+                      "description": "Flag to set proxy internet access"
+                    },
+                    "host": {
+                      "type": "string",
+                      "description": "Proxy server host name"
+                    },
+                    "port": {
+                      "type": "number",
+                      "description": "Port number for proxy"
+                    },
+                    "user": {
+                      "type": "string",
+                      "description": "Proxy user"
+                    },
+                    "password": {
+                      "type": "string",
+                      "description": "Proxy password"
+                    }
+                  },
+                  "required": [
+                    "internet_access_enabled",
+                    "host",
+                    "port",
+                    "user",
+                    "password"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "minProperties": 1,
+              "additionalProperties": false
+            },
+            "snmp_v3": {
+              "type": "object",
+              "title": "SNMP v3 configuration",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "object",
+                  "properties": {
+                    "enable": {
+                      "type": "boolean",
+                      "description": "Flag that denotes if SNMP is enabled or disabled"
+                    },
+                    "privacy": {
+                      "enum": [
+                        "none",
+                        "AES128",
+                        "AES192",
+                        "AES256"
+                      ],
+                      "description": "Privacy algorithm to be used by SNMP"
+                    },
+                    "authentication": {
+                      "enum": [
+                        "none",
+                        "SHA1",
+                        "SHA256",
+                        "SHA384",
+                        "SHA512"
+                      ],
+                      "description": "Authentication algorithm to be used by SNMP"
+                    }
+                  },
+                  "required": [
+                    "enable",
+                    "privacy",
+                    "authentication"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "sso_auto_unlock_interval": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "number",
+                  "description": "SSO auto unlock interval in seconds"
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "sso_failed_login_attempts_interval": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "number",
+                  "description": "SSO failed login attempt interval in seconds"
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "sso_max_failed_login_attempts": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "number",
+                  "description": "Max failed login attempts"
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "sso_password_max_lifetime": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "number",
+                  "description": "Max password lifetime in days"
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "sso_password_min_lowercase_characters": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "number",
+                  "description": "Password minimum lowercase character count"
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "sso_password_min_numeric_characters": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "number",
+                  "description": "Password minimum numeric character count"
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "sso_password_min_special_characters": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "number",
+                  "description": "Password minimum special character count"
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "sso_password_min_uppercase_characters": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "number",
+                  "description": "Password minimum uppercase character count"
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "sso_password_minimum_length": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "number",
+                  "description": "Password minimum length"
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "sso_password_reuse_restriction": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "number",
+                  "description": "Password reuse count"
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "sso_bash_shell_authorized_members": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "array",
+                  "description": "List of users and groups in SystemConfiguration.BashShellAdministrators SSO group.",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string",
+                        "description": "User or group name."
+                      },
+                      "domain": {
+                        "type": "string",
+                        "description": "Domain name."
+                      },
+                      "member_type": {
+                        "description": "Type to denote a user or a group",
+                        "enum": [
+                          "USER",
+                          "GROUP"
+                        ]
+                      }
+                    }
+                  }
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "minProperties": 1,
+              "additionalProperties": false
+            },
+            "sso_trusted_admin_authorized_members": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "array",
+                  "description": "List of users and groups in TrustedAdmins SSO group.",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string",
+                        "description": "User or group name."
+                      },
+                      "domain": {
+                        "type": "string",
+                        "description": "Domain name."
+                      },
+                      "member_type": {
+                        "description": "Type to denote a user or a group",
+                        "enum": [
+                          "USER",
+                          "GROUP"
+                        ]
+                      }
+                    }
+                  }
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "minProperties": 1,
+              "additionalProperties": false
+            },
+            "active_directory_authentication": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "boolean",
+                  "const": true,
+                  "description": "Ensure that Active Directory authentication is strictly enforced for vCenter logins. The default and only allowed value is True."
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "active_directory_ldaps_enabled": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "object",
+                  "properties": {
+                    "use_ldaps": {
+                      "type": "boolean",
+                      "const": true,
+                      "description": "Require the usage of the LDAPS protocol for all Active Directory Servers added as identity sources. The default and only allowed value is True."
+                    }
+                  }
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "vsan_datastore_naming_policy": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "boolean",
+                  "const": true,
+                  "description": "Specify name uniqueness enforcement for vSAN datastores. When set to true (the only allowed value), the audit process flags a datastore as non-compliant only if its name is 'vsanDatastore.' No other names are checked for compliance."
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "vsan_datastore_transit_encryption_config": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "object",
+                  "properties": {
+                    "rekey_interval": {
+                      "type": "number",
+                      "minimum": 30,
+                      "maximum": 10080,
+                      "description": "vSAN data in transit encryption rekey interval in minutes. Minimum 30 minutes maximum 10080 (7 days)"
+                    },
+                    "transit_encryption_enabled": {
+                      "type": "boolean",
+                      "const": true,
+                      "description": "Ensure that transit encryption is strictly enforced for data in transit encryption enabled vSAN clusters. The default and only allowed value is True."
+                    }
+                  },
+                  "required": [
+                    "rekey_interval"
+                  ]
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "vsan_iscsi_targets_mutual_chap_config": {
+              "type": "object",
+              "title": "iSCSI targets authentication configuration for vSAN",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "object",
+                  "properties": {
+                    "global": {
+                      "enum": [
+                        "CHAP_Mutual",
+                        "CHAP",
+                        "NoAuth"
+                      ],
+                      "description": "vSan iSCSI targets global level authentication type"
+                    }
+                  },
+                  "additionalProperties": {
+                    "enum": [
+                      "CHAP_Mutual",
+                      "CHAP",
+                      "NoAuth"
+                    ],
+                    "description": "vSan iSCSI targets cluster or target level authentication type"
+                  }
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "minProperties": 0,
+              "additionalProperties": false
+            },
+            "h5_client_session_timeout": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "number",
+                  "description": "Session timeout in minutes for vCenter H5 Client"
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "dvs_health_check": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "object",
+                  "description": "DV switch Health check status",
+                  "properties": {
+                    "__GLOBAL__": {
+                      "type": "object",
+                      "description": "Global configuration to enable/disable Health check for DV switches.",
+                      "properties": {
+                        "health_check_enabled": {
+                          "type": "boolean",
+                          "description": "Switch health check enablement status"
+                        }
+                      },
+                      "required": [
+                        "health_check_enabled"
+                      ]
+                    },
+                    "__OVERRIDES__": {
+                      "type": "array",
+                      "description": "Overrides for enabling/disabling health checks on one or more switches.",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "switch_name": {
+                            "type": "string",
+                            "description": "Switch name to update health check config."
+                          },
+                          "health_check_enabled": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "switch_name",
+                          "health_check_enabled"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "minProperties": 1,
+                  "anyOf": [
+                    {
+                      "required": [
+                        "__GLOBAL__"
+                      ]
+                    },
+                    {
+                      "required": [
+                        "__OVERRIDES__"
+                      ]
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "dvs_network_io_control": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "object",
+                  "description": "DV switch Network I/O control status",
+                  "properties": {
+                    "__GLOBAL__": {
+                      "type": "object",
+                      "description": "Global configuration for enabling/disabling Network I/O control for DV switches.",
+                      "properties": {
+                        "network_io_control_status": {
+                          "type": "boolean",
+                          "description": "Enable/Disable Network I/O control."
+                        }
+                      },
+                      "required": [
+                        "network_io_control_status"
+                      ]
+                    },
+                    "__OVERRIDES__": {
+                      "type": "array",
+                      "description": "Overrides for enabling/disabling Network I/O control on one or more switches.",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "switch_name": {
+                            "type": "string",
+                            "description": "Switch name to update health check config."
+                          },
+                          "network_io_control_status": {
+                            "type": "boolean",
+                            "description": "Enable/Disable Network I/O control."
+                          }
+                        },
+                        "required": [
+                          "switch_name",
+                          "network_io_control_status"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "minProperties": 1,
+                  "anyOf": [
+                    {
+                      "required": [
+                        "__GLOBAL__"
+                      ]
+                    },
+                    {
+                      "required": [
+                        "__OVERRIDES__"
+                      ]
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "dvpg_promiscuous_mode_policy": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "object",
+                  "description": "DV port group promiscuous mode policy",
+                  "properties": {
+                    "__GLOBAL__": {
+                      "type": "object",
+                      "description": "Global configuration to enable/disable Promiscuous mode policy for dv port groups.",
+                      "properties": {
+                        "promiscuous_mode": {
+                          "type": "boolean",
+                          "description": "Promiscuous mode policy for dv port groups."
+                        }
+                      },
+                      "required": [
+                        "promiscuous_mode"
+                      ]
+                    },
+                    "__OVERRIDES__": {
+                      "type": "array",
+                      "description": "Overrides for enabling/disabling Promiscuous mode policy for one or more port groups.",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "switch_name": {
+                            "type": "string"
+                          },
+                          "port_group_name": {
+                            "type": "string"
+                          },
+                          "promiscuous_mode": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "switch_name",
+                          "port_group_name",
+                          "promiscuous_mode"
+                        ]
+                      }
+                    }
+                  },
+                  "minProperties": 1,
+                  "anyOf": [
+                    {
+                      "required": [
+                        "__GLOBAL__"
+                      ]
+                    },
+                    {
+                      "required": [
+                        "__OVERRIDES__"
+                      ]
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "dvpg_mac_address_change_policy": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "object",
+                  "description": "DV port group MAC address change policy.",
+                  "properties": {
+                    "__GLOBAL__": {
+                      "type": "object",
+                      "description": "Global configuration to enable/disable MAC address change policy for dv port groups.",
+                      "properties": {
+                        "allow_mac_address_change": {
+                          "type": "boolean",
+                          "description": "MAC address change policy for dv port groups."
+                        }
+                      },
+                      "required": [
+                        "allow_mac_address_change"
+                      ]
+                    },
+                    "__OVERRIDES__": {
+                      "type": "array",
+                      "description": "Overrides for enabling/disabling MAC address change policy for one or more port groups.",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "switch_name": {
+                            "type": "string"
+                          },
+                          "port_group_name": {
+                            "type": "string"
+                          },
+                          "allow_mac_address_change": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "switch_name",
+                          "port_group_name",
+                          "allow_mac_address_change"
+                        ]
+                      }
+                    }
+                  },
+                  "minProperties": 1,
+                  "anyOf": [
+                    {
+                      "required": [
+                        "__GLOBAL__"
+                      ]
+                    },
+                    {
+                      "required": [
+                        "__OVERRIDES__"
+                      ]
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "dvpg_forged_transmits_policy": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "object",
+                  "description": "DV port group Forged Transmits policy",
+                  "properties": {
+                    "__GLOBAL__": {
+                      "type": "object",
+                      "description": "Global configuration to enable/disable Forged Transmits policy for dv port groups.",
+                      "properties": {
+                        "allow_forged_transmits": {
+                          "type": "boolean",
+                          "description": "Forged Transmits policy for dv port groups."
+                        }
+                      },
+                      "required": [
+                        "allow_forged_transmits"
+                      ]
+                    },
+                    "__OVERRIDES__": {
+                      "type": "array",
+                      "description": "Overrides for enabling/disabling Forged Transmits policy for one or more port groups.",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "switch_name": {
+                            "type": "string"
+                          },
+                          "port_group_name": {
+                            "type": "string"
+                          },
+                          "allow_forged_transmits": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "switch_name",
+                          "port_group_name",
+                          "allow_forged_transmits"
+                        ]
+                      }
+                    }
+                  },
+                  "minProperties": 1,
+                  "anyOf": [
+                    {
+                      "required": [
+                        "__GLOBAL__"
+                      ]
+                    },
+                    {
+                      "required": [
+                        "__OVERRIDES__"
+                      ]
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "dvpg_excluded_native_vlan_policy": {
+              "type": "object",
+              "description": "Configuration ensuring port groups use a VLAN different from the native VLAN.",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "object",
+                  "properties": {
+                    "native_vlan_id_to_exclude": {
+                      "type": "number",
+                      "description": "Native VLAN ID to be excluded from port group configurations.",
+                      "minimum": 0,
+                      "maximum": 4096
+                    }
+                  },
+                  "required": [
+                    "native_vlan_id_to_exclude"
+                  ]
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "dvpg_excluded_reserved_vlan_policy": {
+              "type": "object",
+              "description": "Configuration ensuring port groups use a VLAN different from the reserved VLAN.",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "object",
+                  "properties": {
+                    "reserved_vlan_id_to_exclude": {
+                      "type": "number",
+                      "description": "Reserved VLAN ID to be excluded from port group configurations.",
+                      "minimum": 0,
+                      "maximum": 4094
+                    }
+                  }
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "dvpg_vlan_trunking_authorized_check": {
+              "type": "object",
+              "description": "VLAN trunking config in port group need authorized by VGT.",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "array",
+                  "description": "List of vlan trunking configs for a specific port group.",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "switch_name": {
+                        "type": "string"
+                      },
+                      "port_group_name": {
+                        "type": "string"
+                      },
+                      "vlan_info": {
+                        "type": "object",
+                        "properties": {
+                          "vlan_id": {
+                            "type": "number"
+                          },
+                          "vlan_ranges": {
+                            "type": "array",
+                            "items": {
+                              "properties": {
+                                "start": {
+                                  "type": "number",
+                                  "description": "Start VLAN id in allowed vlans.",
+                                  "minimum": 0,
+                                  "maximum": 4094
+                                },
+                                "end": {
+                                  "type": "number",
+                                  "description": "End VLAN id in allowed vlans.",
+                                  "minimum": 0,
+                                  "maximum": 4094
+                                }
+                              },
+                              "required": [
+                                "start",
+                                "end"
+                              ]
+                            },
+                            "minItems": 1,
+                            "uniqueItems": true
+                          },
+                          "vlan_type": {
+                            "enum": [
+                              "None",
+                              "VLAN",
+                              "PVLAN",
+                              "VLAN trunking"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "vlan_type"
+                        ],
+                        "if": {
+                          "properties": {
+                            "vlan_type": {
+                              "enum": [
+                                "VLAN",
+                                "PVLAN"
+                              ]
+                            }
+                          }
+                        },
+                        "then": {
+                          "required": [
+                            "vlan_id"
+                          ]
+                        },
+                        " if": {
+                          "properties": {
+                            "vlan_type": {
+                              "const": "VLAN trunking"
+                            }
+                          }
+                        },
+                        " then": {
+                          "required": [
+                            "vlan_ranges"
+                          ]
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "dvpg_vmotion_traffic_isolation": {
+              "type": "object",
+              "description": "vMotion port groups vlan isolation configuration",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "properties": {
+                    "__GLOBAL__": {
+                      "type": "object",
+                      "description": "Global configuration settings applicable for all dv port vmotion groups",
+                      "properties": {
+                        "is_dedicated_vlan": {
+                          "type": "boolean",
+                          "description": "Flag to check if vlan is isolated for all vmotion portgroups"
+                        }
+                      },
+                      "additionalProperties": false,
+                      "required": [
+                        "is_dedicated_vlan"
+                      ]
+                    },
+                    "__OVERRIDES__": {
+                      "type": "array",
+                      "description": "Object to hold overrides for the port groups",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "switch_name": {
+                            "type": "string"
+                          },
+                          "port_group_name": {
+                            "type": "string"
+                          },
+                          "vlan_info": {
+                            "type": "object",
+                            "properties": {
+                              "vlan_id": {
+                                "type": "number",
+                                "description": "VLAN id for the port group",
+                                "minimum": 0,
+                                "maximum": 4094
+                              }
+                            },
+                            "required": [
+                              "vlan_id"
+                            ]
+                          },
+                          "is_dedicated_vlan": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "switch_name",
+                          "port_group_name",
+                          "vlan_info"
+                        ]
+                      }
+                    }
+                  },
+                  "minProperties": 1,
+                  "anyOf": [
+                    {
+                      "required": [
+                        "__GLOBAL__"
+                      ]
+                    },
+                    {
+                      "required": [
+                        "__OVERRIDES__"
+                      ]
+                    }
+                  ],
+                  "if": {
+                    "not": {
+                      "required": [
+                        "__GLOBAL__"
+                      ]
+                    }
+                  },
+                  "then": {
+                    "properties": {
+                      "__OVERRIDES__": {
+                        "items": {
+                          "required": [
+                            "is_dedicated_vlan"
+                          ]
+                        }
+                      }
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            },
+            "backup_schedule_config": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "object",
+                  "properties": {
+                    "backup_schedule_name": {
+                      "type": "string",
+                      "description": "Name for the backup schedule.",
+                      "minLength": 1
+                    },
+                    "enable_backup_schedule": {
+                      "type": "boolean",
+                      "description": "Enable or disable the backup schedule."
+                    },
+                    "backup_location_url": {
+                      "type": "string",
+                      "description": "URL of the backup location. Supported protocols: nfs, sftp, ftps, https, ftp, smb, http. Example: sftp://10.0.0.250:/root/backups or nfs://10.0.0.250/root/backups"
+                    },
+                    "backup_server_username": {
+                      "type": "string",
+                      "description": "Username for accessing the backup server. If unset authentication will not be used for the specified location."
+                    },
+                    "backup_server_password": {
+                      "type": "string",
+                      "description": "Password for the backup server user. If unset authentication will not be used for the specified location."
+                    },
+                    "backup_encryption_password": {
+                      "minLength": 8,
+                      "maxLength": 20,
+                      "type": "string",
+                      "description": "[Optional]Password to encrypt the backup, if left empty backup will not be encrypted. Must adhere to the following requirements: At least 8 characters, maximum 20 characters, at least 1 uppercase letter, at least 1 lowercase letter, at least 1 numeric digit, at least 1 special character. Only visible ASCII characters (for example, no space)."
+                    },
+                    "backup_parts": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "description": "Specifies the parts of the backup to be included. Choose from 'seat' to include stats, events, and tasks, or 'common' to include only inventory and configuration data.",
+                        "enum": [
+                          "seat",
+                          "common"
+                        ]
+                      },
+                      "default": [
+                        "seat",
+                        "common"
+                      ]
+                    },
+                    "recurrence_info": {
+                      "type": "object",
+                      "properties": {
+                        "recurrence_type": {
+                          "type": "string",
+                          "enum": [
+                            "DAILY",
+                            "WEEKLY",
+                            "CUSTOM"
+                          ]
+                        },
+                        "hour": {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 23
+                        },
+                        "minute": {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 59
+                        },
+                        "days": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "MONDAY",
+                              "TUESDAY",
+                              "WEDNESDAY",
+                              "THURSDAY",
+                              "FRIDAY",
+                              "SATURDAY",
+                              "SUNDAY"
+                            ]
+                          }
+                        }
+                      },
+                      "required": [
+                        "recurrence_type",
+                        "hour",
+                        "minute"
+                      ],
+                      "oneOf": [
+                        {
+                          "properties": {
+                            "recurrence_type": {
+                              "const": "DAILY"
+                            }
+                          },
+                          "required": [
+                            "recurrence_type",
+                            "hour",
+                            "minute"
+                          ]
+                        },
+                        {
+                          "properties": {
+                            "recurrence_type": {
+                              "const": "WEEKLY"
+                            },
+                            "days": {
+                              "minItems": 1,
+                              "maxItems": 1
+                            }
+                          },
+                          "required": [
+                            "recurrence_type",
+                            "days",
+                            "hour",
+                            "minute"
+                          ]
+                        },
+                        {
+                          "properties": {
+                            "recurrence_type": {
+                              "const": "CUSTOM"
+                            },
+                            "days": {
+                              "minItems": 1,
+                              "maxItems": 7
+                            }
+                          },
+                          "required": [
+                            "recurrence_type",
+                            "days",
+                            "hour",
+                            "minute"
+                          ]
+                        }
+                      ]
+                    },
+                    "retention_info": {
+                      "type": "object",
+                      "description": "Retention information for the backup schedule.",
+                      "properties": {
+                        "max_count": {
+                          "type": "number",
+                          "minimum": 1,
+                          "description": "Number of backups to be retained. If retention is not set, all backups will be retained forever."
+                        }
+                      },
+                      "required": [
+                        "max_count"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "backup_schedule_name",
+                    "enable_backup_schedule",
+                    "backup_location_url",
+                    "recurrence_info"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "task_and_event_retention": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "object",
+                  "description": "VPXD Task and Event retention policy.",
+                  "properties": {
+                    "task_cleanup_enabled": {
+                      "type": "boolean",
+                      "description": "Enable/Disable task cleanup."
+                    },
+                    "task_max_age": {
+                      "type": "number",
+                      "description": "Max age for tasks in days."
+                    },
+                    "event_cleanup_enabled": {
+                      "type": "boolean",
+                      "description": "Enable/Disable event cleanup."
+                    },
+                    "event_max_age": {
+                      "type": "number",
+                      "description": "Max age for events in days."
+                    }
+                  },
+                  "required": [
+                    "task_cleanup_enabled",
+                    "task_max_age",
+                    "event_cleanup_enabled",
+                    "event_max_age"
+                  ]
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "vpx_host_password_length_policy": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "number",
+                  "description": "VPX User host password length policy",
+                  "minimum": 32
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "vpx_password_expiration_policy": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "number",
+                  "description": "VPX User password expiration policy in days."
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "vpx_syslog_enablement_policy": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "boolean",
+                  "description": "VPX Syslog enablement policy"
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "vpx_log_level_config": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "enum": [
+                    "none",
+                    "error",
+                    "warning",
+                    "info",
+                    "verbose",
+                    "trivia"
+                  ],
+                  "description": "VPX logging level"
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "vpx_sddc_deployed_compliance_kit_config": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "string",
+                  "description": "Compliance kit configuration for a recognized security control framework or standard (e.g., NIST-800-53)."
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "vm_migrate_encryption": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "object",
+                  "properties": {
+                    "__GLOBAL__": {
+                      "type": "object",
+                      "description": "Global configuration to change  Virtual machine migrate encryption policy.",
+                      "properties": {
+                        "migrate_encryption_policy": {
+                          "enum": [
+                            "disabled",
+                            "opportunistic",
+                            "required"
+                          ],
+                          "description": "Virtual machine migrate encryption policy"
+                        }
+                      },
+                      "required": [
+                        "migrate_encryption_policy"
+                      ]
+                    },
+                    "__OVERRIDES__": {
+                      "type": "array",
+                      "description": "Overrides to change  Virtual machine migrate encryption policy.",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "vm_name": {
+                            "type": "string"
+                          },
+                          "path": {
+                            "type": "string",
+                            "description": "Path of the VM in datacenter. Ex: If the virtual machine is located in a datacenter named 'SDDC-Datacenter' and resides within base vm folder named 'vm', the path would be 'SDDC-Datacenter/vm/virtual_machine_name'."
+                          },
+                          "migrate_encryption_policy": {
+                            "enum": [
+                              "disabled",
+                              "opportunistic",
+                              "required"
+                            ],
+                            "description": "Virtual machine migrate encryption policy"
+                          }
+                        },
+                        "required": [
+                          "vm_name",
+                          "path",
+                          "migrate_encryption_policy"
+                        ]
+                      }
+                    }
+                  },
+                  "minProperties": 1,
+                  "anyOf": [
+                    {
+                      "required": [
+                        "__GLOBAL__"
+                      ]
+                    },
+                    {
+                      "required": [
+                        "__OVERRIDES__"
+                      ]
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "tls_version": {
+              "type": "object",
+              "description": "Object containing TLS versions for different services on vCenter.",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "object",
+                  "properties": {
+                    "global": {
+                      "type": "array",
+                      "description": "Global TLS versions applicable for all services. Individual services can override these versions.",
+                      "items": {
+                        "type": "string",
+                        "enum": [
+                          "TLSv1.0",
+                          "TLSv1.1",
+                          "TLSv1.2"
+                        ]
+                      },
+                      "minItems": 1,
+                      "uniqueItems": true
+                    }
+                  },
+                  "additionalProperties": {
+                    "type": "array",
+                    "description": "TLS versions specific to individual services. These versions override global TLS version if specified.",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "TLSv1.0",
+                        "TLSv1.1",
+                        "TLSv1.2"
+                      ]
+                    },
+                    "minItems": 1,
+                    "uniqueItems": true
+                  }
+                }
+              }
+            },
+            "logon_banner_config": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "object",
+                  "description": "vCenter Logon Banner configuration",
+                  "properties": {
+                    "logon_banner_title": {
+                      "type": "string",
+                      "description": "Logon Banner Title. Example input: vCenter Server Managed by SDDC Manager"
+                    },
+                    "logon_banner_content": {
+                      "type": "string",
+                      "description": "Logon Banner Content. Example input: This vCenter Server is managed by SDDC Manager (sddc-manager.vrack.vsphere.local)..."
+                    },
+                    "checkbox_enabled": {
+                      "type": "boolean",
+                      "description": "Checkbox enabled. Example input: true"
+                    }
+                  },
+                  "required": [
+                    "logon_banner_title",
+                    "logon_banner_content",
+                    "checkbox_enabled"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "minProperties": 1,
+              "additionalProperties": false
+            },
+            "ldap_identity_source_config": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "array",
+                  "description": "LDAP identity source configuration",
+                  "items": {
+                    "type": "object",
+                    "description": "ldap binding accounts: username for the account",
+                    "properties": {
+                      "username": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "username"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "minItems": 0
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "minProperties": 1,
+              "additionalProperties": false
+            },
+            "users_groups_roles": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "array",
+                  "description": "A valid list of dictionary with three keys - users, groups and roles",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string",
+                        "description": "User or group name"
+                      },
+                      "type": {
+                        "enum": [
+                          "USER",
+                          "GROUP"
+                        ],
+                        "description": "Type to denote its a user or a group"
+                      },
+                      "role": {
+                        "type": "string",
+                        "description": "Role name"
+                      }
+                    },
+                    "required": [
+                      "name",
+                      "type",
+                      "role"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "minItems": 0
+                }
+              },
+              "additionalProperties": false,
+              "minProperties": 1
+            },
+            "cert_config": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "object",
+                  "description": "SSL certificate configuration",
+                  "properties": {
+                    "certificate_issuer": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "description": "Certificate issuer details. Example input: OU=VMware Engineering,O=vcenter.vsphere.local,ST=California,C=US,DC=local,DC=vsphere,CN=CB"
+                      },
+                      "minItems": 0
+                    }
+                  },
+                  "required": [
+                    "certificate_issuer"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "minProperties": 1,
+              "additionalProperties": false
+            }
+          },
+          "minProperties": 1,
+          "additionalProperties": false
+        },
+        "sddc_manager": {
+          "type": "object",
+          "title": "Compliance controls related to SDDC manager",
+          "properties": {
+            "ntp": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "object",
+                  "properties": {
+                    "servers": {
+                      "type": "array",
+                      "description": "A valid list of reachable NTP servers",
+                      "items": {
+                        "type": "string"
+                      },
+                      "uniqueItems": true
+                    },
+                    "is_local": {
+                      "type": "boolean",
+                      "default": true,
+                      "description": "Configure ntp only on SDDC-manager if flag is true. Else, propagate ntp configuration to all VCF components"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "dns": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "object",
+                  "properties": {
+                    "servers": {
+                      "type": "array",
+                      "description": "A valid list of reachable DNS servers",
+                      "items": {
+                        "type": "string"
+                      },
+                      "minItems": 1,
+                      "maxItems": 2,
+                      "uniqueItems": true
+                    },
+                    "is_local":{
+                      "type": "boolean",
+                      "default": true,
+                      "description": "Configure dns only on SDDC-manager if flag is true. Else, propagate dns configuration to all VCF components"
+                    }
+                  },
+                  "required": [
+                    "servers"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "fips_mode_enabled": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "boolean",
+                  "description": "FIPS mode enablement status"
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "depot_config": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "object",
+                  "description": "Dedicated VMware account credentials",
+                  "properties": {
+                    "vmware_account": {
+                      "type": "object",
+                      "properties": {
+                        "username": {
+                          "type": "string"
+                        },
+                        "password": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "username",
+                        "password"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "vmware_account"
+                  ]
+                }
+              },
+              "required": [
+                "value"
+              ]
+            },
+            "cert_config": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "object",
+                  "description": "SSL certificate configuration",
+                  "properties": {
+                    "certificate_issuer": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "description": "Certificate issuer details. Example input: OU=VMware Engineering,O=vcenter.vsphere.local,ST=California,C=US,DC=local,DC=vsphere,CN=CB"
+                      },
+                      "minItems": 0
+                    }
+                  },
+                  "required": [
+                    "certificate_issuer"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "minProperties": 1,
+              "additionalProperties": false
+            },
+            "credential_auto_rotate_policy": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "object",
+                  "properties": {
+                    "frequency": {
+                      "type": "number",
+                      "description": "Number of days to be configured as auto rotate schedule"
+                    }
+                  },
+                  "required": [
+                    "frequency"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "backup": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "object",
+                  "properties": {
+                    "encryption": {
+                      "type": "object",
+                      "description": "Encryption Passphrase for SDDC Manager and NSX Manager backups",
+                      "properties": {
+                        "passphrase": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "passphrase"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "backup_locations": {
+                      "type": "array",
+                      "description": "Backup Server for SDDC Manager and NSX Manager",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "server": {
+                            "type": "string"
+                          },
+                          "username": {
+                            "type": "string"
+                          },
+                          "password": {
+                            "type": "string"
+                          },
+                          "directory_path": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "server",
+                          "username",
+                          "password",
+                          "directory_path"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "minItems": 1
+                    },
+                    "backup_schedules": {
+                      "type": "array",
+                      "description": "Valid backup schedule for SDDC Manager",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "resource_type": {
+                            "type": "string"
+                          },
+                          "take_scheduled_backups": {
+                            "type": "boolean"
+                          },
+                          "frequency": {
+                            "enum": [
+                              "WEEKLY",
+                              "HOURLY"
+                            ]
+                          },
+                          "days_of_week": {
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "enum": [
+                                "SUNDAY",
+                                "MONDAY",
+                                "TUESDAY",
+                                "WEDNESDAY",
+                                "THURSDAY",
+                                "FRIDAY",
+                                "SATURDAY"
+                              ]
+                            }
+                          },
+                          "hour_of_day": {
+                            "type": "number",
+                            "minimum": 0,
+                            "maximum": 23
+                          },
+                          "minute_of_hour": {
+                            "type": "number",
+                            "minimum": 0,
+                            "maximum": 59
+                          },
+                          "take_backup_on_state_change": {
+                            "type": "boolean"
+                          },
+                          "retention_policy": {
+                            "type": "object",
+                            "description": "Retention policy",
+                            "properties": {
+                              "number_of_most_recent_backups": {
+                                "type": "number"
+                              },
+                              "number_of_days_of_hourly_backups": {
+                                "type": "number"
+                              },
+                              "number_of_days_of_daily_backups": {
+                                "type": "number"
+                              }
+                            },
+                            "required": [
+                              "number_of_most_recent_backups",
+                              "number_of_days_of_hourly_backups",
+                              "number_of_days_of_daily_backups"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "required": [
+                          "resource_type",
+                          "take_scheduled_backups",
+                          "frequency",
+                          "days_of_week",
+                          "hour_of_day",
+                          "minute_of_hour",
+                          "take_backup_on_state_change",
+                          "retention_policy"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "minItems": 1
+                    }
+                  },
+                  "required": [
+                    "encryption",
+                    "backup_locations",
+                    "backup_schedules"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "users_groups_roles": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "object",
+                  "properties": {
+                    "users_groups_roles_info": {
+                      "type": "array",
+                      "description": "A valid list of users groups and roles",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string"
+                          },
+                          "type": {
+                            "type": "string"
+                          },
+                          "role": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "name",
+                          "type",
+                          "role"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "minItems": 0
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            },
+            "proxy_config": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "object",
+                  "description": "Enable/Disable lcm proxy configuration.",
+                  "properties": {
+                    "proxy_enabled": {
+                      "type": "boolean",
+                      "description": "proxy enable flag"
+                    },
+                    "host": {
+                      "type": "string",
+                      "description": "host name for proxy"
+                    },
+                    "port": {
+                      "type": "number",
+                      "description": "Port number for proxy"
+                    }
+                  },
+                  "required": [
+                    "proxy_enabled"
+                  ],
+                  "if": {
+                    "properties": {
+                      "proxy_enabled": {
+                        "const": true
+                      }
+                    }
+                  },
+                  "then": {
+                    "required": [
+                      "host",
+                      "port"
+                    ]
+                  }
+                }
+              },
+              "required": [
+                "value"
+              ]
+            }
+          },
+          "minProperties": 1,
+          "additionalProperties": false
+        },
+        "esxi": {
+          "type": "object",
+          "description": "Compliance controls related to ESXi",
+          "properties":{
+            "password_max_lifetime": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "number",
+                  "description": "Max password lifetime in days",
+                  "minimum": 1,
+                  "maximum": 99999
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "password_reuse_restriction": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "number",
+                  "description": "Password reuse count",
+                  "minimum": 0,
+                  "maximum": 100
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "managed_object_browser": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "boolean",
+                  "description": "Flag to enable/disable the debug managed object browser"
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "bridge_protocol_data_unit_filter": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "number",
+                  "description": "Enable/Disable bridge protocol data unit filter (1 to enable, 0 to disable)",
+                  "minimum": 0,
+                  "maximum": 1
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "suppress_hyperthread_warning": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "number",
+                  "description": "Enable/Disable suppressing of hyperthread warning( 1 to enable, 0 to disable)",
+                  "minimum": 0,
+                  "maximum": 1
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "cim_service_policy": {
+              "type": "object",
+              "title": "CIM service policy configuration for ESXi",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "object",
+                  "properties": {
+                    "service_running": {
+                      "type": "boolean",
+                      "description": "service running flag true/false"
+                    },
+                    "service_policy": {
+                      "type": "string",
+                      "enum": [
+                        "on",
+                        "off"
+                      ],
+                      "description": "service policy: on/off"
+                    }
+                  },
+                  "required": [
+                    "service_running",
+                    "service_policy"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "minProperties": 1,
+              "additionalProperties": false
+            },
+            "shell_service_policy": {
+              "type": "object",
+              "title": "SHELL service policy configuration for ESXi",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "object",
+                  "properties": {
+                    "service_running": {
+                      "type": "boolean",
+                      "description": "service running flag true/false"
+                    },
+                    "service_policy": {
+                      "type": "string",
+                      "enum": [
+                        "on",
+                        "off"
+                      ],
+                      "description": "service policy: on/off"
+                    }
+                  },
+                  "required": [
+                    "service_running",
+                    "service_policy"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "minProperties": 1,
+              "additionalProperties": false
+            },
+            "ntp_service_config": {
+              "type": "object",
+              "title": "NTP service running configuration for ESXi",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "object",
+                  "properties": {
+                    "service_running": {
+                      "type": "boolean",
+                      "description": "service running flag true/false"
+                    }
+                  },
+                  "required": [
+                    "service_running"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "minProperties": 1,
+              "additionalProperties": false
+            },
+            "slp_service_policy": {
+              "type": "object",
+              "title": "SLP service policy configuration for ESXi",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "object",
+                  "properties": {
+                    "service_running": {
+                      "type": "boolean",
+                      "description": "service running flag true/false"
+                    },
+                    "service_policy": {
+                      "type": "string",
+                      "enum": [
+                        "on",
+                        "off"
+                      ],
+                      "description": "service policy: on/off"
+                    }
+                  },
+                  "required": [
+                    "service_running",
+                    "service_policy"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "minProperties": 1,
+              "additionalProperties": false
+            },
+            "snmp_service_policy": {
+              "type": "object",
+              "title": "SNMP service policy configuration for ESXi",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "object",
+                  "properties": {
+                    "service_running": {
+                      "type": "boolean",
+                      "description": "service running flag true/false"
+                    },
+                    "service_policy": {
+                      "type": "string",
+                      "enum": [
+                        "on",
+                        "off"
+                      ],
+                      "description": "service policy: on/off"
+                    }
+                  },
+                  "required": [
+                    "service_running",
+                    "service_policy"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "minProperties": 1,
+              "additionalProperties": false
+            },
+            "ntp_service_startup_policy": {
+              "type": "object",
+              "title": "NTP service startup policy configuration for ESXi",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "object",
+                  "properties": {
+                    "service_policy": {
+                      "type": "string",
+                      "enum": [
+                        "on",
+                        "off"
+                      ],
+                      "description": "service policy should always be on"
+                    }
+                  },
+                  "required": [
+                    "service_policy"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "minProperties": 1,
+              "additionalProperties": false
+            },
+            "firewall_rulesets": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "name",
+                      "allow_all_ip",
+                      "enabled"
+                    ],
+                    "properties": {
+                      "name": {
+                        "type": "string"
+                      },
+                      "enabled": {
+                        "type": "boolean"
+                      },
+                      "allowed_ips": {
+                        "type": "object",
+                        "properties": {
+                          "address": {
+                            "type": "array",
+                            "description": "List of allowed IP addresses for this ruleset",
+                            "items": {
+                              "type": "string"
+                            },
+                            "uniqueItems": true
+                          },
+                          "network": {
+                            "type": "array",
+                            "description": "List of allowed subnet in the format of network cidr",
+                            "items": {
+                              "type": "string"
+                            },
+                            "uniqueItems": true
+                          }
+                        },
+                        "additionalProperties": false
+                      },
+                      "rules": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "required": [
+                            "direction",
+                            "port",
+                            "protocol"
+                          ],
+                          "properties": {
+                            "direction": {
+                              "enum": [
+                                "inbound",
+                                "outbound"
+                              ]
+                            },
+                            "end_port": {
+                              "type": "number"
+                            },
+                            "port": {
+                              "type": "number"
+                            },
+                            "protocol": {
+                              "enum": [
+                                "tcp",
+                                "udp"
+                              ]
+                            }
+                          },
+                          "additionalProperties": false
+                        },
+                        "uniqueItems": true
+                      },
+                      "allow_all_ip": {
+                        "type": "boolean"
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  "uniqueKey": "name"
+                }
+              },
+              "required": [
+                "value",
+                "metadata"
+              ],
+              "additionalProperties": false
+            },
+            "max_failed_login_attempts": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "number",
+                  "description": "Maximum allowed failed login attempts before locking out a user's account. Zero disables account locking",
+                  "minimum": 0,
+                  "maximum": 100
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "account_unlock_time_interval": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "number",
+                  "description": "Duration in seconds to lock out a user's account after exceeding max failed login attempts",
+                  "minimum": 1,
+                  "maximum": 999999999
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "ssh_login_banner": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "string",
+                  "description": "Login banner for ssh connection"
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "dcui_login_banner": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "string",
+                  "description": "Login banner for the DCUI of the host"
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "tls_version": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "array",
+                  "description": "TLS versions enabled on the ESXi hosts",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "sslv3",
+                      "tlsv1",
+                      "tlsv1.1",
+                      "tlsv1.2"
+                    ]
+                  },
+                  "uniqueItems": true
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "ssh_port_forwarding": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "string",
+                  "description": "SSH 'AllowTcpForwarding' configuration value"
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "ssh_ignore_rhosts": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "string",
+                  "description": "SSH 'IgnoreRhosts' configuration value"
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "minProperties": 1,
+          "additionalProperties": false
+        },
+        "vrslcm": {
+          "type": "object",
+          "title": "Compliance controls related to vrslcm",
+          "properties": {
+            "dns": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "object",
+                  "properties": {
+                    "servers": {
+                      "type": "array",
+                      "description": "A valid list of reachable DNS servers",
+                      "items": {
+                        "type": "string"
+                      },
+                      "minItems": 1
+                    }
+                  },
+                  "required": [
+                    "servers"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "minProperties": 1,
+          "additionalProperties": false
+        },
+        "nsxt_manager": {
+          "type": "object",
+          "title": "Compliance controls related to nsxt-manager",
+          "properties": {
+            "ntp": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "object",
+                  "properties": {
+                    "servers": {
+                      "type": "array",
+                      "description": "A valid list of reachable NTP servers",
+                      "items": {
+                        "type": "string"
+                      },
+                      "uniqueItems": true
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "minProperties": 1,
+          "additionalProperties": false
+        },
+        "nsxt_edge": {
+          "type": "object",
+          "title": "Compliance controls related to nsxt-edge",
+          "properties": {
+            "ntp": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "object",
+                  "properties": {
+                    "servers": {
+                      "type": "array",
+                      "description": "A valid list of reachable NTP servers",
+                      "items": {
+                        "type": "string"
+                      },
+                      "uniqueItems": true
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "minProperties": 1,
+          "additionalProperties": false
+        }
+      },
+      "minProperties": 1,
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "compliance_config"
+  ],
+  "additionalProperties": false,
+  "definitions": {
+    "alarm_config": {
+      "type": "array",
+      "items": {
+        "properties": {
+          "alarm_name": {
+            "type": "string",
+            "description": "Name of the alarm which is unique within a vCenter.",
+            "minLength": 1
+          },
+          "alarm_description": {
+            "type": "string",
+            "description": "Description of the alarm."
+          },
+          "enabled": {
+            "type": "boolean",
+            "description": "Flag to enable or disable alarm."
+          },
+          "target_type": {
+            "type": "string",
+            "enum": [
+              "VCENTER",
+              "HOSTS",
+              "CLUSTERS",
+              "DATACENTERS",
+              "DATASTORES",
+              "DISTRIBUTED_SWITCHES",
+              "DISTRIBUTED_PORT_GROUPS",
+              "VIRTUAL_MACHINES",
+              "CLUSTER_DATASTORES"
+            ],
+            "description": "The target for the alarm action."
+          },
+          "rule_expressions": {
+            "type": "array",
+            "description": "Defines the event, condition, or state that triggers the alarm and defines the notification severity.",
+            "items": {
+              "type": "object",
+              "properties": {
+                "event_type_id": {
+                  "type": "string",
+                  "description": "Event Type"
+                },
+                "state": {
+                  "description": "Green to reset, yellow for warning, red for critical and no_change for keeping the current state",
+                  "enum": [
+                    "NO_CHANGE",
+                    "NORMAL",
+                    "WARNING",
+                    "CRITICAL"
+                  ]
+                },
+                "comparisons": {
+                  "type": "array",
+                  "description": "List of additional arguments to be satisfied to trigger alarm, an argument is made from an attribute, operator and value.",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "attribute": {
+                        "type": "string"
+                      },
+                      "operator": {
+                        "enum": [
+                          "equals",
+                          "notEqualTo",
+                          "startsWith",
+                          "doesNotStartWith",
+                          "endsWith",
+                          "doesNotEndWith"
+                        ]
+                      },
+                      "value": {
+                        "type": "string"
+                      }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                      "attribute",
+                      "operator",
+                      "value"
+                    ]
+                  },
+                  "minItems": 0
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "event_type_id",
+                "state"
+              ]
+            },
+            "minItems": 1
+          },
+          "alarm_actions": {
+            "type": "array",
+            "description": "List of actions - sending email, sending snmp traps or running scripts and state causing these actions",
+            "items": {
+              "type": "object",
+              "properties": {
+                "state": {
+                  "type": "string",
+                  "enum": [
+                    "WARNING",
+                    "CRITICAL",
+                    "NORMAL",
+                    "NO_CHANGE"
+                  ],
+                  "description": "The state for which the alarm action is to be taken."
+                },
+                "action_type": {
+                  "type": "string",
+                  "enum": [
+                    "EMAIL",
+                    "SNMP",
+                    "SCRIPT"
+                  ],
+                  "description": "The type of the action to be taken."
+                },
+                "repeats": {
+                  "type": "boolean",
+                  "description": "Action to be repeated based on configured action frequency time"
+                },
+                "email": {
+                  "type": "object",
+                  "description": "Send email when alarm is triggered with warning.",
+                  "properties": {
+                    "subject": {
+                      "type": "string",
+                      "description": "Subject of the email"
+                    },
+                    "to_list": {
+                      "type": "string",
+                      "description": "Emails separated by comma."
+                    },
+                    "cc_list": {
+                      "type": "string",
+                      "description": "Emails separated by comma."
+                    },
+                    "body": {
+                      "type": "string",
+                      "description": "Body of the email"
+                    }
+                  },
+                  "required": [
+                    "subject",
+                    "to_list",
+                    "cc_list",
+                    "body"
+                  ],
+                  "additionalProperties": false
+                },
+                "script": {
+                  "type": "object",
+                  "properties": {
+                    "script_name": {
+                      "type": "string",
+                      "description": "Script to run alarm is triggered with warning."
+                    }
+                  },
+                  "required": [
+                    "script_name"
+                  ]
+                }
+              },
+              "required": [
+                "state",
+                "action_type",
+                "repeats"
+              ],
+              "if": {
+                "properties": {
+                  "action_type": {
+                    "const": "EMAIL"
+                  }
+                }
+              },
+              "then": {
+                "required": [
+                  "email"
+                ]
+              },
+              " if": {
+                "properties": {
+                  "action_type": {
+                    "const": "SCRIPT"
+                  }
+                }
+              },
+              " then": {
+                "required": [
+                  "script_name"
+                ]
+              }
+            },
+            "minItems": 1
+          },
+          "action_frequency": {
+            "description": "Frequency (in minutes) to repeat actions until acknowledged or reset to green",
+            "type": "number"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "alarm_name",
+          "alarm_description",
+          "enabled",
+          "rule_expressions",
+          "target_type"
+        ]
+      },
+      "minItems": 0
+    },
+    "metadata": {
+      "type": "object",
+      "title": "Metadata",
+      "description": "Metadata for a configuration control",
+      "properties": {
+        "configuration_id": {
+          "type": "string",
+          "description": "This is the configuration ID listed in the compliance kit"
+        },
+        "configuration_title": {
+          "type": "string",
+          "description": "This is the configuration title listed in the compliance kit"
+        }
+      },
+      "required": [
+        "configuration_id",
+        "configuration_title"
+      ]
+    }
+  }
+}

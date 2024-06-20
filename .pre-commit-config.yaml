@@ -1,0 +1,31 @@
+default_language_version:
+  python: python3
+fail_fast: true
+repos:
+-   repo: local
+    hooks:
+      - id: reorder_imports
+        name: Reorder Imports.
+        entry: ./devops/scripts/run_reorder_imports.sh
+        language: script
+        pass_filenames: true
+      - id: formatting
+        name: Fix formatting with Black.
+        entry: ./devops/scripts/run_formatting.sh
+        language: script
+        pass_filenames: false
+      - id: security_analysis
+        name: Run security analysis with Bandit.
+        entry: ./devops/scripts/run_security_analysis.sh
+        language: script
+        pass_filenames: false
+      - id: static_code_analysis
+        name: Run static code analysis with pylint.
+        entry: ./devops/scripts/run_static_code_analysis.sh
+        language: script
+        pass_filenames: false
+      - id: generate_docs
+        name: Generate documentation.
+        entry: ./devops/scripts/generate_markdown_docs.sh
+        language: script
+        pass_filenames: false
