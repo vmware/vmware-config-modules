@@ -1,0 +1,348 @@
+#Customer provided values
+vcenter_vsan_datastore_transit_encryption_config:
+  rekey_interval: 70
+  transit_encryption_enabled: true
+
+sddc_manager_depot_config:
+  vmware_account:
+    username: administrator@vsphere.local
+    password: passwordx
+
+sddc_manager_cert_config:
+  certificate_issuer: ['OU=VMware Engineering,O=vcenter-1.vrack.vsphere.local,ST=California,C=US,DC=local,DC=vsphere,CN=CA']
+
+sddc_manager_users_groups_roles:
+  users_groups_roles_info: [{'name': 'administrator@VSPHERE.LOCAL', 'type': 'USER', 'role': 'ADMIN'}, {'name': 'VSPHERE.LOCAL\SDDCAdmins', 'type': 'GROUP', 'role': 'ADMIN'}, {'name': 'vcf-secure-user@vsphere.local', 'type': 'USER', 'role': 'ADMIN'}]
+
+
+sddc_manager_backup:
+    encryption:
+      passphrase: mysceretepassphrase
+    backup_locations:
+        - server: 10.0.0.4
+          username: vcf
+          password: password
+          directory_path: /temp
+    backup_schedules:
+        - resource_type: vcenter
+          take_scheduled_backups: true
+          frequency: WEEKLY
+          days_of_week: ['SUNDAY', 'FRIDAY']
+          hour_of_day: 21
+          minute_of_hour: 0
+          take_backup_on_state_change: true
+          retention_policy:
+            number_of_most_recent_backups: 30
+            number_of_days_of_hourly_backups: 30
+            number_of_days_of_daily_backups: 30
+
+vcenter_cert_config:
+  certificate_issuer: ['OU=VMware Engineering,O=vcenter-1.vrack.vsphere.local,ST=California,C=US,DC=local,DC=vsphere,CN=CA']
+
+sddc_manager_credential_auto_rotate_policy:
+  frequency: 100
+
+vcenter_alarm_sso_account_actions:
+  - alarm_name: alarm1
+    alarm_description: test
+    enabled: true
+    rule_expressions:
+      - attribute: VM Momory Usage
+        operation : equals
+        value: 5
+    target_type: VCENTER
+
+vcenter_alarm_esx_remote_syslog_failure:
+  - alarm_name: esx_remote_syslog_failure
+    alarm_description: test
+    enabled: false
+    rule_expressions:
+      - attribute: VM Momory Usage
+        operation: equals
+        value: 5
+    target_type: VCENTER
+
+vcenter_active_directory_authentication: true
+vcenter_active_directory_ldaps_enabled:
+  use_ldaps:
+
+vcenter_vsan_iscsi_targets_mutual_chap_config:
+  global: CHAP
+vcenter_sso_auto_unlock_interval: 320
+vcenter_sso_bash_shell_authorized_members:
+  - name: Administrator
+    domain: vsphere.local
+    member_type: USER
+  - name: svc-sddc-manager-vcenter-1
+    domain: vsphere.local
+    member_type: USER
+  - name: vmware-applmgmtservice-b3f796b7-3c19-49aa-bd95-0af6d6a594a2
+    domain: vsphere.local
+    member_type: USER
+
+vcenter_sso_trusted_admin_authorized_members: []
+vcenter_sso_failed_login_attempts_interval: 220
+vcenter_sso_max_failed_login_attempts: 4
+vcenter_sso_password_max_lifetime: 100
+vcenter_sso_password_min_lowercase_characters: 0
+vcenter_sso_password_min_numeric_characters: 0
+vcenter_sso_password_min_special_characters: 0
+vcenter_sso_password_min_uppercase_characters: 0
+vcenter_sso_password_minimum_length: 14
+vcenter_sso_password_reuse_restriction: 6
+
+vcenter_dvs_health_check:
+  __GLOBAL__:
+    health_check_enabled: true
+  __OVERRIDES__:
+    - switch_name: SDDC-Dswitch-Private
+      health_check_enabled: true
+
+vcenter_dvs_network_io_control:
+  __GLOBAL__:
+    network_io_control_status: false
+  __OVERRIDES__:
+    - switch_name: SDDC-Dswitch-Private
+      network_io_control_status: true
+
+vcenter_dvpg_excluded_native_vlan_policy:
+  native_vlan_id_to_exclude: 99
+vcenter_dvpg_excluded_reserved_vlan_policy:
+  reserved_vlan_id_to_exclude: 99
+vcenter_dvpg_promiscuous_mode_policy:
+  __GLOBAL__:
+    promiscuous_mode: false
+  __OVERRIDES__:
+    - switch_name: SDDC-Dswitch-Private
+      port_group_name: SDDC-DPortGroup-Mgmt
+      promiscuous_mode: false
+    - switch_name: SDDC-Dswitch-Private
+      port_group_name: SDDC-DPortGroup-VSAN
+      promiscuous_mode: false
+    - switch_name: SDDC-Dswitch-Private
+      port_group_name: SDDC-DPortGroup-vMotion
+      promiscuous_mode: false
+    - switch_name: SDDC-Dswitch-Private
+      port_group_name: SDDC-DPortGroup-VM-Mgmt
+      promiscuous_mode: true
+
+vcenter_dvpg_mac_address_change_policy:
+  __GLOBAL__:
+    allow_mac_address_change: false
+  __OVERRIDES__:
+    - switch_name: SDDC-Dswitch-Private
+      port_group_name: SDDC-DPortGroup-Mgmt
+      allow_mac_address_change: false
+    - switch_name: SDDC-Dswitch-Private
+      port_group_name: SDDC-DPortGroup-VSAN
+      allow_mac_address_change: false
+    - switch_name: SDDC-Dswitch-Private
+      port_group_name: SDDC-DPortGroup-vMotion
+      allow_mac_address_change: false
+    - switch_name: SDDC-Dswitch-Private
+      port_group_name: SDDC-DPortGroup-VM-Mgmt
+      allow_mac_address_change: true
+
+vcenter_dvpg_forged_transmits_policy:
+  __GLOBAL__:
+    allow_forged_transmits: false
+  __OVERRIDES__:
+    - switch_name: SDDC-Dswitch-Private
+      port_group_name: SDDC-DPortGroup-Mgmt
+      allow_forged_transmits: false
+    - switch_name: SDDC-Dswitch-Private
+      port_group_name: SDDC-DPortGroup-VSAN
+      allow_forged_transmits: false
+    - switch_name: SDDC-Dswitch-Private
+      port_group_name: SDDC-DPortGroup-vMotion
+      allow_forged_transmits: false
+    - switch_name: SDDC-Dswitch-Private
+      port_group_name: SDDC-DPortGroup-VM-Mgmt
+      allow_forged_transmits: true
+
+vcenter_dvpg_vlan_trunking_authorized_check: []
+
+vcenter_users_groups_roles:
+  - name: VSPHERE.LOCAL\Administrator
+    type: USER
+    role: Administrator
+  - nane: VSPHERE.LOCAL\Administrators
+    type: GROUP
+    role: Administrator
+  - nane: VSPHERE.LOCAL\NsxAdministrators
+    type: GROUP
+    role: NSX Administrator
+  - name: VSPHERE.LOCAL\NsxAuditors
+    type: GROUP
+    role: NSX Auditor
+  - name: VSPHERE.LOCAL\NsxViAdministrators
+    type: GROUP
+    role: NSX VI Administrator
+  - name: VSPHERE.LOCAL\RegistryAdministrators
+    type: GROUP
+    role: Content Library Registry administrator (sample)
+  - name: VSPHERE.LOCAL\SDDCAdmins
+    type: GROUP
+    role: Administrator
+  - name: VSPHERE.LOCAL\SyncUsers
+    type: GROUP
+    role: SyncUsers
+  - name: VSPHERE.LOCAL\TrustedAdmins
+    type: GROUP
+    role: Trusted Infrastructure administrator
+  - name: VSPHERE.LOCAL\vStatsGroup
+    type: GROUP
+    role: vStatsAdmin
+  - name: VSPHERE.LOCAL\WorkloadStorage
+    type: GROUP
+    role: Workload Storage Manager
+  - name: VSPHERE.LOCAL\vSphereClientSolutionUsers
+    type: GROUP
+    role: vSphere Client Service Account
+
+vcenter_ldap_identity_source_config:
+  - username: user1
+
+vcenter_logon_banner_config:
+  logon_banner_title: vcenter login
+  logon_banner_content: Vcenter is for authorized uses only.
+  checkbox_enabled: true
+
+vcenter_tls_version:
+  global:
+    - TLSv1.2
+    - TLSv1.1
+    - TLSv1.0
+
+vcenter_vpx_sddc_deployed_compliance_kit_config :
+
+vcenter_task_and_event_retention:
+  task_cleanup_enabled: true
+  task_max_age: 30
+  event_cleanup_enabled: true
+  event_max_age: 30
+
+vcenter_backup_schedule_config:
+  backup_schedule_name: vc_backup
+  enable_backup_schedule: false
+  backup_location_url: sftp://10.0.0.250:/root/backups
+  backup_server_username: username
+  backup_server_password: password
+  backup_encryption_password: mysceretepassphrase
+  backup_parts:
+    - common
+    - seat
+  recurrence_info:
+    recurrence_type: DAILY
+    hour: 23
+    minute: 0
+  retention_info:
+    max_count: 3
+
+vcenter_dvpg_vmotion_traffic_isolation:
+  __GLOBAL__:
+    is_dedicated_vlan: false
+  __OVERRIDES__:
+   - switch_name: SDDC-Dswitch-Private
+     port_group_name: SDDC-DPortGroup-vMotion
+     is_dedicated_vlan: False
+     ports:
+      - host_name: esxi-3.vrack.vsphere.local
+        device: vmk1
+        tcp_ip_stack: vmotion
+      - host_name: esxi-4.vrack.vsphere.local
+        device: vmk1
+        tcp_ip_stack: vmotion
+      - host_name: esxi-1.vrack.vsphere.local
+        device: vmk1
+        tcp_ip_stack: vmotion
+      - host_name: esxi-2.vrack.vsphere.local
+        device: vmk1
+        tcp_ip_stack: vmotion
+     vlan_info:
+        vlan_type: VLAN
+        vlan_id: 0
+
+
+sddc_manager_fips_mode_enabled: true
+
+vcenter_h5_client_session_timeout: 15
+vcenter_vsan_datastore_naming_policy: false
+
+vcenter_vm_migrate_encryption:
+  __GLOBAL__:
+    migrate_encryption_policy: required
+  __OVERRIDES__:
+    - migrate_encryption_policy: required
+      vm_name: nsx-mgmt-1
+      path: 'SDDC-Datacenter/vm/Networking VMs'
+    - migrate_encryption_policy: opportunistic
+      vm_name: vCLS-4201903b-9dd2-8ded-5542-12d3acb10f2a
+      path: SDDC-Datacenter/vm/vCLS
+    - migrate_encryption_policy: opportunistic
+      vm_name: sddc-manager
+      path: 'SDDC-Datacenter/vm/Management VMs'
+    - migrate_encryption_policy: opportunistic
+      vm_name: vCLS-4201c824-cc9f-1b28-707d-9fdde39486f0
+      path: SDDC-Datacenter/vm/vCLS
+    - migrate_encryption_policy: opportunistic
+      vm_name: vcenter-1
+      path: 'SDDC-Datacenter/vm/Management VMs'
+
+vcenter_vpx_syslog_enablement_policy: false
+vcenter_vpx_log_level_config: warning
+vcenter_vpx_host_password_length_policy: 41
+
+vcenter_vpx_task_and_event_retention:
+  task_cleanup_enabled: true
+  task_max_age: 5
+  event_cleanup_enabled: true
+  event_max_age: 6
+
+vcenter_vpx_password_expiration_policy: 60
+
+vcenter_dns:
+  mode: is_static
+  servers:
+    - 10.0.0.250
+    - 8.8.8.8
+vrslcm_dns:
+  mode: is_static
+  servers:
+    - 10.0.0.250
+    - 8.8.8.8
+sddc_manager_dns:
+  mode: is_static
+  servers:
+    - 10.0.0.250
+    - 8.8.8.8
+vcenter_ntp:
+  mode: NTP
+  servers:
+    - 216.239.35.8
+sddc_manager_ntp:
+  servers:
+    - 216.239.35.8
+nsxt_manager_ntp:
+  servers:
+    - 216.239.35.8
+nsxt_edge_ntp:
+  servers:
+    - 216.239.35.8
+vcenter_snmp_v3:
+    enable: True
+    privacy: AES192
+    authentication: SHA1
+
+vcenter_vsan_proxy:
+  internet_access_enabled: true
+  host: 10.0.0.5
+  port: 80
+  user: test
+  password: ''
+
+vcenter_syslog:
+  servers:
+    - hostname:  8.8.4.0
+      port: 90
+      protocol: TLS

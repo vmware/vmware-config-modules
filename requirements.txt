@@ -1,0 +1,5 @@
+-r requirements/prod-requirements.txt
+-r requirements/dev-requirements.txt
+-r requirements/api-requirements.txt
+-r requirements/unit-test-requirements.txt
+-r requirements/functional-test-requirements.txt
