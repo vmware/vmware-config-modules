@@ -135,8 +135,8 @@ class FirewallRulesetsConfig(BaseController):
             return {consts.STATUS: RemediateStatus.FAILED, consts.ERRORS: compliance_response.get(consts.ERRORS, [])}
 
         elif compliance_response.get(consts.STATUS) == ComplianceStatus.COMPLIANT:
-            # For compliant case, return SUCCESS.
-            return {consts.STATUS: RemediateStatus.SUCCESS}
+            # For compliant case, return SKIPPED.
+            return {consts.STATUS: RemediateStatus.SKIPPED, consts.ERRORS: ["Control already compliant"]}
         else:
             # Check for non-compliant items and iterate through each of drifts and invoke remediation.
             # Scenario 1. Handle addition/removal of ruleset in desired config

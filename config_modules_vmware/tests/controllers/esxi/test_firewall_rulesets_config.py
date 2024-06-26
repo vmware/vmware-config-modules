@@ -150,7 +150,6 @@ class TestFirewallRulesetsConfig:
         "test_name, test_input, expected_new, expected_old",
         [
             ("update_allow_all_ip", "remediate_mock_1", "remediate_mock_1_new", "remediate_mock_1_old"),
-            ("no_remediation_required", "mock_ruleset_1", None, None),
             ("update_enabled", "remediate_mock_2", "remediate_mock_2_new", "remediate_mock_2_old"),
             ("update_allowed_address", "remediate_mock_3", "remediate_mock_3_new", "remediate_mock_3_old"),
             ("update_allowed_hosts", "remediate_mock_4", "remediate_mock_4_new", "remediate_mock_4_old"),
@@ -170,6 +169,11 @@ class TestFirewallRulesetsConfig:
         else:
             assert "old" not in result
             assert "new" not in result
+
+    def test_remediate_skipped(self):
+        mock_input = [self.mock_ruleset_1]
+        result = self.controller.remediate(self.context, mock_input)
+        assert result["status"] == "SKIPPED"
 
     def test_remediate_disable_ruleset_failed(self):
         mock_host_ref = MagicMock()
@@ -208,7 +212,6 @@ class TestFirewallRulesetsConfig:
         result = self.controller.remediate(self.context, mock_input)
         assert result["status"] == "FAILED"
         assert result["errors"] == self.mock_5_expected_errors
-
 
     def test_remediate_failed_ruleset_not_found_in_host(self):
         # mock_host_ref = MagicMock()

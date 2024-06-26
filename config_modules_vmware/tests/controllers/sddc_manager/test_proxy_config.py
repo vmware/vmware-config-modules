@@ -214,8 +214,8 @@ class TestProxyConfig:
 
     @patch('config_modules_vmware.framework.auth.contexts.sddc_manager_context.SDDCManagerContext')
     @patch('config_modules_vmware.framework.clients.sddc_manager.sddc_manager_rest_client.SDDCManagerRestClient')
-    def test_remediate_success_already_desired_api(self, mock_sddc_manager_rest_client, mock_sddc_manager_context):
-        expected_result = {consts.STATUS: RemediateStatus.SUCCESS}
+    def test_remediate_skipped_already_desired_api(self, mock_sddc_manager_rest_client, mock_sddc_manager_context):
+        expected_result = {consts.STATUS: RemediateStatus.SKIPPED, consts.ERRORS: ['Control already compliant']}
 
         mock_sddc_manager_rest_client.get_base_url.return_value = self.sddc_base_url
         mock_sddc_manager_rest_client.get_helper.side_effect = [self.get_helper_values]
@@ -227,8 +227,8 @@ class TestProxyConfig:
 
     @patch('config_modules_vmware.framework.auth.contexts.sddc_manager_context.SDDCManagerContext')
     @patch("builtins.open", new_callable=mock_open, read_data="lcm.depot.adapter.proxyEnabled=false\nlcm.depot.adapter.proxyHost=10.0.0.250\nlcm.depot.adapter.proxyPort=3128")
-    def test_remediate_success_already_desired_file(self, mock_open, mock_sddc_manager_context):
-        expected_result = {consts.STATUS: RemediateStatus.SUCCESS}
+    def test_remediate_skipped_already_desired_file(self, mock_open, mock_sddc_manager_context):
+        expected_result = {consts.STATUS: RemediateStatus.SKIPPED, consts.ERRORS: ['Control already compliant']}
         mock_sddc_manager_context.product_version = VCF_4_X_VERSION
 
         result = self.controller.remediate(mock_sddc_manager_context, self.compliant_values)

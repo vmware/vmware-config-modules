@@ -51,7 +51,7 @@ class TestPasswordReuseRestrictionPolicy:
                                                                self.option_string, self.desired_configs,
                                                                self.non_compliant_configs)
 
-    def test_remediate_with_already_compliant(self):
+    def test_remediate_skipped_with_already_compliant(self):
         HelperTestEsxAdvControls.helper_test_remediate_on_already_compliant_system(self.controller,
                                                                                      self.mock_host_ref,
                                                                                      self.option_string,

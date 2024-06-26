@@ -167,7 +167,7 @@ class TestDatastoreUniqueNamePolicy:
     @patch("config_modules_vmware.framework.auth.contexts.vc_context.VcenterContext")
     @patch("config_modules_vmware.framework.clients.vcenter.vc_vmomi_client.VcVmomiClient")
     def test_remediate_already_desired(self, mock_vc_vmomi_client, mock_vc_context):
-        expected_result = {consts.STATUS: RemediateStatus.SUCCESS}
+        expected_result = {consts.STATUS: RemediateStatus.SKIPPED, consts.ERRORS: ['Control already compliant']}
 
         mock_vc_vmomi_client.get_objects_by_vimtype.return_value = self.compliant_datastore_mocks
         mock_vc_context.vc_vmomi_client.return_value = mock_vc_vmomi_client

@@ -104,11 +104,15 @@ class BaseController(ABC):
             return {consts.STATUS: RemediateStatus.FAILED, consts.ERRORS: compliance_response.get(consts.ERRORS, [])}
 
         elif compliance_response.get(consts.STATUS) == ComplianceStatus.COMPLIANT:
-            # For compliant case, return SUCCESS.
-            return {consts.STATUS: RemediateStatus.SUCCESS}
+            # For compliant_status as "COMPLIANT", return remediation as skipped.
+            return {consts.STATUS: RemediateStatus.SKIPPED, consts.ERRORS: ["Control already compliant"]}
 
         elif compliance_response.get(consts.STATUS) == ComplianceStatus.SKIPPED:
-            return {consts.STATUS: RemediateStatus.SKIPPED}
+            # For compliance_status as "SKIPPED", return remediation as SKIPPED since no remediation was performed.
+            return {
+                consts.STATUS: RemediateStatus.SKIPPED,
+                consts.ERRORS: ["Remediation Skipped as Check compliance is SKIPPED"],
+            }
 
         elif compliance_response.get(consts.STATUS) != ComplianceStatus.NON_COMPLIANT:
             # Raise exception for unexpected compliance status (other than FAILED, COMPLIANT, NON_COMPLIANT).

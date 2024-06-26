@@ -94,6 +94,7 @@ class TestShellServicePolicy:
         self.host_service.serviceInfo.service = [MagicMock(key=ESXI_SERVICE_SHELL, running=False, policy="off")]
         result = self.controller.remediate(self.mock_host_context, self.compliant_value)
         expected_result = {
-            consts.STATUS: RemediateStatus.SUCCESS,
+            consts.STATUS: RemediateStatus.SKIPPED,
+            consts.ERRORS: ['Control already compliant']
         }
         assert result == expected_result

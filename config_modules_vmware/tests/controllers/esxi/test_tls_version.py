@@ -106,6 +106,7 @@ class TestTlsVersion:
         self.mock_host_ref.configManager.advancedOption.QueryOptions.return_value = option_values
         result = self.controller.remediate(HostContext(host_ref=self.mock_host_ref), self.desired_configs)
         expected_result = {
-            consts.STATUS: RemediateStatus.SUCCESS,
+            consts.STATUS: RemediateStatus.SKIPPED,
+            consts.ERRORS: ['Control already compliant']
         }
         assert result == expected_result
