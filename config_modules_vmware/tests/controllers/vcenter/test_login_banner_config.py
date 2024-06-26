@@ -82,10 +82,10 @@ class TestLogonBannerConfig:
 
     @patch('config_modules_vmware.framework.auth.contexts.vc_context.VcenterContext')
     @patch("config_modules_vmware.framework.utils.utils.run_shell_cmd")
-    def test_remediate_success_already_compliant(self, mock_execute_shell_cmd, mock_vc_context):
+    def test_remediate_skipped_already_compliant(self, mock_execute_shell_cmd, mock_vc_context):
         # Setup Mock objects for successfully changing the value.
 
-        expected_result = {consts.STATUS: RemediateStatus.SUCCESS}
+        expected_result = {consts.STATUS: RemediateStatus.SKIPPED, consts.ERRORS: ['Control already compliant']}
 
         mock_execute_shell_cmd.return_value = self.shell_cmd_set_return_success
 

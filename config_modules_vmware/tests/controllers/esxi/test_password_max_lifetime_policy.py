@@ -114,7 +114,8 @@ class HelperTestEsxAdvControls:
         mock_host_ref.configManager.advancedOption.QueryOptions.return_value = option_values
         result = controller.remediate(HostContext(host_ref=mock_host_ref), desired_configs)
         expected_result = {
-            consts.STATUS: RemediateStatus.SUCCESS,
+            consts.STATUS: RemediateStatus.SKIPPED,
+            consts.ERRORS: ['Control already compliant']
         }
         assert result == expected_result
 

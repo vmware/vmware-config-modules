@@ -131,8 +131,8 @@ class TestTaskAndEventRetentionPolicy:
 
     @patch("config_modules_vmware.framework.auth.contexts.vc_context.VcenterContext")
     @patch("config_modules_vmware.framework.clients.vcenter.vc_vmomi_client.VcVmomiClient")
-    def test_remediate_success_already_desired(self, mock_vc_vmomi_client, mock_vc_context):
-        expected_result = {consts.STATUS: RemediateStatus.SUCCESS}
+    def test_remediate_skipped_already_desired(self, mock_vc_vmomi_client, mock_vc_context):
+        expected_result = {consts.STATUS: RemediateStatus.SKIPPED, consts.ERRORS: ['Control already compliant']}
 
         mock_vc_vmomi_client.get_vpxd_option_value.side_effect = [
             self.compliant_value[DESIRED_TASK_CLEANUP_ENABLED_KEY],

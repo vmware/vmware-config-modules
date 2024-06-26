@@ -1,5 +1,5 @@
 # Copyright 2024 Broadcom. All Rights Reserved.
-from unittest.mock import patch
+from mock import patch
 
 from config_modules_vmware.framework.models.controller_models.metadata import ControllerMetadata
 from config_modules_vmware.services.workflows.operations_interface import OperationsInterface

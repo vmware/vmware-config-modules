@@ -1,18 +1,24 @@
 # Copyright 2024 Broadcom. All Rights Reserved.
+import os
+from pathlib import Path
+
 import pytest
 from mock import MagicMock
 from mock import patch
 
+from config_modules_vmware.controllers.vcenter.ntp_config import NtpConfig
 from config_modules_vmware.framework.auth.contexts.esxi_context import EsxiContext
 from config_modules_vmware.framework.models.controller_models.metadata import ControllerMetadata
 from config_modules_vmware.framework.models.output_models.compliance_response import ComplianceStatus
 from config_modules_vmware.framework.models.output_models.get_current_response import GetCurrentConfigurationStatus
 from config_modules_vmware.framework.models.output_models.remediate_response import RemediateStatus
+from config_modules_vmware.services.config import Config
 from config_modules_vmware.services.workflows.compliance_operations import ComplianceOperations
 from config_modules_vmware.services.workflows.operations_interface import Operations
 
 
 class TestComplianceOperations:
+
     def setup_method(self):
         self.context_mock = self.create_context_mock()
         self.esxi_context_mock = MagicMock(spec=EsxiContext)
@@ -43,8 +49,12 @@ class TestComplianceOperations:
                 }
             }
         }
+        os.environ['OVERRIDES_PATH'] = os.getcwd()
+        self.config_overrides_path = Path(os.getcwd()) / "config-overrides.ini"
+
     def teardown_method(self):
         self.validate_patch.stop()
+        os.remove(self.config_overrides_path) if os.path.exists(self.config_overrides_path) else None
 
     def create_context_mock(self):
         context_mock = MagicMock()
@@ -191,6 +201,7 @@ class TestComplianceOperations:
             logger_error_mock.assert_called_once_with("New value not present in config template for key "
                                                       "/dummy_control_not_present. Not continuing with "
                                                       "check_compliance operation")
+
     @patch('config_modules_vmware.services.mapper.mapper_utils.get_class')
     def test_get_current_items_partial_failure(self, get_class_mock):
         result_config = {}
@@ -472,7 +483,7 @@ class TestComplianceOperations:
     def test_check_compliance_metadata_disabled(self, logger_error_mock, get_class_mock, get_mapping_template_mock):
         expected_result = {
             'result': {'compliance_config': {'vcenter': {'ntp': {'status': ComplianceStatus.SKIPPED}}}},
-            'status': ComplianceStatus.COMPLIANT}
+            'status': ComplianceStatus.SKIPPED}
 
         class MockControllerCheckCompliance:
             metadata = ControllerMetadata(status=ControllerMetadata.ControllerStatus.DISABLED)
@@ -536,7 +547,7 @@ class TestComplianceOperations:
     def test_check_compliance_metadata_filter(self, logger_error_mock, get_class_mock, get_mapping_template_mock):
         expected_result = {
             'result': {'compliance_config': {'vcenter': {'ntp': {'status': ComplianceStatus.SKIPPED}}}},
-            'status': ComplianceStatus.COMPLIANT}
+            'status': ComplianceStatus.SKIPPED}
 
         class MockControllerCheckCompliance:
             metadata = ControllerMetadata(status=ControllerMetadata.ControllerStatus.ENABLED)
@@ -1152,7 +1163,7 @@ class TestComplianceOperations:
                     }
                 }
             },
-            'status': ComplianceStatus.COMPLIANT
+            'status': ComplianceStatus.SKIPPED
         }
         self.context_mock.product_category.value = "vcenter"
         input_values = {'compliance_config': {'esxi': {'password_max_lifetime': 10}}}
@@ -1174,7 +1185,7 @@ class TestComplianceOperations:
                     }
                 }
             },
-            'status': RemediateStatus.SUCCESS
+            'status': RemediateStatus.SKIPPED
         }
         self.context_mock.product_category.value = "vcenter"
         input_values = {'compliance_config': {'esxi': {'password_max_lifetime': 10}}}
@@ -1206,7 +1217,76 @@ class TestComplianceOperations:
         # Assert expected results
         expected_result = {
             "result": {'compliance_config': {'vcenter': {'ntp': {'status': RemediateStatus.SKIPPED, 'message': ["Manual remediation required"], "current": "test_current", "desired": "test_desired"}}}},
-            'status': RemediateStatus.SUCCESS
+            'status': RemediateStatus.SKIPPED
         }
         assert actual_result == expected_result
         logger_error_mock.assert_not_called()
+
+    def compliance_workflow_with_metadata(self, compliance_response, mock_controller_workflow, operation: Operations):
+        # Using ntp controller for the tests
+        mock_controller_workflow.return_value = compliance_response.copy()
+        Config._conf = None
+        # Enable metadata publishing
+        with open(self.config_overrides_path, "w") as fp:
+            fp.write(
+                """
+                [metadata]
+                PublishMetadata=true
+                """
+            )
+        compliance_response['metadata'] = NtpConfig.metadata.to_dict()
+        overall_compliance_status = RemediateStatus.SKIPPED \
+            if operation == Operations.REMEDIATE and compliance_response['status'] == RemediateStatus.SKIPPED \
+            else compliance_response['status']
+        compliance_expected_result = {
+            'status': overall_compliance_status,
+            'result': {
+                'compliance_config': {
+                    'vcenter': {
+                        'ntp': compliance_response
+                    }
+                }
+            }
+        }
+        compliance_result = ComplianceOperations.operate(
+            self.context_mock,
+            operation,
+            self.input_values,
+            None
+        )
+        assert compliance_result == compliance_expected_result
+
+    @patch('config_modules_vmware.controllers.vcenter.ntp_config.NtpConfig.check_compliance')
+    def test_check_compliance_metadata_addition(self, ntp_config):
+        compliant_response = {
+            'status': ComplianceStatus.COMPLIANT
+        }
+        self.compliance_workflow_with_metadata(compliant_response, ntp_config, Operations.CHECK_COMPLIANCE)
+        non_compliant_response = {
+            'status': ComplianceStatus.NON_COMPLIANT,
+            'current': {'servers': ['10.0.0.250']},
+            'desired': {'servers': ['10.0.0.250', '216.239.35.0']}
+        }
+        self.compliance_workflow_with_metadata(non_compliant_response, ntp_config, Operations.CHECK_COMPLIANCE)
+        failed_compliance_response = {
+            'status': 'FAILED',
+            'errors': ['failed to get ntp servers']
+        }
+        self.compliance_workflow_with_metadata(failed_compliance_response, ntp_config, Operations.CHECK_COMPLIANCE)
+
+    @patch('config_modules_vmware.controllers.vcenter.ntp_config.NtpConfig.remediate')
+    def test_remediate_metadata_addition(self, ntp_config):
+        remediate_response = {
+            'status': RemediateStatus.SKIPPED,
+        }
+        self.compliance_workflow_with_metadata(remediate_response, ntp_config, Operations.REMEDIATE)
+        remediate_response = {
+            'status': RemediateStatus.SUCCESS,
+            'old': {
+                'servers': ['10.0.0.250', '10.0.0.251']
+            },
+            'new': {
+                'servers': ['10.0.0.250']
+            }
+        }
+        self.compliance_workflow_with_metadata(remediate_response, ntp_config, Operations.REMEDIATE)

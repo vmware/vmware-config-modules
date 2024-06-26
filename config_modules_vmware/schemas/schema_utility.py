@@ -25,8 +25,11 @@ def retrieve_reference_schema(solution: str) -> dict:
 
     schema_path = os.path.join(os.path.dirname(__file__), solution_schema_mapping.get(solution.lower()))
     if os.path.exists(schema_path) and os.path.isfile(schema_path):
-        with open(schema_path, encoding="utf-8") as f:
-            return json.load(f)
+        try:
+            with open(schema_path, encoding="utf-8") as f:
+                return json.load(f)
+        except Exception as e:
+            raise Exception(f"Exception loading schema file: {e}") from e
     else:
         raise Exception(f"Missing schema file for {solution}")
 

@@ -273,7 +273,8 @@ class TestTlsVersion:
         mock_execute_shell_cmd.return_value = self.compliant_shell_cmd_return_val
         result = self.controller.remediate(mock_vc_context, self.desired_values_only_global)
         expected_result = {
-            consts.STATUS: RemediateStatus.SUCCESS
+            consts.STATUS: RemediateStatus.SKIPPED,
+            consts.ERRORS: ['Control already compliant']
         }
         assert result == expected_result
 

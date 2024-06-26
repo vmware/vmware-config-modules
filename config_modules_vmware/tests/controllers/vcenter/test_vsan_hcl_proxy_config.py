@@ -202,8 +202,8 @@ class TestVSANHCLProxyConfig:
 
     @patch("config_modules_vmware.framework.auth.contexts.vc_context.VcenterContext")
     @patch("config_modules_vmware.framework.clients.vcenter.vc_vsan_vmomi_client.VcVsanVmomiClient")
-    def test_remediate_success_already_desired(self, mock_vc_vsan_vmomi_client, mock_vc_context):
-        expected_result = {consts.STATUS: RemediateStatus.SUCCESS}
+    def test_remediate_skipped_already_desired(self, mock_vc_vsan_vmomi_client, mock_vc_context):
+        expected_result = {consts.STATUS: RemediateStatus.SKIPPED, consts.ERRORS: ['Control already compliant']}
 
         mock_vc_vsan_vmomi_client.get_all_vsan_enabled_clusters.return_value = self.all_vsan_enabled_mock_cluster_refs
         mock_vc_vsan_vmomi_client.get_vsan_proxy_config_for_cluster.side_effect = [

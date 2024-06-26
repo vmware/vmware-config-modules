@@ -277,7 +277,7 @@ class DVPortGroupForgedTransmitsPolicy(BaseController):
         result = self.check_compliance(context, desired_values)
 
         if result[consts.STATUS] == ComplianceStatus.COMPLIANT:
-            return {consts.STATUS: RemediateStatus.SUCCESS}
+            return {consts.STATUS: RemediateStatus.SKIPPED, consts.ERRORS: ["Control already compliant"]}
         elif result[consts.STATUS] == ComplianceStatus.NON_COMPLIANT:
             non_compliant_configs = result[consts.CURRENT]
             desired_configs = result[consts.DESIRED]

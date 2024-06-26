@@ -242,8 +242,8 @@ class TlsVersion(BaseController):
             return {consts.STATUS: RemediateStatus.FAILED, consts.ERRORS: compliance_response.get(consts.ERRORS, [])}
 
         elif compliance_response.get(consts.STATUS) == ComplianceStatus.COMPLIANT:
-            # For compliant case, return SUCCESS.
-            return {consts.STATUS: RemediateStatus.SUCCESS}
+            # For compliant case, return SKIPPED.
+            return {consts.STATUS: RemediateStatus.SKIPPED, consts.ERRORS: ["Control already compliant"]}
 
         elif compliance_response.get(consts.STATUS) != ComplianceStatus.NON_COMPLIANT:
             # Raise exception for unexpected compliance status (other than FAILED, COMPLIANT, NON_COMPLIANT).

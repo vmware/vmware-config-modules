@@ -14,6 +14,7 @@ from config_modules_vmware.framework.models.output_models.compliance_response im
 from config_modules_vmware.framework.models.output_models.get_current_response import GetCurrentConfigurationStatus
 from config_modules_vmware.framework.models.output_models.remediate_response import RemediateStatus
 from config_modules_vmware.schemas import schema_utility
+from config_modules_vmware.services.config import Config
 from config_modules_vmware.services.mapper import mapper_utils
 from config_modules_vmware.services.workflows.operations_interface import Operations
 from config_modules_vmware.services.workflows.operations_interface import OperationsInterface
@@ -116,9 +117,7 @@ class ComplianceOperations(OperationsInterface):
                 raise Exception(err_msg)
             schema_utility.validate_input_against_schema(input_values, "compliance")
             operation_output = {}
-            overall_status = (
-                RemediateStatus.SUCCESS if operation == Operations.REMEDIATE else ComplianceStatus.COMPLIANT
-            )
+            overall_status = RemediateStatus.SKIPPED if operation == Operations.REMEDIATE else ComplianceStatus.SKIPPED
             return cls._iterate_desired_state(
                 config_template,
                 input_values,
@@ -207,9 +206,17 @@ class ComplianceOperations(OperationsInterface):
                 return ComplianceStatus.FAILED
             elif control_status == ComplianceStatus.NON_COMPLIANT or overall_status == ComplianceStatus.NON_COMPLIANT:
                 return ComplianceStatus.NON_COMPLIANT
+            elif control_status == ComplianceStatus.COMPLIANT or overall_status == ComplianceStatus.COMPLIANT:
+                return ComplianceStatus.COMPLIANT
         else:
-            if control_status == RemediateStatus.FAILED or control_status == RemediateStatus.PARTIAL:
+            if (
+                control_status == RemediateStatus.FAILED
+                or control_status == RemediateStatus.PARTIAL
+                or overall_status == RemediateStatus.FAILED
+            ):
                 return RemediateStatus.FAILED
+            elif control_status == RemediateStatus.SUCCESS or overall_status == RemediateStatus.SUCCESS:
+                return RemediateStatus.SUCCESS
         return overall_status
 
     @classmethod
@@ -244,6 +251,7 @@ class ComplianceOperations(OperationsInterface):
 
         result_config[consts.COMPLIANCE_CONFIG] = {}
 
+        include_metadata_config = Config().get_section("metadata").getboolean("PublishMetadata", fallback=False)
         # Iterate over all the products and populate result config for the product
         for product in desired_state_spec[consts.COMPLIANCE_CONFIG]:
             result_config[consts.COMPLIANCE_CONFIG][product] = {}
@@ -285,15 +293,9 @@ class ComplianceOperations(OperationsInterface):
                                     operation == Operations.REMEDIATE.value
                                     and control_result.get(consts.STATUS) == RemediateStatus.SKIPPED
                                     and control_result.get(consts.ERRORS)
-                                    and control_result.get(consts.DESIRED)
-                                    and control_result.get(consts.CURRENT)
                                 ):
-                                    control_result = {
-                                        consts.STATUS: control_result.get(consts.STATUS),
-                                        consts.MESSAGE: control_result.get(consts.ERRORS),
-                                        consts.DESIRED: control_result.get(consts.DESIRED),
-                                        consts.CURRENT: control_result.get(consts.CURRENT),
-                                    }
+                                    control_result[consts.MESSAGE] = control_result.get(consts.ERRORS)
+                                    del control_result[consts.ERRORS]
                                 # For 'remediate' operation, only add the result in the result_config when there
                                 # are some changes done or some errors occurred or remediation is not implemented
                                 if (
@@ -302,11 +304,16 @@ class ComplianceOperations(OperationsInterface):
                                     or consts.NEW in control_result
                                     or consts.ERRORS in control_result
                                     or consts.MESSAGE in control_result
+                                    or include_metadata_config
                                 ):
                                     result_config[consts.COMPLIANCE_CONFIG][product][control_name] = control_result
-                                    overall_status = cls._update_overall_status(
-                                        operation, control_result.get(consts.STATUS), overall_status
-                                    )
+                                overall_status = cls._update_overall_status(
+                                    operation, control_result.get(consts.STATUS), overall_status
+                                )
+                            if include_metadata_config:
+                                result_config[consts.COMPLIANCE_CONFIG][product][control_name][
+                                    consts.METADATA
+                                ] = class_ref.metadata.to_dict()
                         except Exception as e:
                             logger.error(f"Exception in control {control_name} for {operation} operation {e}.")
                             result_config[consts.COMPLIANCE_CONFIG][product][control_name] = {

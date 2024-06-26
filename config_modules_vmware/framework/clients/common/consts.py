@@ -50,5 +50,6 @@ GLOBAL = "global"
 SKIPPED = "SKIPPED"
 REMEDIATION_SKIPPED_MESSAGE = "Remediation is not implemented as this control requires manual intervention."
 COMPLIANCE_CONFIG = "compliance_config"
+METADATA = "metadata"
 # Timestamp format
 DEFAULT_TIMESTAMP_FORMAT = "%Y-%m-%dT%H:%M:%S.%f"
