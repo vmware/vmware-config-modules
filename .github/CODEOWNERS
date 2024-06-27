@@ -1,0 +1,8 @@
+# VMWARE CONFIG MODULES CODE OWNERS
+# For more information on how to use this CODEOWNERS file, see
+# https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Each line is a file pattern, followed by one or more code owners or teams
+# Later lines take precedence.
+
+*   @vmware/vmware-config-modules-write
