@@ -15,6 +15,7 @@ from config_modules_vmware.framework.models.output_models.get_current_response i
 from config_modules_vmware.framework.models.output_models.output_response import OutputResponse
 from config_modules_vmware.framework.models.output_models.remediate_response import RemediateResponse
 from config_modules_vmware.framework.models.output_models.remediate_response import RemediateStatus
+from config_modules_vmware.interfaces.metadata_interface import ControllerMetadataInterface
 from config_modules_vmware.services.workflows.compliance_operations import ComplianceOperations
 from config_modules_vmware.services.workflows.configuration_operations import ConfigurationOperations
 from config_modules_vmware.services.workflows.operations_interface import Operations
@@ -27,6 +28,7 @@ class ControllerInterface:
 
     def __init__(self, context: BaseContext):
         self._context = context
+        ControllerMetadataInterface.load_custom_metadata_file()
 
     def get_current_configuration(
         self,

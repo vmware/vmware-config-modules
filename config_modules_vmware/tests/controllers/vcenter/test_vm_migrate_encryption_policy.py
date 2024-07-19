@@ -65,6 +65,13 @@ class TestVmMigrateEncryptionPolicy:
             {"vm_name": "ubuntu-dev-box", "migrate_encryption_policy": "disabled", "path": "SDDC-Datacenter/vm/dev"},
             {"vm_name": "vcenter-1", "migrate_encryption_policy": "disabled", "path": "SDDC-Datacenter/vm/Management VMs"}
         ]
+        self.remediate_failure_messages = [
+            "Failed to remediate VM: nsx-mgmt-1 - ",
+            "Failed to remediate VM: ms-sql-replica-1 - ",
+            "Failed to remediate VM: ms-sql-replica-2 - ",
+            "Failed to remediate VM: ubuntu-dev-box - ",
+            "Failed to remediate VM: vcenter-1 - "
+        ]
         # Pyvmomi type MagicMock objects
         self.mocked_vm_refs_compliant_overrides = self.create_all_vm_mock_refs(self.compliant_vm_configs_overrides)
         self.mocked_vm_refs_non_compliant_overrides = self.create_all_vm_mock_refs(self.compliant_vm_configs_overrides)
@@ -135,7 +142,7 @@ class TestVmMigrateEncryptionPolicy:
     @patch("config_modules_vmware.framework.auth.contexts.vc_context.VcenterContext")
     @patch("config_modules_vmware.framework.clients.vcenter.vc_vmomi_client.VcVmomiClient")
     def test_set_failed(self, mock_vc_vmomi_client, mock_vc_context):
-        expected_error = Exception("Failed to set VM migrate encryption policy")
+        expected_error = Exception("")
 
         mock_vc_vmomi_client.get_objects_by_vimtype.return_value = self.mocked_vm_refs_non_compliant
         mock_vc_vmomi_client.wait_for_task.side_effect = expected_error
@@ -143,7 +150,7 @@ class TestVmMigrateEncryptionPolicy:
 
         result, errors = self.controller.set(mock_vc_context, self.compliant_value)
         assert result == RemediateStatus.FAILED
-        assert errors == [str(expected_error)]
+        assert errors == self.remediate_failure_messages
 
     @patch("config_modules_vmware.framework.auth.contexts.vc_context.VcenterContext")
     @patch("config_modules_vmware.framework.clients.vcenter.vc_vmomi_client.VcVmomiClient")

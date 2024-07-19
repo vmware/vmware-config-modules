@@ -1009,11 +1009,14 @@
                 "value": {
                   "type": "object",
                   "properties": {
-                    "reserved_vlan_id_to_exclude": {
-                      "type": "number",
-                      "description": "Reserved VLAN ID to be excluded from port group configurations.",
-                      "minimum": 0,
-                      "maximum": 4094
+                    "reserved_vlan_ids_to_exclude": {
+                      "type": "array",
+                      "description": "Reserved VLAN IDs to be excluded from port group configurations.",
+                      "items": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 4094
+                      }
                     }
                   }
                 }
@@ -1771,6 +1774,22 @@
               ],
               "minProperties": 1,
               "additionalProperties": false
+            },
+            "managed_object_browser": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "boolean",
+                  "description": "Flag to enable/disable the managed object browser (MOB)"
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
             }
           },
           "minProperties": 1,
@@ -2148,38 +2167,8 @@
                   "$ref": "#/definitions/metadata"
                 },
                 "value": {
-                  "type": "object",
-                  "description": "Enable/Disable lcm proxy configuration.",
-                  "properties": {
-                    "proxy_enabled": {
-                      "type": "boolean",
-                      "description": "proxy enable flag"
-                    },
-                    "host": {
-                      "type": "string",
-                      "description": "host name for proxy"
-                    },
-                    "port": {
-                      "type": "number",
-                      "description": "Port number for proxy"
-                    }
-                  },
-                  "required": [
-                    "proxy_enabled"
-                  ],
-                  "if": {
-                    "properties": {
-                      "proxy_enabled": {
-                        "const": true
-                      }
-                    }
-                  },
-                  "then": {
-                    "required": [
-                      "host",
-                      "port"
-                    ]
-                  }
+                  "type": "boolean",
+                  "description": "proxy enable flag"
                 }
               },
               "required": [
@@ -2246,6 +2235,22 @@
               ],
               "additionalProperties": false
             },
+            "pg_vss_mac_change_accept": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "boolean",
+                  "description": "Flag to accept/reject mac change"
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
             "bridge_protocol_data_unit_filter": {
               "type": "object",
               "properties": {
@@ -2257,6 +2262,39 @@
                   "description": "Enable/Disable bridge protocol data unit filter (1 to enable, 0 to disable)",
                   "minimum": 0,
                   "maximum": 1
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "pg_vss_allow_promiscuous_mode": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "boolean",
+                  "description": "Flag to allow/reject guest promiscuous mode"
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "ssh_fips_140_2_crypt_config": {
+              "type": "object",
+              "title": "SSH daemon FIPS 140-2 validated cryptographic modules configuration for ESXi",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "boolean",
+                  "description": "Flag to enable/disable FIPS 140-2 validated cryptographic modules configuration"
                 }
               },
               "required": [
@@ -2280,6 +2318,69 @@
               "required": [
                 "value"
               ],
+              "additionalProperties": false
+            },
+            "suppress_shell_warning": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "number",
+                  "description": "Enable/Disable suppressing of warning for enabled local and remote shell access( 1 to enable, 0 to disable)",
+                  "minimum": 0,
+                  "maximum": 1
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "mem_share_force_salting_config": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "number",
+                  "description": "Memory share force salting config, 0-no salting or isolation between VMs, 1-share mem with VMs with same salt, 2-no inter VM share",
+                  "minimum": 0,
+                  "maximum": 2
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "dv_filter_bind_ip_config": {
+              "type": "object",
+              "title": "DvFilterBindIpAddress configuration for ESXi",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "object",
+                  "properties": {
+                    "security_appliance_ip": {
+                      "type": "string",
+                      "description": "blank string or security appliance IP address"
+                    }
+                  },
+                  "required": [
+                    "security_appliance_ip"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "minProperties": 1,
               "additionalProperties": false
             },
             "cim_service_policy": {
@@ -2469,7 +2570,7 @@
                         "on",
                         "off"
                       ],
-                      "description": "service policy should always be on"
+                      "description": "service policy: on/off"
                     }
                   },
                   "required": [
@@ -2482,6 +2583,79 @@
                 "value"
               ],
               "minProperties": 1,
+              "additionalProperties": false
+            },
+            "image_profile_acceptance_level": {
+              "type": "object",
+              "title": "Host image profile acceptance level configuration for ESXi",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "object",
+                  "properties": {
+                    "acceptance_level": {
+                      "type": "string",
+                      "enum": [
+                        "vmware_certified",
+                        "vmware_accepted",
+                        "partner",
+                        "community"
+                      ],
+                      "description": "image profile acceptance level"
+                    }
+                  },
+                  "required": [
+                    "acceptance_level"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "minProperties": 1,
+              "additionalProperties": false
+            },
+            "firewall_default_action_incoming": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "string",
+                  "description": "Firewall default action. DROP(or PASS) blocks(or allows) incoming traffic by default",
+                  "enum": [
+                    "DROP",
+                    "PASS"
+                  ]
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "firewall_default_action_outgoing": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "string",
+                  "description": "Firewall default action. DROP(or PASS) blocks(or allows) outgoing traffic by default",
+                  "enum": [
+                    "DROP",
+                    "PASS"
+                  ]
+                }
+              },
+              "required": [
+                "value"
+              ],
               "additionalProperties": false
             },
             "firewall_rulesets": {
@@ -2612,6 +2786,68 @@
               ],
               "additionalProperties": false
             },
+            "hostd_log_level": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "string",
+                  "description": "Setting to control the global log level",
+                  "enum": [
+                    "none",
+                    "quiet",
+                    "panic",
+                    "error",
+                    "warning",
+                    "info",
+                    "verbose",
+                    "trivia"
+                  ]
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "remote_log_server_config": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "array",
+                  "description": "Remote log servers",
+                  "items": {
+                    "type": "string",
+                    "pattern": "^\\s*(tcp|udp|ssl)://[a-zA-Z0-9.-]+:[0-9]+\\s*$"
+                  }
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "ssh_daemon_login_banner": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "string",
+                  "description": "Login banner for ssh daemon"
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
             "ssh_login_banner": {
               "type": "object",
               "properties": {
@@ -2621,6 +2857,22 @@
                 "value": {
                   "type": "string",
                   "description": "Login banner for ssh connection"
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "ad_esx_admin_group_config": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "string",
+                  "description": "ESX Admin group configuration"
                 }
               },
               "required": [
@@ -2670,6 +2922,81 @@
               ],
               "additionalProperties": false
             },
+            "lockdown_dcui_access_users": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "array",
+                  "description": "Local users with unconditional access to DCUI. These users can exit lockdown mode regardless of their privileges",
+                  "items": {
+                    "type": "string"
+                  },
+                  "minItems": 1,
+                  "uniqueItems": true
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "dcui_idle_timeout": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "number",
+                  "description": "An idle time in seconds before DCUI is automatically logout. Setting 0 disables the timeout",
+                  "minimum": 0,
+                  "maximum": 86400
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "host_client_session_idle_timeout": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "number",
+                  "description": "An idle time(in seconds) before host client session is automatically logout (0 disables timeout).",
+                  "minimum": 0,
+                  "maximum": 7200
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "interactive_shell_idle_timeout": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "number",
+                  "description": "An idle time(in seconds) before interactive shell is automatically logout (0 disables timeout). Takes effect only for new logged in sessions",
+                  "minimum": 0,
+                  "maximum": 86400
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
             "ssh_port_forwarding": {
               "type": "object",
               "properties": {
@@ -2701,10 +3028,130 @@
                 "value"
               ],
               "additionalProperties": false
+            },
+            "syslog_enforce_ssl_certificates": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "boolean",
+                  "description": "Enable/Disable enforcing checking of SSL certificates when transmitting messages to remote hosts"
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "rhttpproxy_fips_140_2_crypt_config": {
+              "type": "object",
+              "title": "FIPS 140-2 validated cryptographic modules configuration for ESXi rhttpproxy daemon",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "boolean",
+                  "description": "Flag to enable/disable FIPS 140-2 validated cryptographic modules for ESXi rhttpproxy daemon"
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "userworld_memory_zeroing_config": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "number",
+                  "description": "Flag to enable(1)/disable(0) volatile key destruction (Zero out userworld and guest memory pages immediately after free)",
+                  "minimum": 0,
+                  "maximum": 1
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "vim_api_session_timeout": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "number",
+                  "description": "Number of minutes until a VIM API session times out due to inactivity - set to zero to disable timeout. Applies to new sessions only.",
+                  "minimum": 0,
+                  "maximum": 2147483647
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
             }
           },
           "minProperties": 1,
-          "additionalProperties": false
+          "additionalProperties": false,
+          "if": {
+            "required": ["firewall_default_action_incoming", "firewall_default_action_outgoing"]
+          },
+          "then": {
+            "anyOf": [
+              {
+                "properties": {
+                  "firewall_default_action_incoming": {
+                    "properties": {
+                      "value": {
+                        "enum": [
+                          "DROP"
+                        ]
+                      }
+                    }
+                  },
+                  "firewall_default_action_outgoing": {
+                    "properties": {
+                      "value": {
+                        "enum": [
+                          "DROP"
+                        ]
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "properties": {
+                  "firewall_default_action_incoming": {
+                    "properties": {
+                      "value": {
+                        "enum": [
+                          "PASS"
+                        ]
+                      }
+                    }
+                  },
+                  "firewall_default_action_outgoing": {
+                    "properties": {
+                      "value": {
+                        "enum": [
+                          "PASS"
+                        ]
+                      }
+                    }
+                  }
+                }
+              }
+            ]
+          }
         },
         "vrslcm": {
           "type": "object",

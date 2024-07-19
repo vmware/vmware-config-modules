@@ -32,7 +32,6 @@
 * [`ProxyConfig`](sddc_manager.proxy_config.md)
   * [`ProxyConfig.get()`](sddc_manager.proxy_config.md#sddc_manager.proxy_config.ProxyConfig.get)
   * [`ProxyConfig.set()`](sddc_manager.proxy_config.md#sddc_manager.proxy_config.ProxyConfig.set)
-  * [`ProxyConfig.check_compliance()`](sddc_manager.proxy_config.md#sddc_manager.proxy_config.ProxyConfig.check_compliance)
 * [`UsersGroupsRolesConfig`](sddc_manager.users_groups_roles_config.md)
   * [`UsersGroupsRolesConfig.get()`](sddc_manager.users_groups_roles_config.md#sddc_manager.users_groups_roles_config.UsersGroupsRolesConfig.get)
   * [`UsersGroupsRolesConfig.set()`](sddc_manager.users_groups_roles_config.md#sddc_manager.users_groups_roles_config.UsersGroupsRolesConfig.set)

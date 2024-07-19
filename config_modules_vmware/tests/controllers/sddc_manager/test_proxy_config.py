@@ -23,13 +23,13 @@ class TestProxyConfig:
         self.mock_sddc_host_name = "mock-sddc.eng.vmware.com"
         self.sddc_base_url = SDDC_MANAGER_API_BASE.format(self.mock_sddc_host_name)
         # Desired
-        self.compliant_values = {"proxy_enabled": False, "host": "10.0.0.250", "port": 3128}
-        self.non_compliant_values = {"proxy_enabled": True, "host": "10.0.0.250", "port": 3128}
+        self.compliant_values = False
+        self.non_compliant_values = True
         self.get_helper_values = {"isEnabled": False, "isConfigured": True, "host": "10.0.0.250", "port": 3128}
         self.get_helper_non_compliant_values = {"isEnabled": True, "host": "10.0.0.250", "port": 3128}
-        self.put_helper_values = {"isEnabled": False, "isConfigured": True, "host": "10.0.0.250", "port": 3128}
-        self.file_read_values = {"lcm.depot.adapter.proxyEnabled=false", "lcm.depot.adapter.proxyHost=10.0.0.250", "lcm.depot.adapter.proxyPort=3128"}
-        self.file_write_values = {"lcm.depot.adapter.proxyEnabled=false", "lcm.depot.adapter.proxyHost=10.0.0.250", "lcm.depot.adapter.proxyPort=3128"}
+        self.put_helper_values = {"isEnabled": False}
+        self.file_read_values = {"lcm.depot.adapter.proxyEnabled=false"}
+        self.file_write_values = {"lcm.depot.adapter.proxyEnabled=false"}
 
     @patch('config_modules_vmware.framework.auth.contexts.sddc_manager_context.SDDCManagerContext')
     @patch('config_modules_vmware.framework.clients.sddc_manager.sddc_manager_rest_client.SDDCManagerRestClient')
@@ -63,7 +63,7 @@ class TestProxyConfig:
         mock_sddc_manager_context.product_version = VCF_4_5_X_X_VERSION
 
         result, errors = self.controller.get(mock_sddc_manager_context)
-        assert result == {}
+        assert result == None
         assert errors == [str(expected_error)]
 
     @patch('config_modules_vmware.framework.auth.contexts.sddc_manager_context.SDDCManagerContext')
@@ -73,7 +73,7 @@ class TestProxyConfig:
         mock_open.side_effect = [expected_error, ""]
         mock_sddc_manager_context.product_version = VCF_4_X_VERSION
         result, errors = self.controller.get(mock_sddc_manager_context)
-        assert result == {}
+        assert result == None
         assert errors == [str(expected_error)]
 
     @patch('config_modules_vmware.framework.auth.contexts.sddc_manager_context.SDDCManagerContext')
@@ -133,8 +133,6 @@ class TestProxyConfig:
     def test_check_compliance_compliant_api(self, mock_sddc_manager_rest_client, mock_sddc_manager_context):
         expected_result = {
                               consts.STATUS: ComplianceStatus.COMPLIANT,
-                              consts.CURRENT: self.compliant_values,
-                              consts.DESIRED: self.compliant_values
                           }
 
         mock_sddc_manager_rest_client.get_base_url.return_value = self.sddc_base_url
@@ -150,8 +148,6 @@ class TestProxyConfig:
     def test_check_compliance_compliant_file(self, mock_open, mock_sddc_manager_context):
         expected_result = {
                               consts.STATUS: ComplianceStatus.COMPLIANT,
-                              consts.CURRENT: self.compliant_values,
-                              consts.DESIRED: self.compliant_values
                           }
 
         mock_sddc_manager_context.product_version = VCF_4_X_VERSION

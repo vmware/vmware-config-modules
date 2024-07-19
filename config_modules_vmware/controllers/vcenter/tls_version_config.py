@@ -25,12 +25,12 @@ SCAN_COMMAND = "scan"
 UPDATE_COMMAND = "update"
 REGEX_PATTERN = r"\|\s*([^|]+)\s*\|\s*([^|]+)\s*\|\s*([^|]+)\s*\|"
 NOT_RUNNING = "NOT RUNNING"
+SERVICES_TO_BE_IGNORED = ["VC Storage Clients"]
 
 
 class TlsVersion(BaseController):
     """Class to implement get and set methods for configuring and enabling specified TLS versions.
-    For 4411 it supports multiple TLS versions - TLSv1.0, TLSv1.1, TLSv1.2
-    For 5x onwards only supported version is TLSv1.2
+    For vcenter versions 8.0.2 and above, control is not applicable.
 
     | Config Id - 1204
     | Config Title - The vCenter Server must enable TLS 1.2 exclusively.
@@ -62,63 +62,9 @@ class TlsVersion(BaseController):
             "VMWARE_DATA_DIR": "/storage",
             "VMWARE_CFG_DIR": "/etc/vmware",
             "VMWARE_RUNTIME_DATA_DIR": "/var",
-            "PATH": "/usr/sbin/",
+            "PATH": "/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/opt/vmware/bin",
         }
         return environment
-
-    def _generate_remediate_commands(self, services_to_tls_versions: Dict = None) -> List[str]:
-        """
-        Return list of commands to be executed for remediation.
-        :param services_to_tls_versions: Non-compliant services to tls versions data.
-        :type: dict
-        :return: List of remediation commands.
-        :rtype: list
-        """
-
-        if not services_to_tls_versions:
-            return []
-
-        tls_to_services = {}
-        for service, tls_versions in services_to_tls_versions.items():
-            if NOT_RUNNING not in tls_versions:
-                tls_key = tuple(sorted(tls_versions))
-                if tls_key not in tls_to_services:
-                    tls_to_services[tls_key] = [service]
-                else:
-                    tls_to_services[tls_key].append(service)
-
-        remediation_commands = []
-
-        # If all services require same TLS versions, use <script update -p [TLS versions]>
-        if len(tls_to_services) == 1:
-            tls_versions = list(tls_to_services.keys())[0]
-            command = "{} {} -p {} --quiet".format(
-                RECONFIGURE_VC_TLS_SCRIPT_PATH, UPDATE_COMMAND, " ".join(tls_versions)
-            )
-            remediation_commands.append(command)
-        else:
-            for tls_versions, services in sorted(tls_to_services.items()):
-                # Last command so restart the services
-                # Use command  <script update -s [services] -p [TLS versions] --quiet>
-                if len(remediation_commands) == len(tls_to_services) - 1:
-                    command = "{} {} -s {} -p {} --quiet".format(
-                        RECONFIGURE_VC_TLS_SCRIPT_PATH,
-                        UPDATE_COMMAND,
-                        " ".join(services),
-                        " ".join(tls_versions),
-                    )
-                else:
-                    # Add '--no-restart' for all the commands except last one.
-                    # Use command  <script update -s [services] -p [TLS versions] --quiet --no-restart>
-                    command = "{} {} -s {} -p {} --quiet --no-restart".format(
-                        RECONFIGURE_VC_TLS_SCRIPT_PATH,
-                        UPDATE_COMMAND,
-                        " ".join(services),
-                        " ".join(tls_versions),
-                    )
-                remediation_commands.append(command)
-
-        return remediation_commands
 
     def get(self, context: VcenterContext) -> Tuple[Dict[str, List[str]], List[str]]:
         """Get TLS versions for the services on vCenter.
@@ -130,8 +76,15 @@ class TlsVersion(BaseController):
         :rtype: Tuple
         """
         logger.info("Getting TLS versions for all the services.")
+
         errors = []
         tls_versions = {}
+
+        # Check product version, if product version is >= 8.0.2.x, this control is not applicable.
+        if utils.is_newer_or_same_version(context.product_version, "8.0.2"):
+            errors.append(consts.SKIPPED)
+            return tls_versions, errors
+
         try:
             command = "{} {}".format(RECONFIGURE_VC_TLS_SCRIPT_PATH, SCAN_COMMAND)
             _, tls_output_data, _ = utils.run_shell_cmd(command=f"{command}", env=self._get_environment_variables())
@@ -151,7 +104,8 @@ class TlsVersion(BaseController):
 
     def set(self, context: VcenterContext, desired_values) -> Tuple[str, List[Any]]:
         """
-        [High risk remediation]: Set requires restart of the services post changing the TLS version.
+        It is a high-risk remediation as it requires restart of services/vCenter.
+        Post updating the TLS versions, services are restarted as part of the implementation.
 
         :param context: Product context instance.
         :type context: VcenterContext
@@ -162,9 +116,34 @@ class TlsVersion(BaseController):
         """
         logger.info("Setting TLS versions for all the services.")
         errors = []
+
+        # Check product version, if product version is >= 8.0.2.x, this control is not applicable.
+        if utils.is_newer_or_same_version(context.product_version, "8.0.2"):
+            errors.append(consts.SKIPPED)
+            return RemediateStatus.SKIPPED, errors
+
         try:
-            services_to_tls_versions = desired_values
-            remediation_commands = self._generate_remediate_commands(services_to_tls_versions)
+            remediation_commands = []
+            if consts.GLOBAL in desired_values:
+                command = "{} {} -p {} --quiet".format(
+                    RECONFIGURE_VC_TLS_SCRIPT_PATH, UPDATE_COMMAND, " ".join(desired_values[consts.GLOBAL])
+                )
+                remediation_commands.append(command)
+            for service_key, tls_versions in desired_values.items():
+                if service_key == consts.GLOBAL:
+                    continue
+                command = "{} {} -s {} -p {} --quiet".format(
+                    RECONFIGURE_VC_TLS_SCRIPT_PATH,
+                    UPDATE_COMMAND,
+                    service_key,
+                    " ".join(tls_versions),
+                )
+                remediation_commands.append(command)
+
+            total_commands = len(remediation_commands)
+            for idx in range(total_commands - 1):
+                remediation_commands[idx] = remediation_commands[idx] + " --no-restart"
+
             logger.debug(f"remediation commands {remediation_commands}")
             for command in remediation_commands:
                 _, tls_output_data, _ = utils.run_shell_cmd(command=f"{command}", env=self._get_environment_variables())
@@ -186,11 +165,26 @@ class TlsVersion(BaseController):
         :rtype: Dict
         """
         logger.info("Running check compliance for vCenter TLS control")
+
         current, errors = self.get(context=context)
-        # If errors are seen during get, return "FAILED" status with errors.
         if errors:
+            if len(errors) == 1 and errors[0] == consts.SKIPPED:
+                return {
+                    consts.STATUS: ComplianceStatus.SKIPPED,
+                    consts.MESSAGE: "Control is not applicable on this product version",
+                }
+            # If errors are seen during get, return "FAILED" status with errors.
             return {consts.STATUS: ComplianceStatus.FAILED, consts.ERRORS: errors}
 
+        # If services from ignore_service_list are present in desired spec, fail the operation and report back.
+        not_supported_keys = [key for key in desired_values.keys() if key in SERVICES_TO_BE_IGNORED]
+        if not_supported_keys:
+            errors = []
+            for key in not_supported_keys:
+                errors.append(f"Can not override service '{key}' in desired spec. Desired spec needs to be fixed.")
+            return {consts.STATUS: ComplianceStatus.FAILED, consts.ERRORS: errors}
+
+        # If unknown services are present in desired spec, fail the operation and report back.
         missing_keys = [key for key in desired_values.keys() if key != consts.GLOBAL and key not in current]
         if missing_keys:
             errors = []
@@ -222,41 +216,4 @@ class TlsVersion(BaseController):
             }
         else:
             result = {consts.STATUS: ComplianceStatus.COMPLIANT}
-        return result
-
-    def remediate(self, context: VcenterContext, desired_values: Dict) -> Dict:
-        """
-        It is a high-risk remediation as it requires restart of services/vCenter.
-        Post updating the TLS versions, services are restarted as part of the implementation.
-
-        :param context: Product context instance.
-        :param desired_values: Desired value for the tls versions for the vCenter services.
-        :return: Dict of status and errors if any
-        """
-        logger.info("Running remediation for vCenter TLS control")
-        # Call check compliance and check for current compliance status.
-        compliance_response = self.check_compliance(context=context, desired_values=desired_values)
-
-        if compliance_response.get(consts.STATUS) == ComplianceStatus.FAILED:
-            # For compliance_status as "FAILED", return FAILED with errors.
-            return {consts.STATUS: RemediateStatus.FAILED, consts.ERRORS: compliance_response.get(consts.ERRORS, [])}
-
-        elif compliance_response.get(consts.STATUS) == ComplianceStatus.COMPLIANT:
-            # For compliant case, return SKIPPED.
-            return {consts.STATUS: RemediateStatus.SKIPPED, consts.ERRORS: ["Control already compliant"]}
-
-        elif compliance_response.get(consts.STATUS) != ComplianceStatus.NON_COMPLIANT:
-            # Raise exception for unexpected compliance status (other than FAILED, COMPLIANT, NON_COMPLIANT).
-            raise Exception("Error during remediation. Unexpected compliant status found.")
-
-        # Configs are non_compliant, call set to remediate them.
-        status, errors = self.set(context=context, desired_values=compliance_response.get(consts.DESIRED))
-        if not errors:
-            result = {
-                consts.STATUS: status,
-                consts.OLD: compliance_response.get(consts.CURRENT),
-                consts.NEW: compliance_response.get(consts.DESIRED),
-            }
-        else:
-            result = {consts.STATUS: RemediateStatus.FAILED, consts.ERRORS: errors}
         return result

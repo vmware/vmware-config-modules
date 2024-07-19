@@ -76,11 +76,12 @@ class AlarmSSOConfig(BaseController):
 
             # Fetch details of all the alarms for which any expression within an alarm has eventId : SSO_EVENT_ID
             for alarm_def in alarm_definitions:
-                for expression in alarm_def.info.expression.expression:
-                    if isinstance(expression, vim.alarm.EventAlarmExpression):
-                        if expression.eventTypeId == SSO_EVENT_ID:
-                            target_type = vc_alarms_utils.get_target_type(expression.objectType)
-                            alarms.append(vc_alarms_utils.get_alarm_details(alarm_def, target_type))
+                if hasattr(alarm_def.info.expression, "expression"):
+                    for expression in alarm_def.info.expression.expression:
+                        if isinstance(expression, vim.alarm.EventAlarmExpression):
+                            if expression.eventTypeId == SSO_EVENT_ID:
+                                target_type = vc_alarms_utils.get_target_type(expression.objectType)
+                                alarms.append(vc_alarms_utils.get_alarm_details(alarm_def, target_type))
             result = alarms
 
         except Exception as e:

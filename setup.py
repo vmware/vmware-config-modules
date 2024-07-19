@@ -23,7 +23,7 @@ def _parse_requirements(requirements_file):
 setup(
     name=config_modules_vmware.name,
     # duplicate information due to concourse pipeline requirement
-    version="0.0.12",
+    version="0.1.0.0",
     description=config_modules_vmware.description,
     author=config_modules_vmware.author,
     install_requires=_parse_requirements("requirements/prod-requirements.txt"),

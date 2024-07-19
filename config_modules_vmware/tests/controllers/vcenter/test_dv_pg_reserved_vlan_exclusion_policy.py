@@ -104,7 +104,7 @@ class TestDVPortGroupReservedVlanExclusionConfig:
         ]
         self.non_compliant_get_values = [utils.filter_dict_keys(val, DESIRED_KEYS_CHECK) for val in self.non_compliant_dv_pgs]
         self.compliant_value = {
-            "reserved_vlan_id_to_exclude": 1
+            "reserved_vlan_ids_to_exclude": [1, 2]
         }
         # Pyvmomi type MagicMock objects
         self.compliant_dv_pg_pyvmomi_mocks = [

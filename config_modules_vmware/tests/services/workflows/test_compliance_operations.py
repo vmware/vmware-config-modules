@@ -1021,7 +1021,7 @@ class TestComplianceOperations:
             'message': "Skipped for hosts - ['esxi-20.abc.local']"
         }
 
-        result = ComplianceOperations.operate(self.esxi_context_mock, Operations.REMEDIATE, self.esxi_input_values)
+        result = ComplianceOperations.operate(self.esxi_context_mock, Operations.CHECK_COMPLIANCE, self.esxi_input_values)
         # Assert expected results
         self.esxi_context_mock.vc_rest_client.return_value.get_filtered_hosts_info.assert_called_once_with(
             esxi_host_names=self.esxi_context_mock.esxi_host_names)
@@ -1132,7 +1132,7 @@ class TestComplianceOperations:
         self.esxi_context_mock.vc_vmomi_client.return_value.get_host_ref_for_moid.side_effect = \
             lambda moid: f"Ref-{moid}"
         expected_check_compliance_response = {
-            'status': RemediateStatus.SUCCESS,
+            'status': RemediateStatus.SKIPPED,
             'result': {
                 'esxi-20.abc.local': {
                     'status': RemediateStatus.SKIPPED,

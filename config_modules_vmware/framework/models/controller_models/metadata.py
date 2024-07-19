@@ -4,6 +4,7 @@ from enum import Enum
 
 from config_modules_vmware.framework.logging.logger_adapter import LoggerAdapter
 from config_modules_vmware.schemas import schema_utility
+from config_modules_vmware.services.config import Config
 
 logger = LoggerAdapter(logging.getLogger(__name__))
 
@@ -39,6 +40,7 @@ class ControllerMetadata:
         CONFIGURATION = "CONFIGURATION"
 
     REQUIRED_METADATA = ["name", "configuration_id", "path_in_schema", "title", "version", "products", "status"]
+    EXCLUDED_METADATA_FROM_DICT = ["_spec", "_custom_metadata"]
     ControllerMetadataTypes = {
         "name": str,
         "configuration_id": str,
@@ -55,6 +57,7 @@ class ControllerMetadata:
         "type": ControllerType,
         "spec": dict,
         "functional_test_targets": list,
+        "custom_metadata": dict,
     }
 
     def __init__(self, **kwargs):
@@ -73,6 +76,7 @@ class ControllerMetadata:
         self._scope = kwargs.get("scope")
         self._type = kwargs.get("type", ControllerMetadata.ControllerType.COMPLIANCE)
         self._functional_test_targets = kwargs.get("functional_test_targets", [])
+        self._custom_metadata = {}
 
         self._spec = self._get_spec_from_schema()
 
@@ -220,6 +224,15 @@ class ControllerMetadata:
     def spec(self, spec: str):
         self._spec = spec
 
+    @property
+    def custom_metadata(self):
+        """Any custom metadata provided by user to add or override defaults."""
+        return self._custom_metadata
+
+    @custom_metadata.setter
+    def custom_metadata(self, custom_metadata: dict):
+        self._custom_metadata = custom_metadata
+
     def _get_spec_from_schema(self):
         if self.type == ControllerMetadata.ControllerType.CONFIGURATION:
             compliance_schema = {}
@@ -254,10 +267,24 @@ class ControllerMetadata:
                     return False
         return True
 
-    def to_dict(self):
+    def to_dict(self, always_include_defaults=False):
+        """
+
+        :param always_include_defaults: Whether to include the built in attributes or only the custom ones.
+        If this is false, it will get the value from the config.ini.
+        It is mostly used for generating documentation.
+        :type always_include_defaults: bool
+        :return: Dictionary of the metadata attributes.
+        """
+        if not always_include_defaults:
+            custom_metadata_config = Config.get_section("metadata")
+            custom_metadata_only = custom_metadata_config.getboolean("IncludeOnlyCustomMetadata")
+            if custom_metadata_only:
+                return self._custom_metadata
         response_dict = {}
         for key, value in vars(self).items():
             if key.startswith("_"):
-                if key != "_spec":
+                if key not in self.EXCLUDED_METADATA_FROM_DICT:
                     response_dict[key[1:]] = value
+        response_dict.update(self._custom_metadata)
         return response_dict
