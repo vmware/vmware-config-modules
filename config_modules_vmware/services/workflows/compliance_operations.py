@@ -51,7 +51,7 @@ class ComplianceOperations(OperationsInterface):
         if isinstance(context, EsxiContext):
             default_status = {
                 Operations.CHECK_COMPLIANCE: ComplianceStatus.COMPLIANT,
-                Operations.REMEDIATE: RemediateStatus.SUCCESS,
+                Operations.REMEDIATE: RemediateStatus.SKIPPED,
                 Operations.GET_CURRENT: GetCurrentConfigurationStatus.SUCCESS,
             }[operation]
             result = {consts.STATUS: default_status}
@@ -359,13 +359,13 @@ class ComplianceOperations(OperationsInterface):
         skipped_hosts = []
         hosts_info = context.vc_rest_client().get_filtered_hosts_info(esxi_host_names=context.esxi_host_names)
         # Iterate over all the host_info and collect host_changes.
+        overall_status = result_config[consts.STATUS]
         for host_name, host_moid in hosts_info.items():
             if host_moid:
                 # TBD Make the below method _get_esxi_host_workflow_result to run as a thread task.
                 logger.info(f"Invoke workflow for host {host_name}.")
                 try:
                     host_result = cls._get_esxi_host_workflow_result(
-                        result_config=result_config,
                         desired_state_spec=desired_state_spec,
                         context=context,
                         operation=operation,
@@ -432,7 +432,17 @@ class ComplianceOperations(OperationsInterface):
                 and hosts_changes[host_name].get(consts.STATUS) != GetCurrentConfigurationStatus.SUCCESS
             ):
                 del hosts_changes[host_name]
+            if operation == Operations.CHECK_COMPLIANCE or operation == Operations.REMEDIATE:
+                # Update overall status. host_status acts as control status to decide overall status for the operation
+                # performed on list of hosts
+                host_status = hosts_changes.get(host_name, {}).get(consts.STATUS)
+                overall_status = cls._update_overall_status(
+                    operation=operation.value, control_status=host_status, overall_status=overall_status
+                )
+
         result_config[consts.RESULT] = hosts_changes
+        result_config[consts.STATUS] = overall_status
+
         # Set message
         if failed_hosts and skipped_hosts:
             result_config[
@@ -443,14 +453,18 @@ class ComplianceOperations(OperationsInterface):
         elif skipped_hosts:
             result_config[consts.MESSAGE] = f"Skipped for hosts - {skipped_hosts}"
 
-        # Have success and failed hosts
-        if failed_hosts and successful_hosts and operation == Operations.GET_CURRENT:
-            result_config[consts.STATUS] = GetCurrentConfigurationStatus.PARTIAL
+        # For GET_CURRENT operation, update the overall status based on list of failed/skipped/success hosts
+        if operation == Operations.GET_CURRENT:
+            if not failed_hosts:
+                result_config[consts.STATUS] = GetCurrentConfigurationStatus.SUCCESS
+            elif failed_hosts and successful_hosts:
+                result_config[consts.STATUS] = GetCurrentConfigurationStatus.PARTIAL
+            else:
+                result_config[consts.STATUS] = GetCurrentConfigurationStatus.FAILED
 
     @classmethod
     def _get_esxi_host_workflow_result(
         cls,
-        result_config: dict,
         desired_state_spec: dict,
         context: EsxiContext,
         operation: Operations,
@@ -460,7 +474,6 @@ class ComplianceOperations(OperationsInterface):
     ):
         """
         Get host_changes and status for the single host for the respective workflow.
-        :param result_config: Map to store result of each get configuration
         :param desired_state_spec: The input desired state spec.
         :param context: The Context that can be used by the config classes to retrieve value.
         :param operation: The operation to invoke.
@@ -489,14 +502,6 @@ class ComplianceOperations(OperationsInterface):
                 input_values=desired_state_spec,
                 metadata_filter=metadata_filter,
             )
-        default_status = {
-            Operations.CHECK_COMPLIANCE: ComplianceStatus.COMPLIANT,
-            Operations.REMEDIATE: RemediateStatus.SUCCESS,
-            Operations.GET_CURRENT: GetCurrentConfigurationStatus.SUCCESS,
-        }[operation]
-
-        if workflow_response.get(consts.STATUS) != default_status:
-            result_config[consts.STATUS] = workflow_response.get(consts.STATUS)
 
         host_result = {
             consts.STATUS: workflow_response.get(consts.STATUS),

@@ -86,11 +86,11 @@ Sample desired state
 
 #### check_compliance(context, desired_values)
 
-Check compliance of all dv port groups against reserved vlan id to be excluded from configuration.
+Check compliance of all dv port groups against reserved vlan ids to be excluded from configuration.
 
 * **Parameters:**
   * **context** (*VcenterContext*) – Product context instance.
-  * **desired_values** (*dict*) – Dict containing reserved VLAN ID to be excluded from port group configurations.
+  * **desired_values** (*dict*) – Dict containing reserved VLAN IDs to be excluded from port group configurations.
 * **Returns:**
   Dict of status and current/desired value(for non_compliant) or errors (for failure).
 * **Return type:**

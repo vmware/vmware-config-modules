@@ -21,7 +21,7 @@ logger = LoggerAdapter(logging.getLogger(__name__))
 
 # constants
 VLAN_KEY = "vlan"
-DESIRED_KEY = "reserved_vlan_id_to_exclude"
+DESIRED_KEY = "reserved_vlan_ids_to_exclude"
 SWITCH_NAME_KEY = "switch_name"
 PORT_GROUP_NAME_KEY = "port_group_name"
 NSX_BACKING_TYPE = "nsx"
@@ -140,20 +140,21 @@ class DVPortGroupReservedVlanExclusionConfig(BaseController):
                 vlan_config_non_nsx_non_uplink_dv_port_group_refs.append((dv_pg, vlan_config))
         return vlan_config_non_nsx_non_uplink_dv_port_group_refs
 
-    def __is_reserved_vlan_in_range(self, vlan_range: vim.NumericRange, reserved_vlan_id: int):
-        """Check if a given reserved vlan value lies in range of vlan trunk range.
+    def __is_reserved_vlan_in_range(self, vlan_range: vim.NumericRange, reserved_vlan_ids: List):
+        """Check if a list of reserved vlan values lie in range of vlan trunk range.
 
         :param vlan_range: vLan range configured for a dv port group.
         :type vlan_range:vim.NumericRange
-        :param reserved_vlan_id: reserved vlan id to check if it lies within given vlan range
-        :type reserved_vlan_id: int
+        :param reserved_vlan_ids: list of reserved vlan ids to check if they lie within given vlan range
+        :type reserved_vlan_id: list
         :return:
         """
         logger.info(f"Check if reserved vlan is part of vlan range {vlan_range}")
         start = vlan_range.start
         end = vlan_range.end
-        if start <= reserved_vlan_id <= end:
-            return True
+        for reserved_vlan_id in reserved_vlan_ids:
+            if start <= reserved_vlan_id <= end:
+                return True
         return False
 
     def __get_all_dv_port_vlan_configs(self, vc_vmomi_client: VcVmomiClient) -> List:
@@ -205,17 +206,17 @@ class DVPortGroupReservedVlanExclusionConfig(BaseController):
         return dv_pg_vlan_configs
 
     def __get_non_compliant_vlan_configs(self, dv_pg_vlan_configs: List, desired_values: dict) -> List:
-        """Get list of dv port groups with vlan configurations overlapping with reserved vlan id.
+        """Get list of dv port groups with vlan configurations overlapping with reserved vlan ids.
 
         :param dv_pg_vlan_configs: List of non-uplink, non-nsx port groups.
         :type dv_pg_vlan_configs: List
-        :param desired_values: Dict containing reserved VLAN ID to be excluded from port group configurations.
+        :param desired_values: Dict containing a list of reserved VLAN IDs to be excluded from port group configurations.
         :type desired_values: Dict
         :return: List of non-compliant vlan configs
         :rtype: List
         """
         non_compliant_dv_port_group_configs = []
-        reserved_vlan_to_exclude = desired_values.get(DESIRED_KEY)
+        reserved_vlans_to_exclude = desired_values.get(DESIRED_KEY)
         for dv_pg_vlan_config in dv_pg_vlan_configs:
             vlan_config = dv_pg_vlan_config[VLAN_KEY]
             # vlan trunk spec will be in list format Ex:["1-200", "205", "300-350"]
@@ -227,25 +228,25 @@ class DVPortGroupReservedVlanExclusionConfig(BaseController):
                         start = int(ranges[0])
                         end = int(ranges[1])
                         numeric_range = vim.NumericRange(start=start, end=end)
-                        if self.__is_reserved_vlan_in_range(numeric_range, reserved_vlan_to_exclude):
+                        if self.__is_reserved_vlan_in_range(numeric_range, reserved_vlans_to_exclude):
                             non_compliant_dv_port_group_configs.append(dv_pg_vlan_config)
                             break
                     # Trunk ranges might also have single numeric values like "200"
                     else:
-                        if int(vlan_range) == reserved_vlan_to_exclude:
+                        if int(vlan_range) in reserved_vlans_to_exclude:
                             non_compliant_dv_port_group_configs.append(dv_pg_vlan_config)
                             break
             elif isinstance(vlan_config, int):
-                if reserved_vlan_to_exclude == vlan_config:
+                if vlan_config in reserved_vlans_to_exclude:
                     non_compliant_dv_port_group_configs.append(dv_pg_vlan_config)
         return non_compliant_dv_port_group_configs
 
     def check_compliance(self, context: VcenterContext, desired_values: dict) -> Dict:
-        """Check compliance of all dv port groups against reserved vlan id to be excluded from configuration.
+        """Check compliance of all dv port groups against reserved vlan ids to be excluded from configuration.
 
         :param context: Product context instance.
         :type context: VcenterContext
-        :param desired_values: Dict containing reserved VLAN ID to be excluded from port group configurations.
+        :param desired_values: Dict containing reserved VLAN IDs to be excluded from port group configurations.
         :type desired_values: dict
         :return: Dict of status and current/desired value(for non_compliant) or errors (for failure).
         :rtype: Dict

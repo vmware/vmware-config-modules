@@ -47,7 +47,8 @@
       "cert_config": "config_modules_vmware.controllers.vcenter.cert_config.CertConfig",
       "logon_banner_config": "config_modules_vmware.controllers.vcenter.logon_banner_config.LogonBannerConfig",
       "tls_version": "config_modules_vmware.controllers.vcenter.tls_version_config.TlsVersion",
-      "ldap_identity_source_config": "config_modules_vmware.controllers.vcenter.ldap_identity_source_config.LdapIdentitySourceConfig"
+      "ldap_identity_source_config": "config_modules_vmware.controllers.vcenter.ldap_identity_source_config.LdapIdentitySourceConfig",
+      "managed_object_browser": "config_modules_vmware.controllers.vcenter.managed_object_browser.ManagedObjectBrowser"
     },
     "sddc_manager": {
       "ntp": "config_modules_vmware.controllers.sddc_manager.ntp_config.NtpConfig",
@@ -71,24 +72,45 @@
     },
     "esxi": {
       "firewall_rulesets": "config_modules_vmware.controllers.esxi.firewall_rulesets_config.FirewallRulesetsConfig",
+      "firewall_default_action_incoming": "config_modules_vmware.controllers.esxi.firewall_default_action_incoming.FirewallDefaultActionIncoming",
+      "firewall_default_action_outgoing": "config_modules_vmware.controllers.esxi.firewall_default_action_outgoing.FirewallDefaultActionOutgoing",
       "password_max_lifetime": "config_modules_vmware.controllers.esxi.password_max_lifetime_policy.PasswordMaxLifetimePolicy",
       "password_reuse_restriction": "config_modules_vmware.controllers.esxi.password_reuse_restriction_policy.PasswordReuseRestrictionPolicy",
       "managed_object_browser": "config_modules_vmware.controllers.esxi.managed_object_browser.ManagedObjectBrowser",
+      "pg_vss_mac_change_accept": "config_modules_vmware.controllers.esxi.pg_vss_mac_change_accept.PgVssMacChangeAccept",
       "bridge_protocol_data_unit_filter": "config_modules_vmware.controllers.esxi.bridge_protocol_data_unit_filter.BridgeProtocolDataUnitFilter",
+      "pg_vss_allow_promiscuous_mode": "config_modules_vmware.controllers.esxi.pg_vss_allow_promiscuous_mode.PgVssAllowPromiscuousMode",
       "suppress_hyperthread_warning": "config_modules_vmware.controllers.esxi.hyperthread_warning_policy.HyperthreadWarningPolicy",
+      "suppress_shell_warning": "config_modules_vmware.controllers.esxi.suppress_shell_warning_policy.SuppressShellWarningPolicy",
       "ntp_service_config": "config_modules_vmware.controllers.esxi.ntp_service_config.NtpServiceConfig",
       "ntp_service_startup_policy": "config_modules_vmware.controllers.esxi.ntp_service_startup_policy.NtpServiceStartupPolicy",
       "max_failed_login_attempts": "config_modules_vmware.controllers.esxi.max_failed_login_attempts.MaxFailedLoginAttempts",
       "account_unlock_time_interval": "config_modules_vmware.controllers.esxi.account_unlock_time_interval.AccountUnlockTimeInterval",
+      "hostd_log_level": "config_modules_vmware.controllers.esxi.hostd_log_level.HostdLogLevel",
+      "remote_log_server_config": "config_modules_vmware.controllers.esxi.remote_log_server_config.RemoteLogServerConfig",
+      "ssh_daemon_login_banner": "config_modules_vmware.controllers.esxi.ssh_daemon_login_banner.SshDaemonLoginBanner",
       "ssh_login_banner": "config_modules_vmware.controllers.esxi.ssh_login_banner.SshLoginBanner",
+      "ad_esx_admin_group_config": "config_modules_vmware.controllers.esxi.ad_esx_admin_group_config.AdEsxAdminGroupConfig",
+      "ssh_fips_140_2_crypt_config": "config_modules_vmware.controllers.esxi.ssh_fips_140_2_crypt_config.SshFips140_2CryptConfig",
       "dcui_login_banner": "config_modules_vmware.controllers.esxi.dcui_login_banner.DcuiLoginBanner",
       "ssh_port_forwarding": "config_modules_vmware.controllers.esxi.ssh_port_forwarding_policy.SshPortForwardingPolicy",
       "ssh_ignore_rhosts": "config_modules_vmware.controllers.esxi.ssh_ignore_rhosts_policy.SshIgnoreRHostsPolicy",
       "tls_version": "config_modules_vmware.controllers.esxi.tls_version.TlsVersion",
+      "lockdown_dcui_access_users": "config_modules_vmware.controllers.esxi.lockdown_dcui_access_users.LockdownDcuiAccessUsers",
+      "dcui_idle_timeout": "config_modules_vmware.controllers.esxi.dcui_idle_timeout.DcuiIdleTimeout",
+      "host_client_session_idle_timeout": "config_modules_vmware.controllers.esxi.host_client_session_idle_timeout.HostClientSessionIdleTimeout",
+      "interactive_shell_idle_timeout": "config_modules_vmware.controllers.esxi.interactive_shell_idle_timeout.InteractiveShellIdleTimeout",
+      "dv_filter_bind_ip_config": "config_modules_vmware.controllers.esxi.dv_filter_bind_ip_config.DvFilterBindIpConfig",
+      "image_profile_acceptance_level": "config_modules_vmware.controllers.esxi.image_profile_acceptance_level.ImageProfileAcceptanceLevel",
+      "mem_share_force_salting_config": "config_modules_vmware.controllers.esxi.mem_share_force_salting_config.MemShareForceSaltingConfig",
       "slp_service_policy": "config_modules_vmware.controllers.esxi.slp_service_policy.SlpServicePolicy",
       "snmp_service_policy": "config_modules_vmware.controllers.esxi.snmp_service_policy.SnmpServicePolicy",
       "shell_service_policy": "config_modules_vmware.controllers.esxi.shell_service_policy.ShellServicePolicy",
-      "cim_service_policy": "config_modules_vmware.controllers.esxi.cim_service_policy.CimServicePolicy"
+      "cim_service_policy": "config_modules_vmware.controllers.esxi.cim_service_policy.CimServicePolicy",
+      "syslog_enforce_ssl_certificates": "config_modules_vmware.controllers.esxi.syslog_enforce_ssl_certificates.SyslogEnforceSslCertificates",
+      "rhttpproxy_fips_140_2_crypt_config": "config_modules_vmware.controllers.esxi.rhttpproxy_fips_140_2_crypt_config.RHttpProxyFips140_2CryptConfig",
+      "userworld_memory_zeroing_config": "config_modules_vmware.controllers.esxi.userworld_memory_zeroing_config.UserworldMemoryZeroingConfig",
+      "vim_api_session_timeout": "config_modules_vmware.controllers.esxi.vim_api_session_timeout.VimApiSessionTimeout"
     }
   }
 }

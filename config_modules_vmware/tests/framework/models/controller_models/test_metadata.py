@@ -187,7 +187,7 @@ class TestMetadata:
                          'version': test_version,
                          'functional_test_targets': []}
 
-        assert test_controller_metadata.to_dict() == expected_dict
+        assert test_controller_metadata.to_dict(always_include_defaults=True) == expected_dict
 
     @patch('config_modules_vmware.schemas.schema_utility.retrieve_reference_schema')
     def test_to_dict_extra_args(self, mock_retrieve_schema):
@@ -226,4 +226,4 @@ class TestMetadata:
                          'version': test_version,
                          'functional_test_targets': []}
 
-        assert test_controller_metadata.to_dict() == expected_dict
+        assert test_controller_metadata.to_dict(always_include_defaults=True) == expected_dict

@@ -53,7 +53,9 @@ def docstring_processor_add_metadata(app, what, name, obj, options, lines):
         class_ref = mapper_utils.get_class(prefix + name)
         if isinstance(class_ref, BaseController) or not hasattr(class_ref, "metadata"):
             return
-        lines.append(code_block_text + json.dumps(class_ref.metadata.to_dict(), indent=2) + "\n````")
+        lines.append(
+            code_block_text + json.dumps(class_ref.metadata.to_dict(always_include_defaults=True), indent=2) + "\n````"
+        )
 
 
 def setup(app):

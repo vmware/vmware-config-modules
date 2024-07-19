@@ -30,6 +30,7 @@ Submodules
    vcenter.h5_client_session_timeout_config
    vcenter.ldap_identity_source_config
    vcenter.logon_banner_config
+   vcenter.managed_object_browser
    vcenter.ntp_config
    vcenter.snmp_v3_config
    vcenter.sso_active_directory_authentication_policy

@@ -42,7 +42,7 @@ class SshLoginBanner(BaseController):
         scope="",  # any information or limitations about how the controller operates. i.e. runs as a CLI on VCSA.
     )
 
-    def get(self, context: HostContext) -> Tuple[int, List[str]]:
+    def get(self, context: HostContext) -> Tuple[str, List[str]]:
         """Get ssh login banner for esxi host.
 
         :param context: ESX context instance.

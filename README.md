@@ -13,16 +13,17 @@ Config-modules is a library that can be utilized by services written in python t
 
 # Documentation Index
 
-| Document                                                                                      |
-|-----------------------------------------------------------------------------------------------|
-| 1. [Contributing and Getting Started](CONTRIBUTING.md)                                                         |
-| 2. [Instructions to Create New Controllers](docs/instructions-to-create-new-controllers.md)   |
-| 3. [Testing Controllers](docs/testing-controllers.md)                                         |
-| 4. [Controller Documentation](docs/controllers/markdown/index.md)                                  |
-| 5. [Interface Consumption](docs/interface-consumption.md)                                     |
-| 6. [Functional Test](functional_tests/README.md)                                              |
-| 7. [API Service Documentation](docs/api-service.md)                                        |
-| 8. [Building and Running in Docker](docs/docker-instructions.md)                           |
+| Document                                                                                    |
+|---------------------------------------------------------------------------------------------|
+| 1. [Contributing and Getting Started](CONTRIBUTING.md)                                      |
+| 2. [Configuration](docs/configuration.md)                                                   |
+| 3. [Instructions to Create New Controllers](docs/instructions-to-create-new-controllers.md) |
+| 4. [Testing Controllers](docs/testing-controllers.md)                                       |
+| 5. [Controller Documentation](docs/controllers/markdown/index.md)                           |
+| 6. [Metadata](docs/metadata.md)                                                             |
+| 7. [Functional Test](functional_tests/README.md)                                            |
+| 8. [API Service Documentation](docs/api-service.md)                                         |
+| 9. [Building and Running in Docker](docs/docker-instructions.md)                            |
 
 ## Directory Structure
 

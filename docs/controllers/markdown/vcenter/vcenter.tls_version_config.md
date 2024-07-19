@@ -3,8 +3,7 @@
 Bases: `BaseController`
 
 Class to implement get and set methods for configuring and enabling specified TLS versions.
-For 4411 it supports multiple TLS versions - TLSv1.0, TLSv1.1, TLSv1.2
-For 5x onwards only supported version is TLSv1.2
+For vcenter versions 8.0.2 and above, control is not applicable.
 
 Config Id - 1204
 <br/>
@@ -49,7 +48,8 @@ Get TLS versions for the services on vCenter.
 
 #### set(context, desired_values)
 
-[High risk remediation]: Set requires restart of the services post changing the TLS version.
+It is a high-risk remediation as it requires restart of services/vCenter.
+Post updating the TLS versions, services are restarted as part of the implementation.
 
 * **Parameters:**
   * **context** (*VcenterContext*) – Product context instance.
@@ -70,16 +70,3 @@ Check compliance of current configuration against provided desired values.
   Dict of status and current/desired value(for non_compliant) or errors (for failure).
 * **Return type:**
   Dict
-
-#### remediate(context, desired_values)
-
-It is a high-risk remediation as it requires restart of services/vCenter.
-Post updating the TLS versions, services are restarted as part of the implementation.
-
-* **Parameters:**
-  * **context** (*VcenterContext*) – Product context instance.
-  * **desired_values** (*Dict*) – Desired value for the tls versions for the vCenter services.
-* **Returns:**
-  Dict of status and errors if any
-* **Return type:**
-  *Dict*

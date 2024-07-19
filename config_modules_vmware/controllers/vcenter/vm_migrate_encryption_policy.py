@@ -154,7 +154,10 @@ class VmMigrateEncryptionPolicy(BaseController):
         errors = []
         status = RemediateStatus.SUCCESS
         try:
-            self.__set_vm_migrate_encryption_policy_for_all_non_compliant_vms(vc_vmomi_client, desired_values)
+            errors = self.__set_vm_migrate_encryption_policy_for_all_non_compliant_vms(vc_vmomi_client, desired_values)
+            if errors:
+                status = RemediateStatus.FAILED
+
         except Exception as e:
             logger.exception(f"An error occurred: {e}")
             errors.append(str(e))
@@ -184,7 +187,7 @@ class VmMigrateEncryptionPolicy(BaseController):
 
     def __set_vm_migrate_encryption_policy_for_all_non_compliant_vms(
         self, vc_vmomi_client: VcVmomiClient, desired_values: Dict
-    ) -> None:
+    ) -> List:
         """
         Set VM migrate Encryption policies for all non-compliant VMs.
 
@@ -192,12 +195,13 @@ class VmMigrateEncryptionPolicy(BaseController):
         :type vc_vmomi_client: VcVmomiClient
         :param desired_values: Dictionary containing VM migration Encryption policy.
         :type desired_values: Dict
-        :return:
-        :rtype: None
+        :return: list of errors if any
+        :rtype: list
         """
         desired_global_vm_migrate_encryption_policy = desired_values.get(GLOBAL, {}).get(DESIRED_KEY)
         overrides = desired_values.get(OVERRIDES, [])
         all_vm_refs = vc_vmomi_client.get_objects_by_vimtype(vim.VirtualMachine)
+        errors = []
 
         for vm_ref in all_vm_refs:
             vm_path = vc_vmomi_client.get_vm_path_in_datacenter(vm_ref)
@@ -219,13 +223,20 @@ class VmMigrateEncryptionPolicy(BaseController):
                 config_spec = vim.vm.ConfigSpec()
                 config_spec.migrateEncryption = desired_vm_migrate_policy
                 logger.info(f"Setting VM migrate policy {desired_vm_migrate_policy} on VM {vm_ref.name}")
-                task = vm_ref.ReconfigVM_Task(config_spec)
-                vc_vmomi_client.wait_for_task(task=task)
+                # continue to remediate next vm if hitting any errors
+                try:
+                    task = vm_ref.ReconfigVM_Task(config_spec)
+                    vc_vmomi_client.wait_for_task(task=task)
+                except Exception as e:
+                    logger.exception(f"An error occurred: {e}")
+                    errors.append(f"Failed to remediate VM: {vm_ref.name} - {str(e)}")
             else:
                 logger.info(
                     f"VM {vm_ref.name} already has desired migrate policy {desired_vm_migrate_policy},"
                     f" no remediation required."
                 )
+
+        return errors
 
     def __get_non_compliant_configs(self, vm_configs: List, desired_values: Dict) -> List:
         """
