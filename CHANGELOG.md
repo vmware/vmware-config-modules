@@ -1,4 +1,6 @@
 # CURRENTLY-IN-DEVELOPMENT
+# `v0.13.0.0`
+##### Released by codydouglasBC on Jul 23, 2024 @ 10:32 PM UTC
 ### New Controllers
   - ESXi Controllers
     - 105 - firewall_default_action_incoming
@@ -17,6 +19,8 @@
 ### Controller Enhancements
   - VCSA control 1234 - continue remediation when hitting error on one VM.
   - SDDC Manager control 1604 - remove host and port parameters.
+### Dependency Version Changes
+  - urllib3 pinned to 1.26.19
 # Initial Open Source Release!
 - Support for two controller types (Compliance and Configuration)
   - Compliance has support for 5 products and 77 Controllers
