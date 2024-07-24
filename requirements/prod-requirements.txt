@@ -11,3 +11,6 @@ lxml~=5.2.2
 #jsonschema~=4.22.0; python_version>="3.8"
 #jsonschema~=4.17.3; python_version<="3.7"
 jsonschema~=4.17.3
+
+#some VCF release doesn't have the updated ssl lib required by Urllib3 2.0.x. Urllib3 1.26.19 is validated to work properly
+urllib3~=1.26.19
