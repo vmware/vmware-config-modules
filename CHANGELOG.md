@@ -1,4 +1,8 @@
 # CURRENTLY-IN-DEVELOPMENT
+# `v0.13.1.0`
+##### Released by codydouglasBC on Jul 24, 2024 @ 10:56 PM UTC
+### Bug Fixes
+  - Description in setup.py was not formatted properly and blocked publishing to PyPi.
 # `v0.13.0.0`
 ##### Released by codydouglasBC on Jul 23, 2024 @ 10:32 PM UTC
 ### New Controllers

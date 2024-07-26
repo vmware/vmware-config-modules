@@ -23,11 +23,13 @@ def _parse_requirements(requirements_file):
 setup(
     name=config_modules_vmware.name,
     # duplicate information due to concourse pipeline requirement
-    version="0.13.0.0",
+    version="0.13.1.0",
     description=config_modules_vmware.description,
     author=config_modules_vmware.author,
     install_requires=_parse_requirements("requirements/prod-requirements.txt"),
     extras_require={"api": _parse_requirements("requirements/api-requirements.txt")},
     python_requires=">=3.7, <3.12.0",
     tests_require=_parse_requirements("requirements/unit-test-requirements.txt"),
+    long_description=read("README.md"),
+    long_description_content_type="text/markdown",
 )
