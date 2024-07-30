@@ -1,4 +1,8 @@
 # CURRENTLY-IN-DEVELOPMENT
+# `v0.13.2.0`
+##### Released by ravi-pratap-s on Jul 30, 2024 @ 08:42 PM UTC
+### Dependency Version Changes
+  - pyVmomi version downgraded to 7.0.3 inline with salt-ext dependency.
 # `v0.13.1.0`
 ##### Released by codydouglasBC on Jul 24, 2024 @ 10:56 PM UTC
 ### Bug Fixes
