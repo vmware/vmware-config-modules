@@ -200,19 +200,13 @@ the corresponding entry in the config mapping file would look like:
 
 For configuration type controls (i.e. vCenter Profiles), a separate mapping file is used - [configuration_mapping.json](../config_modules_vmware/services/mapper/configuration_mapping.json).
 
-This maps a product to a control depending on the product version. Each product can support multiple versions and each versions can be mapped to a different controller.
+This maps a product to a control. Each control can support multiple product versions. The control internally will fetch the product version and invoke the corresponding logic for that version.
 
 ```json
 {
-  "vcenter": {
-    "8.0.3": "config_modules_vmware.controllers.vcenter.vc_profile.VcProfile_v1"
-  }
+  "vcenter": "config_modules_vmware.controllers.vcenter.vc_profile.VcProfile"
 }
 ```
-
-In the above, VcProfile_v1 is applicable for 8.0.3. This product version is retrieved as part of the product version check API.
-
-The framework will retrieve the product version using product APIs and then invoke the right versioned controller.
 
 ### 5. Auto-generate documentation for the new controller
 Documentation for each controller is auto-generated based on the docstrings written in the class. Refer to the [SampleController](../config_modules_vmware/controllers/sample/sample_controller.py) for examples of how to format the docstrings. Documentation for the [SampleController](../config_modules_vmware/controllers/sample/sample_controller.py) is located at [sample.sample_controller.md](./controllers/markdown/sample/sample.sample_controller.md).

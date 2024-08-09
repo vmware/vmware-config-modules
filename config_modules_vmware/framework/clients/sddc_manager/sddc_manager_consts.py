@@ -14,6 +14,7 @@ SDDC_MANAGER_URL = "v1/sddc-managers"
 CREDENTIALS_URL = "v1/credentials"
 USERS_URL = "v1/users"
 ROLES_URL = "v1/roles"
+SSO_DOMAINS_URL = "v1/sso-domains"
 PROXY_URL = "v1/system/proxy-configuration"
 
 LOCAL_NTP_URL = "http://localhost/appliancemanager/ntp/configuration"

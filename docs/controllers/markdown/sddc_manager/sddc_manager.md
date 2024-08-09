@@ -35,3 +35,5 @@
 * [`UsersGroupsRolesConfig`](sddc_manager.users_groups_roles_config.md)
   * [`UsersGroupsRolesConfig.get()`](sddc_manager.users_groups_roles_config.md#sddc_manager.users_groups_roles_config.UsersGroupsRolesConfig.get)
   * [`UsersGroupsRolesConfig.set()`](sddc_manager.users_groups_roles_config.md#sddc_manager.users_groups_roles_config.UsersGroupsRolesConfig.set)
+  * [`UsersGroupsRolesConfig.check_compliance()`](sddc_manager.users_groups_roles_config.md#sddc_manager.users_groups_roles_config.UsersGroupsRolesConfig.check_compliance)
+  * [`UsersGroupsRolesConfig.remediate()`](sddc_manager.users_groups_roles_config.md#sddc_manager.users_groups_roles_config.UsersGroupsRolesConfig.remediate)

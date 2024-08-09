@@ -26,9 +26,7 @@ class TestConfigurationOperations:
 
     def create_config_template(self):
         return {
-          "vcenter": {
-            "8.0.3": "config_modules_vmware.controllers.vcenter.vc_profile.VcProfile"
-          }
+          "vcenter": "config_modules_vmware.controllers.vcenter.vc_profile.VcProfile"
         }
 
     @patch('config_modules_vmware.services.mapper.mapper_utils.get_mapping_template')

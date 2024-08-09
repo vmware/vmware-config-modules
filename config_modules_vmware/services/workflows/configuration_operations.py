@@ -93,26 +93,22 @@ class ConfigurationOperations(OperationsInterface):
             result = {consts.STATUS: skipped_status, consts.MESSAGE: msg}
         else:
             result = {}
-            product_version = context.product_version
-            supported_versions = config_template[context.product_category.value]
-            class_file = None
-            if product_version in supported_versions:
-                class_file = supported_versions[product_version]
-            if class_file is None:
-                msg = f"Version [{product_version}] is not supported for product [{context.product_category}]"
-                logger.info(msg)
-                result = {consts.STATUS: skipped_status, consts.MESSAGE: msg}
+            class_file = config_template[context.product_category.value]
+            class_ref = mapper_utils.get_class(class_file)
+            config_obj = class_ref()
+            if cls.should_skip_controller(class_ref, metadata_filter):
+                logger.debug(f"Skipping configuration {config_obj.metadata.name} with metadata filter")
+                result = {consts.STATUS: skipped_status}
             else:
-                class_ref = mapper_utils.get_class(class_file)
-                config_obj = class_ref()
-                if cls.should_skip_controller(class_ref, metadata_filter):
-                    logger.debug(f"Skipping configuration {config_obj.metadata.name} with metadata filter")
-                    result = {consts.STATUS: skipped_status}
-                else:
-                    if operation == Operations.GET_CURRENT:
-                        with ControllerMetadataLoggingContext(config_obj.metadata):
-                            output, errors = config_obj.get(context, input_values)
-                        if errors:
+                if operation == Operations.GET_CURRENT:
+                    with ControllerMetadataLoggingContext(config_obj.metadata):
+                        output, errors = config_obj.get(context, input_values)
+                    if errors:
+                        if len(errors) == 1 and errors[0] == consts.SKIPPED:
+                            msg = f"Version [{context.product_version}] is not supported for product [{context.product_category}]"
+                            logger.info(msg)
+                            result = {consts.STATUS: skipped_status, consts.MESSAGE: msg}
+                        else:
                             logger.error(
                                 f"Get current configuration for {config_obj.metadata.name} returned errors - {errors}"
                             )
@@ -120,13 +116,13 @@ class ConfigurationOperations(OperationsInterface):
                                 consts.STATUS: GetCurrentConfigurationStatus.FAILED,
                                 consts.MESSAGE: f"{errors[0]}" if len(errors) == 1 else f"{errors}",
                             }
-                        else:
-                            result = {consts.STATUS: GetCurrentConfigurationStatus.SUCCESS, consts.RESULT: output}
-                    elif operation == Operations.CHECK_COMPLIANCE:
-                        with ControllerMetadataLoggingContext(config_obj.metadata):
-                            result = config_obj.check_compliance(context, input_values)
-                    elif operation == Operations.REMEDIATE:
-                        with ControllerMetadataLoggingContext(config_obj.metadata):
-                            result = config_obj.remediate(context, input_values)
+                    else:
+                        result = {consts.STATUS: GetCurrentConfigurationStatus.SUCCESS, consts.RESULT: output}
+                elif operation == Operations.CHECK_COMPLIANCE:
+                    with ControllerMetadataLoggingContext(config_obj.metadata):
+                        result = config_obj.check_compliance(context, input_values)
+                elif operation == Operations.REMEDIATE:
+                    with ControllerMetadataLoggingContext(config_obj.metadata):
+                        result = config_obj.remediate(context, input_values)
 
         result_config.update(result)
