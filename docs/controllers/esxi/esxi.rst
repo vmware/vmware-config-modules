@@ -28,6 +28,8 @@ Submodules
    esxi.image_profile_acceptance_level
    esxi.interactive_shell_idle_timeout
    esxi.lockdown_dcui_access_users
+   esxi.lockdown_mode_config
+   esxi.lockdown_mode_exception_users
    esxi.managed_object_browser
    esxi.max_failed_login_attempts
    esxi.mem_share_force_salting_config
@@ -36,6 +38,7 @@ Submodules
    esxi.password_max_lifetime_policy
    esxi.password_reuse_restriction_policy
    esxi.pg_vss_allow_promiscuous_mode
+   esxi.pg_vss_forged_transmits_accept
    esxi.pg_vss_mac_change_accept
    esxi.remote_log_server_config
    esxi.rhttpproxy_fips_140_2_crypt_config
@@ -47,8 +50,10 @@ Submodules
    esxi.ssh_ignore_rhosts_policy
    esxi.ssh_login_banner
    esxi.ssh_port_forwarding_policy
+   esxi.ssh_service_policy
    esxi.suppress_shell_warning_policy
    esxi.syslog_enforce_ssl_certificates
+   esxi.syslog_strict_x509_compliance
    esxi.tls_version
    esxi.userworld_memory_zeroing_config
    esxi.vim_api_session_timeout

@@ -77,6 +77,27 @@ class TestVcenterController:
         assert desired_state.get("message") in response.json()[consts.ERRORS][0]["error"]["message"]
 
     @patch('config_modules_vmware.interfaces.controller_interface.ControllerInterface.get_current_configuration')
+    def test_get_configuration_skipped_response(self, controller_interface):
+        desired_state = {"status": "SKIPPED", "message": "Version [0.0.0] is not supported for product [vcenter]"}
+        controller_interface.return_value = desired_state
+        response = self.client.post(VC_GET_CONFIGURATION_V1, json={
+            "target": {
+                "hostname": "some_host",
+                "auth": [
+                    {
+                        "username": "sso_username",
+                        "password": "sso_password",
+                        "type": "SSO",
+                    }
+                ],
+            }
+        })
+        assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+        assert response.content is not None
+        assert response.json()[consts.STATUS] == GetConfigStatus.FAILED.value
+        assert desired_state.get("message") in response.json()[consts.ERRORS][0]["error"]["message"]
+
+    @patch('config_modules_vmware.interfaces.controller_interface.ControllerInterface.get_current_configuration')
     def test_get_configuration_failed_response(self, controller_interface):
         desired_state = {"status": "FAILED", "message": "All controls failed",
                          "result": {"desired_state": "sample"}}

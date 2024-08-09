@@ -1,7 +1,7 @@
 # Copyright 2024 Broadcom. All Rights Reserved.
 import copy
 
-from mock import patch
+from mock import MagicMock
 
 from config_modules_vmware.controllers.vcenter.utils.vc_profile_utils import REMEDIATION_COMPONENT_UNAVAILABLE
 from config_modules_vmware.controllers.vcenter.vc_profile import VcProfile
@@ -22,6 +22,13 @@ class TestVcProfile:
         # VC API Base url
         self.mock_vc_host_name = "mock-vc.eng.vmware.com"
         self.vc_base_url = VC_API_BASE.format(self.mock_vc_host_name)
+
+        self.mock_vc_rest_client = MagicMock()
+        self.mock_vc_rest_client.get_base_url.return_value = self.vc_base_url
+
+        self.mock_vc_context = self.create_context_mock()
+        self.mock_vc_context.vc_rest_client.return_value = self.mock_vc_rest_client
+        self.mock_vc_context.hostname = self.mock_vc_host_name
 
         self.vc_profile_current = {
             "appliance": {
@@ -92,88 +99,100 @@ class TestVcProfile:
                                                             "desired_value": 10,
                                                             "key": "appliance/access_settings/shell/timeout"}]}
 
-    @patch('config_modules_vmware.framework.auth.contexts.vc_context.VcenterContext')
-    @patch('config_modules_vmware.framework.clients.vcenter.vc_rest_client.VcRestClient')
-    def test_get_success(self, mock_vc_rest_client, mock_vc_context):
+    def create_context_mock(self):
+        context_mock = MagicMock()
+        context_mock.product_category = "vcenter"
+        return context_mock
+
+    def test_get_skipped(self):
+        self.mock_vc_context.product_version = "8.0.2"
+        result, errors = self.controller.get(self.mock_vc_context)
+        assert result == {}
+        assert errors == [consts.SKIPPED]
+
+    def get_success(self, version):
         vc_profile = {"foo": "bar"}
-        mock_vc_rest_client.get_base_url.return_value = self.vc_base_url
-        mock_vc_rest_client.get_helper.return_value = vc_profile
-        mock_vc_context.vc_rest_client.return_value = mock_vc_rest_client
+        self.mock_vc_context.product_version = version
+        self.mock_vc_rest_client.get_helper.return_value = vc_profile
 
-        result, errors = self.controller.get(mock_vc_context)
+        result, errors = self.controller.get(self.mock_vc_context)
 
-        mock_vc_rest_client.get_helper.assert_called_once_with(
-            f"{self.vc_base_url}{vc_consts.VC_PROFILE_CURRENT_URL}"
+        self.mock_vc_rest_client.get_helper.assert_called_once_with(
+            f"{self.vc_base_url}{vc_consts.VC_PROFILE_SETTINGS_URL}"
             f"&components=AuthManagement&components=Appliance"
         )
         assert result == vc_profile
         assert not errors
 
-    @patch('config_modules_vmware.framework.auth.contexts.vc_context.VcenterContext')
-    @patch('config_modules_vmware.framework.clients.vcenter.vc_rest_client.VcRestClient')
-    def test_get_success_with_template(self, mock_vc_rest_client, mock_vc_context):
+    def test_get_success_8_0_3(self):
+        self.get_success("8.0.3")
+
+    def test_get_success_8_0_4(self):
+        self.get_success("8.0.4")
+
+    def test_get_success_8_1_0(self):
+        self.get_success("8.1.0")
+
+    def test_get_success_with_template_8_0_3(self):
         vc_profile = {"foo": "bar"}
-        mock_vc_rest_client.get_base_url.return_value = self.vc_base_url
-        mock_vc_rest_client.get_helper.return_value = vc_profile
-        mock_vc_context.vc_rest_client.return_value = mock_vc_rest_client
+        self.mock_vc_context.product_version = "8.0.3"
+        self.mock_vc_rest_client.get_helper.return_value = vc_profile
         template = {
             'authmgmt': {}
         }
 
-        result, errors = self.controller.get(mock_vc_context, template)
+        result, errors = self.controller.get(self.mock_vc_context, template)
 
-        mock_vc_rest_client.get_helper.assert_called_once_with(
-            f"{self.vc_base_url}{vc_consts.VC_PROFILE_CURRENT_URL}"
+        self.mock_vc_rest_client.get_helper.assert_called_once_with(
+            f"{self.vc_base_url}{vc_consts.VC_PROFILE_SETTINGS_URL}"
             f"&components=AuthManagement"
         )
         assert result == template
         assert not errors
 
-    @patch('config_modules_vmware.framework.auth.contexts.vc_context.VcenterContext')
-    @patch('config_modules_vmware.framework.clients.vcenter.vc_rest_client.VcRestClient')
-    def test_get_failed(self, mock_vc_rest_client, mock_vc_context):
+    def test_get_failed_8_0_3(self):
         expected_error = Exception("Exception while getting current VC profile")
 
-        mock_vc_rest_client.get_base_url.return_value = self.vc_base_url
-        mock_vc_rest_client.get_helper.side_effect = expected_error
-        mock_vc_context.vc_rest_client.return_value = mock_vc_rest_client
+        self.mock_vc_context.product_version = "8.0.3"
+        self.mock_vc_rest_client.get_helper.side_effect = expected_error
 
-        result, errors = self.controller.get(mock_vc_context)
+        result, errors = self.controller.get(self.mock_vc_context)
 
-        mock_vc_rest_client.get_helper.assert_called_once_with(
-            f"{self.vc_base_url}{vc_consts.VC_PROFILE_CURRENT_URL}"
+        self.mock_vc_rest_client.get_helper.assert_called_once_with(
+            f"{self.vc_base_url}{vc_consts.VC_PROFILE_SETTINGS_URL}"
             f"&components=AuthManagement&components=Appliance"
         )
         assert result == {}
         assert errors == [str(expected_error)]
 
-    @patch('config_modules_vmware.framework.auth.contexts.vc_context.VcenterContext')
-    @patch('config_modules_vmware.framework.clients.vcenter.vc_rest_client.VcRestClient')
-    def test_get_failed(self, mock_vc_rest_client, mock_vc_context):
+    def test_get_invalid_component_8_0_3(self):
         expected_error = "Unsupported component 'invalid' in template"
         template = {
             'authmgmt': {},
             'invalid': {}
         }
 
-        mock_vc_rest_client.get_base_url.return_value = self.vc_base_url
-        mock_vc_context.vc_rest_client.return_value = mock_vc_rest_client
+        self.mock_vc_context.product_version = "8.0.3"
 
-        result, errors = self.controller.get(mock_vc_context, template)
+        result, errors = self.controller.get(self.mock_vc_context, template)
 
-        mock_vc_rest_client.get_helper.assert_not_called()
+        self.mock_vc_rest_client.get_helper.assert_not_called()
         assert result == {}
         assert errors == [expected_error]
 
-    @patch('config_modules_vmware.framework.auth.contexts.vc_context.VcenterContext')
-    def test_set_skipped(self, mock_vc_context):
-        expected_result = RemediateStatus.SKIPPED, [consts.REMEDIATION_SKIPPED_MESSAGE]
-        assert self.controller.set(mock_vc_context, {}) == expected_result
+    def test_get_skipped_9_0(self):
+        self.mock_vc_context.product_version = "9.0.0"
+        result, errors = self.controller.get(self.mock_vc_context)
+        assert result == {}
+        assert errors == [consts.SKIPPED]
 
-    @patch('config_modules_vmware.framework.auth.contexts.vc_context.VcenterContext')
-    def test_remediate_skipped(self, mock_vc_context):
+    def test_set_skipped(self):
+        expected_result = RemediateStatus.SKIPPED, [consts.REMEDIATION_SKIPPED_MESSAGE]
+        assert self.controller.set(self.mock_vc_context, {}) == expected_result
+
+    def test_remediate_skipped(self):
         expected_result = {consts.STATUS: RemediateStatus.SKIPPED, consts.ERRORS: [consts.REMEDIATION_SKIPPED_MESSAGE]}
-        assert self.controller.remediate(mock_vc_context, {}) == expected_result
+        assert self.controller.remediate(self.mock_vc_context, {}) == expected_result
 
     def test_populate_template(self):
         current_value = {
@@ -239,35 +258,56 @@ class TestVcProfile:
         self.controller._populate_template(current_value, template)
         assert template == expected_result
 
-    @patch('config_modules_vmware.framework.auth.contexts.vc_context.VcenterContext')
-    @patch('config_modules_vmware.framework.clients.vcenter.vc_rest_client.VcRestClient')
-    def test_check_compliance_success(self, mock_vc_rest_client, mock_vc_context):
-        mock_vc_rest_client.get_base_url.return_value = self.vc_base_url
-        mock_vc_rest_client.get_helper.return_value = self.vc_profile_current
-        mock_vc_rest_client.post_helper.return_value = "test_task_id"
-        mock_vc_rest_client.wait_for_cis_task_completion.return_value = self.mock_task_response
-        mock_vc_context.vc_rest_client.return_value = mock_vc_rest_client
-        expected_result = self.mock_drift_spec_response
-        result = self.controller.check_compliance(mock_vc_context, self.input_desired_value)
+    def test_check_compliance_skipped(self):
+        self.mock_vc_context.product_version = "8.0.2"
+        expected_error_msg = "Version [8.0.2] is not supported for product [vcenter]"
+        result = self.controller.check_compliance(self.mock_vc_context, self.input_desired_value)
 
-        mock_vc_rest_client.post_helper.assert_called_once_with(
+        assert result["status"] == ComplianceStatus.FAILED
+        assert len(result["message"]["errors"]) == 1
+        assert result["message"]["errors"][0]["error"] == Message(message=expected_error_msg).to_dict()
+
+    def test_check_compliance_skipped_9_0(self):
+        self.mock_vc_context.product_version = "9.0.0"
+        expected_error_msg = "Version [9.0.0] is not supported for product [vcenter]"
+        result = self.controller.check_compliance(self.mock_vc_context, self.input_desired_value)
+
+        assert result["status"] == ComplianceStatus.FAILED
+        assert len(result["message"]["errors"]) == 1
+        assert result["message"]["errors"][0]["error"] == Message(message=expected_error_msg).to_dict()
+
+    def check_compliance_success(self, version):
+        self.mock_vc_context.product_version = version
+        self.mock_vc_rest_client.get_helper.return_value = self.vc_profile_current
+        self.mock_vc_rest_client.post_helper.return_value = "test_task_id"
+        self.mock_vc_rest_client.wait_for_cis_task_completion.return_value = self.mock_task_response
+        expected_result = self.mock_drift_spec_response
+        result = self.controller.check_compliance(self.mock_vc_context, self.input_desired_value)
+
+        self.mock_vc_rest_client.post_helper.assert_called_once_with(
             url = f"{self.vc_base_url}{vc_consts.DESIRED_STATE_SCAN_URL}",
             body = {"desired_state": self.expected_merged_spec}
         )
         assert result["result"]["result"] == expected_result
 
-    @patch('config_modules_vmware.framework.auth.contexts.vc_context.VcenterContext')
-    @patch('config_modules_vmware.framework.clients.vcenter.vc_rest_client.VcRestClient')
-    def test_check_compliance_task_timedout(self, mock_vc_rest_client, mock_vc_context):
-        mock_vc_rest_client.get_base_url.return_value = self.vc_base_url
-        mock_vc_rest_client.get_helper.return_value = self.vc_profile_current
-        mock_vc_rest_client.post_helper.return_value = "test_task_id"
-        mock_vc_rest_client.wait_for_cis_task_completion.side_effect = Exception("Task[test_task_id] timed out. Timeout duration [1s]")
-        mock_vc_context.vc_rest_client.return_value = mock_vc_rest_client
+    def test_check_compliance_success_8_0_3(self):
+        self.check_compliance_success("8.0.3")
+
+    def test_check_compliance_success_8_0_4(self):
+        self.check_compliance_success("8.0.4")
+
+    def test_check_compliance_success_8_1_0(self):
+        self.check_compliance_success("8.1.0")
+
+    def test_check_compliance_task_timedout(self):
+        self.mock_vc_context.product_version = "8.0.3"
+        self.mock_vc_rest_client.get_helper.return_value = self.vc_profile_current
+        self.mock_vc_rest_client.post_helper.return_value = "test_task_id"
+        self.mock_vc_rest_client.wait_for_cis_task_completion.side_effect = Exception("Task[test_task_id] timed out. Timeout duration [1s]")
         expected_error_msg = "Task[test_task_id] timed out. Timeout duration [1s]"
-        result = self.controller.check_compliance(mock_vc_context, self.input_desired_value)
+        result = self.controller.check_compliance(self.mock_vc_context, self.input_desired_value)
 
-        mock_vc_rest_client.post_helper.assert_called_once_with(
+        self.mock_vc_rest_client.post_helper.assert_called_once_with(
             url=f"{self.vc_base_url}{vc_consts.DESIRED_STATE_SCAN_URL}",
             body={"desired_state": self.expected_merged_spec}
         )
@@ -275,19 +315,16 @@ class TestVcProfile:
         assert len(result["message"]["errors"]) == 1
         assert result["message"]["errors"][0]["error"] == Message(message=expected_error_msg).to_dict()
 
-    @patch('config_modules_vmware.framework.auth.contexts.vc_context.VcenterContext')
-    @patch('config_modules_vmware.framework.clients.vcenter.vc_rest_client.VcRestClient')
-    def test_check_compliance_task_status_unknown(self, mock_vc_rest_client, mock_vc_context):
-        mock_vc_rest_client.get_base_url.return_value = self.vc_base_url
-        mock_vc_rest_client.get_helper.return_value = self.vc_profile_current
-        mock_vc_rest_client.post_helper.return_value = "test_task_id"
-        mock_vc_rest_client.wait_for_cis_task_completion.side_effect = Exception(
+    def test_check_compliance_task_status_unknown(self):
+        self.mock_vc_context.product_version = "8.0.3"
+        self.mock_vc_rest_client.get_helper.return_value = self.vc_profile_current
+        self.mock_vc_rest_client.post_helper.return_value = "test_task_id"
+        self.mock_vc_rest_client.wait_for_cis_task_completion.side_effect = Exception(
             "Task[test_task_id] returned an invalid status UNKNOWN")
-        mock_vc_context.vc_rest_client.return_value = mock_vc_rest_client
         expected_error_msg = "Task[test_task_id] returned an invalid status UNKNOWN"
-        result = self.controller.check_compliance(mock_vc_context, self.input_desired_value)
+        result = self.controller.check_compliance(self.mock_vc_context, self.input_desired_value)
 
-        mock_vc_rest_client.post_helper.assert_called_once_with(
+        self.mock_vc_rest_client.post_helper.assert_called_once_with(
             url=f"{self.vc_base_url}{vc_consts.DESIRED_STATE_SCAN_URL}",
             body={"desired_state": self.expected_merged_spec}
         )
@@ -295,24 +332,19 @@ class TestVcProfile:
         assert len(result["message"]["errors"]) == 1
         assert result["message"]["errors"][0]["error"] == Message(message=expected_error_msg).to_dict()
 
-    @patch('config_modules_vmware.framework.auth.contexts.vc_context.VcenterContext')
-    @patch('config_modules_vmware.framework.clients.vcenter.vc_rest_client.VcRestClient')
-    def test_check_compliance_task_failed(self, mock_vc_rest_client, mock_vc_context):
+    def test_check_compliance_task_failed(self):
         mock_task_response = copy.deepcopy(self.mock_task_response)
         mock_task_response["status"] = "FAILED"
         mock_task_response["error"] = "Test failure"
 
-        mock_vc_rest_client.get_base_url.return_value = self.vc_base_url
-        mock_vc_rest_client.get_helper.return_value = self.vc_profile_current
-        mock_vc_rest_client.post_helper.return_value = "test_task_id"
-        mock_vc_rest_client.wait_for_cis_task_completion.return_value = mock_task_response
-        mock_vc_context.vc_rest_client.return_value = mock_vc_rest_client
-        mock_vc_context.hostname = self.mock_vc_host_name
-        mock_vc_context.product_category = "vcenter"
+        self.mock_vc_context.product_version = "8.0.3"
+        self.mock_vc_rest_client.get_helper.return_value = self.vc_profile_current
+        self.mock_vc_rest_client.post_helper.return_value = "test_task_id"
+        self.mock_vc_rest_client.wait_for_cis_task_completion.return_value = mock_task_response
         expected_error_msg = "Test failure"
-        result = self.controller.check_compliance(mock_vc_context, self.input_desired_value)
+        result = self.controller.check_compliance(self.mock_vc_context, self.input_desired_value)
 
-        mock_vc_rest_client.post_helper.assert_called_once_with(
+        self.mock_vc_rest_client.post_helper.assert_called_once_with(
             url=f"{self.vc_base_url}{vc_consts.DESIRED_STATE_SCAN_URL}",
             body={"desired_state": self.expected_merged_spec}
         )
@@ -321,29 +353,22 @@ class TestVcProfile:
         assert result["message"]["errors"][0]["error"] == Message(message=expected_error_msg).to_dict()
         assert result["message"]["errors"][0]["source"] == ErrorSource(server=self.mock_vc_host_name, type="vcenter", endpoint=self.vc_base_url + vc_consts.CIS_TASKS_URL.format("test_task_id")).to_dict()
 
-    @patch('config_modules_vmware.framework.auth.contexts.vc_context.VcenterContext')
-    @patch('config_modules_vmware.framework.clients.vcenter.vc_rest_client.VcRestClient')
-    def test_check_compliance_task_compliant(self, mock_vc_rest_client, mock_vc_context):
+    def test_check_compliance_task_compliant(self):
         mock_task_response = copy.deepcopy(self.mock_task_response)
         mock_task_response["result"]["status"] = "COMPLIANT"
-        mock_vc_rest_client.get_base_url.return_value = self.vc_base_url
-        mock_vc_rest_client.get_helper.return_value = self.vc_profile_current
-        mock_vc_rest_client.post_helper.return_value = "test_task_id"
-        mock_vc_rest_client.wait_for_cis_task_completion.return_value = mock_task_response
-        mock_vc_context.vc_rest_client.return_value = mock_vc_rest_client
-        expected_result = {consts.STATUS: ComplianceStatus.COMPLIANT,
-                           consts.RESULT: mock_task_response["result"]}
-        result = self.controller.check_compliance(mock_vc_context, self.input_desired_value)
+        self.mock_vc_context.product_version = "8.0.3"
+        self.mock_vc_rest_client.get_helper.return_value = self.vc_profile_current
+        self.mock_vc_rest_client.post_helper.return_value = "test_task_id"
+        self.mock_vc_rest_client.wait_for_cis_task_completion.return_value = mock_task_response
+        result = self.controller.check_compliance(self.mock_vc_context, self.input_desired_value)
 
-        mock_vc_rest_client.post_helper.assert_called_once_with(
+        self.mock_vc_rest_client.post_helper.assert_called_once_with(
             url=f"{self.vc_base_url}{vc_consts.DESIRED_STATE_SCAN_URL}",
             body={"desired_state": self.expected_merged_spec}
         )
         assert result["result"]["status"] == "COMPLIANT"
 
-    @patch('config_modules_vmware.framework.auth.contexts.vc_context.VcenterContext')
-    @patch('config_modules_vmware.framework.clients.vcenter.vc_rest_client.VcRestClient')
-    def test_check_compliance_task_unavailable_status(self, mock_vc_rest_client, mock_vc_context):
+    def test_check_compliance_task_unavailable_status(self):
         mock_task_response = copy.deepcopy(self.mock_task_response)
         mock_task_response["result"]["status"] = "UNAVAILABLE"
         expected_error_msg = "Component AuthManagement is unavailable"
@@ -360,13 +385,12 @@ class TestVcProfile:
             ]
         }
         mock_task_response["result"]["notifications"] = mock_notifications
-        mock_vc_rest_client.get_base_url.return_value = self.vc_base_url
-        mock_vc_rest_client.get_helper.return_value = self.vc_profile_current
-        mock_vc_rest_client.post_helper.return_value = "test_task_id"
-        mock_vc_rest_client.wait_for_cis_task_completion.return_value = mock_task_response
-        mock_vc_context.vc_rest_client.return_value = mock_vc_rest_client
-        result = self.controller.check_compliance(mock_vc_context, self.input_desired_value)
-        mock_vc_rest_client.post_helper.assert_called_once_with(
+        self.mock_vc_context.product_version = "8.0.3"
+        self.mock_vc_rest_client.get_helper.return_value = self.vc_profile_current
+        self.mock_vc_rest_client.post_helper.return_value = "test_task_id"
+        self.mock_vc_rest_client.wait_for_cis_task_completion.return_value = mock_task_response
+        result = self.controller.check_compliance(self.mock_vc_context, self.input_desired_value)
+        self.mock_vc_rest_client.post_helper.assert_called_once_with(
             url=f"{self.vc_base_url}{vc_consts.DESIRED_STATE_SCAN_URL}",
             body={"desired_state": self.expected_merged_spec}
         )
@@ -375,20 +399,17 @@ class TestVcProfile:
         assert result["message"]["errors"][0]["error"] == Message(message=expected_error_msg).to_dict()
         assert result["message"]["errors"][0]["remediation"]["message"] == REMEDIATION_COMPONENT_UNAVAILABLE
 
-    @patch('config_modules_vmware.framework.auth.contexts.vc_context.VcenterContext')
-    @patch('config_modules_vmware.framework.clients.vcenter.vc_rest_client.VcRestClient')
-    def test_check_compliance_task_unknown_status(self, mock_vc_rest_client, mock_vc_context):
+    def test_check_compliance_task_unknown_status(self):
         mock_task_response = copy.deepcopy(self.mock_task_response)
         mock_task_response["result"]["status"] = "TEST"
-        mock_vc_rest_client.get_base_url.return_value = self.vc_base_url
-        mock_vc_rest_client.get_helper.return_value = self.vc_profile_current
-        mock_vc_rest_client.post_helper.return_value = "test_task_id"
-        mock_vc_rest_client.wait_for_cis_task_completion.return_value = mock_task_response
-        mock_vc_context.vc_rest_client.return_value = mock_vc_rest_client
+        self.mock_vc_context.product_version = "8.0.3"
+        self.mock_vc_rest_client.get_helper.return_value = self.vc_profile_current
+        self.mock_vc_rest_client.post_helper.return_value = "test_task_id"
+        self.mock_vc_rest_client.wait_for_cis_task_completion.return_value = mock_task_response
         expected_error_msg = "Unknown status[TEST] for task test_task_id"
-        result = self.controller.check_compliance(mock_vc_context, self.input_desired_value)
+        result = self.controller.check_compliance(self.mock_vc_context, self.input_desired_value)
 
-        mock_vc_rest_client.post_helper.assert_called_once_with(
+        self.mock_vc_rest_client.post_helper.assert_called_once_with(
             url=f"{self.vc_base_url}{vc_consts.DESIRED_STATE_SCAN_URL}",
             body={"desired_state": self.expected_merged_spec}
         )
@@ -396,9 +417,7 @@ class TestVcProfile:
         assert len(result["message"]["errors"]) == 1
         assert result["message"]["errors"][0]["error"] == Message(message=expected_error_msg).to_dict()
 
-    @patch('config_modules_vmware.framework.auth.contexts.vc_context.VcenterContext')
-    @patch('config_modules_vmware.framework.clients.vcenter.vc_rest_client.VcRestClient')
-    def test_check_compliance_with_list_success(self, mock_vc_rest_client, mock_vc_context):
+    def test_check_compliance_with_list_success(self):
         vc_profile_current = {
             "appliance": {
                 "object1": {
@@ -469,23 +488,20 @@ class TestVcProfile:
             }
         }
 
-        mock_vc_rest_client.get_base_url.return_value = self.vc_base_url
-        mock_vc_rest_client.get_helper.return_value = vc_profile_current
-        mock_vc_rest_client.post_helper.return_value = "test_task_id"
-        mock_vc_rest_client.wait_for_cis_task_completion.return_value = self.mock_task_response
-        mock_vc_context.vc_rest_client.return_value = mock_vc_rest_client
+        self.mock_vc_context.product_version = "8.0.3"
+        self.mock_vc_rest_client.get_helper.return_value = vc_profile_current
+        self.mock_vc_rest_client.post_helper.return_value = "test_task_id"
+        self.mock_vc_rest_client.wait_for_cis_task_completion.return_value = self.mock_task_response
         expected_result = self.mock_drift_spec_response
-        result = self.controller.check_compliance(mock_vc_context, input_desired_value)
+        result = self.controller.check_compliance(self.mock_vc_context, input_desired_value)
 
-        mock_vc_rest_client.post_helper.assert_called_once_with(
+        self.mock_vc_rest_client.post_helper.assert_called_once_with(
             url=f"{self.vc_base_url}{vc_consts.DESIRED_STATE_SCAN_URL}",
             body={"desired_state": merged_spec}
         )
         assert result["result"]["result"] == expected_result
 
-    @patch('config_modules_vmware.framework.auth.contexts.vc_context.VcenterContext')
-    @patch('config_modules_vmware.framework.clients.vcenter.vc_rest_client.VcRestClient')
-    def test_check_compliance_failed(self, mock_vc_rest_client, mock_vc_context):
+    def test_check_compliance_failed(self):
         vc_profile_current = {
             "appliance": {
                 "software_update_policy": {
@@ -501,16 +517,13 @@ class TestVcProfile:
             }
         }
 
-        mock_vc_rest_client.get_base_url.return_value = self.vc_base_url
-        mock_vc_rest_client.get_helper.return_value = vc_profile_current
-        mock_vc_rest_client.post_helper.side_effect = Exception("Failed to check compliance")
-        mock_vc_context.vc_rest_client.return_value = mock_vc_rest_client
-        mock_vc_context.hostname = self.mock_vc_host_name
-        mock_vc_context.product_category = "vcenter"
+        self.mock_vc_context.product_version = "8.0.3"
+        self.mock_vc_rest_client.get_helper.return_value = vc_profile_current
+        self.mock_vc_rest_client.post_helper.side_effect = Exception("Failed to check compliance")
         expected_error_msg = "Failed to check compliance"
-        result = self.controller.check_compliance(mock_vc_context, input_desired_value)
+        result = self.controller.check_compliance(self.mock_vc_context, input_desired_value)
 
-        mock_vc_rest_client.post_helper.assert_called_once_with(
+        self.mock_vc_rest_client.post_helper.assert_called_once_with(
             url=f"{self.vc_base_url}{vc_consts.DESIRED_STATE_SCAN_URL}",
             body={"desired_state": input_desired_value}
         )
@@ -520,27 +533,24 @@ class TestVcProfile:
         assert result["message"]["errors"][0]["source"] == ErrorSource(server=self.mock_vc_host_name, type="vcenter",
                                                                       endpoint=self.vc_base_url + vc_consts.DESIRED_STATE_SCAN_URL).to_dict()
 
-    @patch('config_modules_vmware.framework.auth.contexts.vc_context.VcenterContext')
-    @patch('config_modules_vmware.framework.clients.vcenter.vc_rest_client.VcRestClient')
-    def test_check_compliance_get_failed(self, mock_vc_rest_client, mock_vc_context):
+    def test_check_compliance_get_failed(self):
         input_desired_value = {"appliance": {}}
 
-        mock_vc_rest_client.get_base_url.return_value = self.vc_base_url
-        mock_vc_rest_client.get_helper.side_effect = Exception("Failed to get config")
-        mock_vc_context.vc_rest_client.return_value = mock_vc_rest_client
+        self.mock_vc_context.product_version = "8.0.3"
+        self.mock_vc_rest_client.get_helper.side_effect = Exception("Failed to get config")
         expected_error_msg = "Failed to get config"
-        result = self.controller.check_compliance(mock_vc_context, input_desired_value)
+        result = self.controller.check_compliance(self.mock_vc_context, input_desired_value)
         assert result["status"] == ComplianceStatus.FAILED
         assert len(result["message"]["errors"]) == 1
         assert result["message"]["errors"][0]["error"] == Message(message=expected_error_msg).to_dict()
         assert result["message"]["errors"][0]["source"] == ErrorSource(type="ConfigModule").to_dict()
 
-    @patch('config_modules_vmware.framework.auth.contexts.vc_context.VcenterContext')
-    def test_check_compliance_unsupported_component(self, mock_vc_context):
+    def test_check_compliance_unsupported_component(self):
         input_desired_value = {"foo": {}}
 
+        self.mock_vc_context.product_version = "8.0.3"
         expected_error_msg = "Unsupported component 'foo' in desired values"
-        result = self.controller.check_compliance(mock_vc_context, input_desired_value)
+        result = self.controller.check_compliance(self.mock_vc_context, input_desired_value)
         assert result["status"] == ComplianceStatus.FAILED
         assert len(result["message"]["errors"]) == 1
         assert result["message"]["errors"][0]["error"] == Message(message=expected_error_msg).to_dict()

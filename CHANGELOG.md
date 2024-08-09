@@ -1,4 +1,23 @@
 # CURRENTLY-IN-DEVELOPMENT
+# `v0.14.0.0`
+##### Released by ravi-pratap-s on Aug 09, 2024 @ 06:33 PM UTC
+### New Controllers
+- ESXi Controllers
+    - 160 - pg_vss_forged_transmits_accept
+    - 1121 - syslog_strict_x509_compliance
+    - 31 - lockdown_mode
+    - 125 - lockdown_mode_exception_users
+    - 111 - ssh_service_policy
+- VCSA Controllers
+    - 417 - dvs_pg_netflow_config
+### Controller Enhancements
+ - SDDC Manager control 1605 - support remediation for roles to sso users/groups mapping.
+### Compliance Control Schema Changes
+  - Schema change for users_groups_roles control (1605) for product sddc manager.
+# `v0.13.3.0`
+##### Released by rjew-bc on Aug 06, 2024 @ 09:15 PM UTC
+### Framework Enhancements
+- Multi-version support for configuration controls
 # `v0.13.2.0`
 ##### Released by ravi-pratap-s on Jul 30, 2024 @ 08:42 PM UTC
 ### Dependency Version Changes

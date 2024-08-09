@@ -1,6 +1,5 @@
 # Copyright 2024 Broadcom. All Rights Reserved.
 import logging
-import re
 from typing import List
 from typing import Tuple
 
@@ -14,20 +13,20 @@ from config_modules_vmware.framework.models.output_models.remediate_response imp
 logger = LoggerAdapter(logging.getLogger(__name__))
 
 
-class SyslogEnforceSslCertificates(BaseController):
-    """ESXi controller to get/set/check_compliance/remediate policy for enforcing checking of SSL certificates for syslog.
+class LockdownModeConfig(BaseController):
+    """ESXi controller to get/set lockdown mode.
 
-    | Config Id - 1115
-    | Config Title - The ESXi host must verify certificates for SSL syslog endpoints.
+    | Config Id - 31
+    | Config Title - Enable Normal lockdown mode on the host.
 
     """
 
     metadata = ControllerMetadata(
-        name="syslog_enforce_ssl_certificates",  # controller name
-        path_in_schema="compliance_config.esxi.syslog_enforce_ssl_certificates",
+        name="lockdown_mode",  # controller name
+        path_in_schema="compliance_config.esxi.lockdown_mode",
         # path in the schema to this controller's definition.
-        configuration_id="1115",  # configuration id as defined in compliance kit.
-        title="The ESXi host must verify certificates for SSL syslog endpoints",
+        configuration_id="31",  # configuration id as defined in compliance kit.
+        title="Enable Normal lockdown mode on the host",
         # controller title as defined in compliance kit.
         tags=[],  # controller tags for future querying and filtering
         version="1.0.0",  # version of the controller implementation.
@@ -39,49 +38,47 @@ class SyslogEnforceSslCertificates(BaseController):
         scope="",  # any information or limitations about how the controller operates. i.e. runs as a CLI on VCSA.
     )
 
-    def get(self, context: HostContext) -> Tuple[bool, List[str]]:
-        """Get SSL certificates enforcement policy for syslog for esxi host.
+    def get(self, context: HostContext) -> Tuple[str, List[str]]:
+        """Get lockdown mode for esxi host.
 
         :param context: ESXi context instance.
         :type context: HostContext
-        :return: Tuple of boolean value True/False and a list of errors.
+        :return: Tuple of lockdown mode and a list of errors if any..
         :rtype: Tuple
         """
-        logger.info("Getting SSL certificates enforcement policy for syslog for esxi.")
+        logger.info("Getting lockdown mode for esxi.")
         errors = []
-        enabled = None
+        lockdown_mode = "DISABLED"
         try:
-            enforce_ssl_certs_get_command = "system syslog config get"
-            cli_output, _, _ = context.esx_cli_client().run_esx_cli_cmd(context.hostname, enforce_ssl_certs_get_command)
-            logger.debug(f"cli_output is {cli_output}")
-            match = re.search(r"Enforce SSLCertificates:\s*(\w+)", cli_output)
-            if not match:
-                err_msg = f"Unable to fetch enforce ssl certs using command esxcli {enforce_ssl_certs_get_command}"
-                raise Exception(err_msg)
+            lockdown_mode_result = context.host_ref.configManager.hostAccessManager.lockdownMode
+            logger.debug(f"Fetch result for lockdown mode for the esxi host: {lockdown_mode_result}")
+            lockdown_mode_parts = lockdown_mode_result.split("lockdown")
+            if len(lockdown_mode_parts) < 2:
+                raise Exception("Unable to fetch lockdown mode")
             else:
-                enabled = match.group(1).lower() == "true"
+                lockdown_mode = lockdown_mode_parts[1].upper()
         except Exception as e:
             logger.exception(f"An error occurred: {e}")
             errors.append(str(e))
-        return enabled, errors
+        return lockdown_mode, errors
 
-    def set(self, context: HostContext, desired_values) -> Tuple[RemediateStatus, List[str]]:
-        """Set SSL certificates enforcement policy for syslog for esxi host.
+    def set(self, context: HostContext, desired_values: str) -> Tuple[RemediateStatus, List[str]]:
+        """Set lockdown mode for esxi host.
 
         :param context: Esxi context instance.
         :type context: HostContext
-        :param desired_values: boolean value True/False to enable/disable SSL certs checking.
-        :type desired_values: bool
+        :param desired_values: Lockdown mode - NORMAL or DISABLED or STRICT.
+        :type desired_values: str
         :return: Tuple of "status" and list of error messages.
         :rtype: Tuple
         """
-        logger.info("Setting SSL certificates enforcement policy for syslog for esxi.")
+        logger.info("Setting lockdown mode for esxi.")
         errors = []
         status = RemediateStatus.SUCCESS
         try:
-            enabled_str = "true" if desired_values else "false"
-            enforce_ssl_certs_set_command = f"system syslog config set --check-ssl-certs={enabled_str}"
-            context.esx_cli_client().run_esx_cli_cmd(context.hostname, enforce_ssl_certs_set_command)
+            new_lockdown_mode = f"lockdown{desired_values.capitalize()}"
+            context.host_ref.configManager.hostAccessManager.ChangeLockdownMode(new_lockdown_mode)
+            logger.debug(f"Updated lockdown mode for the esxi host to {new_lockdown_mode}")
         except Exception as e:
             logger.exception(f"An error occurred: {e}")
             errors.append(str(e))
