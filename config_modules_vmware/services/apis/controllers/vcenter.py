@@ -182,7 +182,10 @@ def get_configuration(
         status_code = status.HTTP_200_OK
         if workflow_status == GetCurrentConfigurationStatus.PARTIAL:
             return_response.status = GetConfigStatus.PARTIAL
-        elif workflow_status == GetCurrentConfigurationStatus.FAILED:
+        elif (
+            workflow_status == GetCurrentConfigurationStatus.FAILED
+            or workflow_status == GetCurrentConfigurationStatus.SKIPPED
+        ):
             return_response.status = GetConfigStatus.FAILED
             status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
         if configuration.get(consts.MESSAGE) is not None:

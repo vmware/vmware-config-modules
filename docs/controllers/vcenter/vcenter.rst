@@ -27,6 +27,7 @@ Submodules
    vcenter.dv_pg_vlan_trunking_authorized
    vcenter.dvs_health_check_config
    vcenter.dvs_network_io_control_policy
+   vcenter.dvs_pg_netflow_config
    vcenter.h5_client_session_timeout_config
    vcenter.ldap_identity_source_config
    vcenter.logon_banner_config

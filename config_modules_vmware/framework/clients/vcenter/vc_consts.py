@@ -25,7 +25,7 @@ NTP_TEST_URL = "api/appliance/ntp?action=test"
 NTP_SERVER_STATUS_REACHABLE = "SERVER_REACHABLE"
 NTP_SERVER_STATUS_UNREACHABLE = "SERVER_UNREACHABLE"
 TIMESYNC_URL = "api/appliance/timesync"
-VC_PROFILE_CURRENT_URL = "api/appliance/vcenter/settings/v1/config-current?invoker_type=USER"
+VC_PROFILE_SETTINGS_URL = "api/appliance/vcenter/settings/v1/config-current?invoker_type=USER"
 DESIRED_STATE_SCAN_URL = "api/appliance/vcenter/settings/v1/config?action=scan-desired-state&vmw-task=true"
 
 SYSLOG_URL = "api/appliance/logging/forwarding"

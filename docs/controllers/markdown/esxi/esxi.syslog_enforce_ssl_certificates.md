@@ -48,7 +48,7 @@ Set SSL certificates enforcement policy for syslog for esxi host.
 
 * **Parameters:**
   * **context** (*HostContext*) – Esxi context instance.
-  * **desired_values** (*dict*) – boolean value True/False to enable/disable SSL certs checking.
+  * **desired_values** (*bool*) – boolean value True/False to enable/disable SSL certs checking.
 * **Returns:**
   Tuple of “status” and list of error messages.
 * **Return type:**

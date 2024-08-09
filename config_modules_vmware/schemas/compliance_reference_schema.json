@@ -771,6 +771,117 @@
               ],
               "additionalProperties": false
             },
+            "dvs_pg_netflow_config": {
+              "type": "object",
+              "description": "The vCenter Server must only send NetFlow traffic to authorized collectors.",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "properties": {
+                    "__GLOBAL__": {
+                      "type": "object",
+                      "description": "Global configuration settings applicable for all dvs and port groups",
+                      "properties": {
+                        "ipfix_collector_ip": {
+                          "description": "netflow collector ip address on distributed virtual switch",
+                          "type": "string"
+                        },
+                        "ipfix_enabled": {
+                          "description": "netflow enabled flag on portgroup",
+                          "type": "boolean"
+                        }
+                      },
+                      "additionalProperties": false,
+                      "required": [
+                        "ipfix_collector_ip",
+                        "ipfix_enabled"
+                      ]
+                    },
+                    "__OVERRIDES__": {
+                      "type": "object",
+                      "properties": {
+                        "switch_override_config": {
+                          "type": "array",
+                          "description": "Object to hold overrides for distributed switch",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "switch_name": {
+                              "type": "string"
+                              },
+                              "ipfix_collector_ip": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "switch_name",
+                              "ipfix_collector_ip"
+                            ]
+                          }
+                        },
+                        "portgroup_override_config": {
+                          "type": "array",
+                          "description": "Object to hold overrides for the port groups",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "switch_name": {
+                                "type": "string"
+                              },
+                              "port_group_name": {
+                                "type": "string"
+                              },
+                              "ipfix_enabled": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "switch_name",
+                              "port_group_name",
+                              "ipfix_enabled"
+                            ]
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "minProperties": 1,
+                  "anyOf": [
+                    {
+                      "required": [
+                        "__GLOBAL__"
+                      ]
+                    },
+                    {
+                      "required": [
+                        "__OVERRIDES__"
+                      ]
+                    }
+                  ],
+                  "if": {
+                    "not": {
+                      "required": [
+                        "__GLOBAL__"
+                      ]
+                    }
+                  },
+                  "then": {
+                    "properties": {
+                      "__OVERRIDES__": {
+                        "required": [
+                          "switch_override_config",
+                          "portgroup_override_config"
+                        ]
+                      }
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            },
             "dvpg_promiscuous_mode_policy": {
               "type": "object",
               "properties": {
@@ -2127,37 +2238,33 @@
                   "$ref": "#/definitions/metadata"
                 },
                 "value": {
-                  "type": "object",
-                  "properties": {
-                    "users_groups_roles_info": {
-                      "type": "array",
-                      "description": "A valid list of users groups and roles",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "name": {
-                            "type": "string"
-                          },
-                          "type": {
-                            "type": "string"
-                          },
-                          "role": {
-                            "type": "string"
-                          }
-                        },
-                        "required": [
-                          "name",
-                          "type",
-                          "role"
-                        ],
-                        "additionalProperties": false
+                  "type": "array",
+                  "description": "A valid list of users/groups and their roles",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string"
                       },
-                      "minItems": 0
-                    }
-                  },
-                  "additionalProperties": false
+                      "type": {
+                        "type": "string",
+                        "enum": ["USER", "GROUP"]
+                      },
+                      "role": {
+                        "type": "string",
+                        "enum": ["ADMIN", "OPERATOR","VIEWER"]
+                      }
+                    },
+                    "required": [
+                      "name",
+                      "type",
+                      "role"
+                    ],
+                    "additionalProperties": false
+                  }
                 }
               },
+              "required": ["value"],
               "additionalProperties": false
             },
             "proxy_config": {
@@ -2228,6 +2335,22 @@
                 "value": {
                   "type": "boolean",
                   "description": "Flag to enable/disable the debug managed object browser"
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "pg_vss_forged_transmits_accept": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "boolean",
+                  "description": "Flag to accept(True)/reject(False) forged transmits."
                 }
               },
               "required": [
@@ -2422,6 +2545,42 @@
             "shell_service_policy": {
               "type": "object",
               "title": "SHELL service policy configuration for ESXi",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "object",
+                  "properties": {
+                    "service_running": {
+                      "type": "boolean",
+                      "description": "service running flag true/false"
+                    },
+                    "service_policy": {
+                      "type": "string",
+                      "enum": [
+                        "on",
+                        "off"
+                      ],
+                      "description": "service policy: on/off"
+                    }
+                  },
+                  "required": [
+                    "service_running",
+                    "service_policy"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "minProperties": 1,
+              "additionalProperties": false
+            },
+            "ssh_service_policy": {
+              "type": "object",
+              "title": "SSH service policy configuration for ESXi",
               "properties": {
                 "metadata": {
                   "$ref": "#/definitions/metadata"
@@ -2922,6 +3081,27 @@
               ],
               "additionalProperties": false
             },
+            "lockdown_mode": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "string",
+                  "description": "Lockdown mode for the esxi host",
+                  "enum": [
+                    "NORMAL",
+                    "DISABLED",
+                    "STRICT"
+                  ]
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
             "lockdown_dcui_access_users": {
               "type": "object",
               "properties": {
@@ -2935,6 +3115,26 @@
                     "type": "string"
                   },
                   "minItems": 1,
+                  "uniqueItems": true
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "lockdown_mode_exception_users": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "array",
+                  "description": "List of exception users which do not lose their permissions when the host enters lockdown mode",
+                  "items": {
+                    "type": "string"
+                  },
                   "uniqueItems": true
                 }
               },
@@ -3038,6 +3238,22 @@
                 "value": {
                   "type": "boolean",
                   "description": "Enable/Disable enforcing checking of SSL certificates when transmitting messages to remote hosts"
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "syslog_strict_x509_compliance": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "boolean",
+                  "description": "Enable/Disable strict x509 verification for SSL syslog endpoints"
                 }
               },
               "required": [

@@ -1,10 +1,10 @@
 # Copyright 2024 Broadcom. All Rights Reserved.
 import logging
-import re
 from typing import List
 from typing import Tuple
 
 from config_modules_vmware.controllers.base_controller import BaseController
+from config_modules_vmware.controllers.esxi.utils.service_utils import HostServiceUtil
 from config_modules_vmware.framework.auth.contexts.base_context import BaseContext
 from config_modules_vmware.framework.auth.contexts.esxi_context import HostContext
 from config_modules_vmware.framework.logging.logger_adapter import LoggerAdapter
@@ -13,21 +13,25 @@ from config_modules_vmware.framework.models.output_models.remediate_response imp
 
 logger = LoggerAdapter(logging.getLogger(__name__))
 
+ESXI_SERVICE_SSH = "TSM-SSH"
+SERVICE_RUNNING = "service_running"
+SERVICE_POLICY = "service_policy"
 
-class SyslogEnforceSslCertificates(BaseController):
-    """ESXi controller to get/set/check_compliance/remediate policy for enforcing checking of SSL certificates for syslog.
 
-    | Config Id - 1115
-    | Config Title - The ESXi host must verify certificates for SSL syslog endpoints.
+class SshServicePolicy(BaseController):
+    """ESXi controller to start/stop/update ssh service.
+
+    | Config Id - 111
+    | Config Title - The ESXi host must be configured to disable non-essential capabilities by disabling SSH.
 
     """
 
     metadata = ControllerMetadata(
-        name="syslog_enforce_ssl_certificates",  # controller name
-        path_in_schema="compliance_config.esxi.syslog_enforce_ssl_certificates",
+        name="ssh_service_policy",  # controller name
+        path_in_schema="compliance_config.esxi.ssh_service_policy",
         # path in the schema to this controller's definition.
-        configuration_id="1115",  # configuration id as defined in compliance kit.
-        title="The ESXi host must verify certificates for SSL syslog endpoints",
+        configuration_id="111",  # configuration id as defined in compliance kit.
+        title="The ESXi host must be configured to disable non-essential capabilities by disabling SSH",
         # controller title as defined in compliance kit.
         tags=[],  # controller tags for future querying and filtering
         version="1.0.0",  # version of the controller implementation.
@@ -39,49 +43,44 @@ class SyslogEnforceSslCertificates(BaseController):
         scope="",  # any information or limitations about how the controller operates. i.e. runs as a CLI on VCSA.
     )
 
-    def get(self, context: HostContext) -> Tuple[bool, List[str]]:
-        """Get SSL certificates enforcement policy for syslog for esxi host.
+    def get(self, context: HostContext) -> Tuple[dict, List[str]]:
+        """Get ssh service status for esxi host.
 
         :param context: ESXi context instance.
         :type context: HostContext
-        :return: Tuple of boolean value True/False and a list of errors.
+        :return: Tuple of dict such as {"service_running": True, "service_policy": "off"} and list of errors.
         :rtype: Tuple
         """
-        logger.info("Getting SSL certificates enforcement policy for syslog for esxi.")
+        logger.info("Getting ssh service status for esxi.")
         errors = []
-        enabled = None
+        ssh_service_status = {}
         try:
-            enforce_ssl_certs_get_command = "system syslog config get"
-            cli_output, _, _ = context.esx_cli_client().run_esx_cli_cmd(context.hostname, enforce_ssl_certs_get_command)
-            logger.debug(f"cli_output is {cli_output}")
-            match = re.search(r"Enforce SSLCertificates:\s*(\w+)", cli_output)
-            if not match:
-                err_msg = f"Unable to fetch enforce ssl certs using command esxcli {enforce_ssl_certs_get_command}"
-                raise Exception(err_msg)
-            else:
-                enabled = match.group(1).lower() == "true"
+            host_service = context.host_ref.configManager.serviceSystem
+            util = HostServiceUtil(host_service)
+            ssh_service_status, errors = util.get_service_status(ESXI_SERVICE_SSH)
         except Exception as e:
             logger.exception(f"An error occurred: {e}")
             errors.append(str(e))
-        return enabled, errors
+        return ssh_service_status, errors
 
-    def set(self, context: HostContext, desired_values) -> Tuple[RemediateStatus, List[str]]:
-        """Set SSL certificates enforcement policy for syslog for esxi host.
+    def set(self, context: HostContext, desired_values: dict) -> Tuple[RemediateStatus, List[str]]:
+        """Start/stop ssh service for esxi host based on desired value.
 
         :param context: Esxi context instance.
         :type context: HostContext
-        :param desired_values: boolean value True/False to enable/disable SSL certs checking.
-        :type desired_values: bool
+        :param desired_values: dict with keys "service_running" and "service_policy" to start/stop service or update policy.
+        :type desired_values: dict
         :return: Tuple of "status" and list of error messages.
         :rtype: Tuple
         """
-        logger.info("Setting SSL certificates enforcement policy for syslog for esxi.")
+        logger.info("Setting ssh service policy for esxi")
         errors = []
         status = RemediateStatus.SUCCESS
         try:
-            enabled_str = "true" if desired_values else "false"
-            enforce_ssl_certs_set_command = f"system syslog config set --check-ssl-certs={enabled_str}"
-            context.esx_cli_client().run_esx_cli_cmd(context.hostname, enforce_ssl_certs_set_command)
+            host_service = context.host_ref.configManager.serviceSystem
+            util = HostServiceUtil(host_service)
+            util.start_stop_service(ESXI_SERVICE_SSH, desired_values.get(SERVICE_RUNNING))
+            util.update_service_policy(ESXI_SERVICE_SSH, desired_values.get(SERVICE_POLICY))
         except Exception as e:
             logger.exception(f"An error occurred: {e}")
             errors.append(str(e))

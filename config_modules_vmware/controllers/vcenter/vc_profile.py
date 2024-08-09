@@ -15,6 +15,7 @@ from config_modules_vmware.framework.clients.vcenter import vc_consts
 from config_modules_vmware.framework.logging.logger_adapter import LoggerAdapter
 from config_modules_vmware.framework.models.controller_models.metadata import ControllerMetadata
 from config_modules_vmware.framework.models.output_models.remediate_response import RemediateStatus
+from config_modules_vmware.framework.utils import utils
 from config_modules_vmware.services.config import Config
 
 logger = LoggerAdapter(logging.getLogger(__name__))
@@ -58,12 +59,21 @@ class VcProfile(BaseController):
         :rtype: tuple
         """
         logger.info("Getting current VC profile configuration.")
+
+        if utils.is_newer_or_same_version(context.product_version, "9.0"):
+            return {}, [consts.SKIPPED]
+        elif utils.is_newer_or_same_version(context.product_version, "8.0.3"):
+            return self._get_8_0_3(context, template)
+        else:
+            return {}, [consts.SKIPPED]
+
+    def _get_8_0_3(self, context: VcenterContext, template: dict = None) -> Tuple[dict, List[str]]:
+        logger.info(f"Getting VC profile configuration for version {context.product_version}")
         current_vc_profile = {}
         errors = []
-
         try:
             vc_rest_client = context.vc_rest_client()
-            url = vc_rest_client.get_base_url() + vc_consts.VC_PROFILE_CURRENT_URL
+            url = vc_rest_client.get_base_url() + vc_consts.VC_PROFILE_SETTINGS_URL
             if template:
                 # Get requested components
                 for component_key in template.keys():
@@ -110,59 +120,75 @@ class VcProfile(BaseController):
         errors = []
         task_id = None
         task_response = None
-        try:
-            self._validate_input(desired_values)
-            # VC scan drift API doesn't support subset of configuration.
-            # So pull current config and merge with input subset to get full config with desired values.
 
-            # Get components from desired values
-            get_template = {key: {} for key in desired_values.keys()}
-            current_config, get_errors = self.get(context, get_template)
-            if get_errors:
-                logger.error(f"Get current config failed with errors. {get_errors}")
-                for get_error in get_errors:
-                    errors.append(
-                        vc_profile_utils.create_error(
-                            vc_profile_utils.source_type_config_module,
-                            get_error,
-                            remediation_msg=vc_profile_utils.REMEDIATION_RETRY_MESSAGE,
-                        )
-                    )
-            else:
-                # Merge subset with current config
-                desired_values = self._merge_config(current_config, desired_values)
-                # Invoke scan drift VCProfile API
-                try:
-                    task_id = context.vc_rest_client().post_helper(
-                        url=context.vc_rest_client().get_base_url() + vc_consts.DESIRED_STATE_SCAN_URL,
-                        body={"desired_state": desired_values},
-                    )
-                except Exception as e:
-                    logger.error(f"An error occurred in 'check_compliance' vc_profile: {e}")
-                    errors.append(
-                        vc_profile_utils.create_error(
-                            context.product_category,
-                            str(e),
-                            context.hostname,
-                            context.vc_rest_client().get_base_url() + vc_consts.DESIRED_STATE_SCAN_URL,
-                            vc_profile_utils.REMEDIATION_RETRY_MESSAGE,
-                        )
-                    )
-                # Monitor task until completion.
-                if task_id:
-                    logger.info(f"check_compliance initiated on vc: {context.hostname}, task id: {task_id}")
-                    task_response = context.vc_rest_client().wait_for_cis_task_completion(
-                        task_id=task_id,
-                        retry_wait_time=self.vc_profile_config.getint("TaskPollIntervalSeconds"),
-                        timeout=self.vc_profile_config.getint("TaskTimeoutSeconds"),
-                    )
-        except Exception as e:
-            logger.error(f"An error occurred for 'check_compliance' vc_profile: {e}")
+        if utils.is_newer_or_same_version(context.product_version, "9.0"):
             errors.append(
                 vc_profile_utils.create_error(
                     vc_profile_utils.source_type_config_module,
-                    str(e),
-                    remediation_msg=vc_profile_utils.REMEDIATION_RETRY_MESSAGE,
+                    f"Version [{context.product_version}] is not supported for product [{context.product_category}]",
+                )
+            )
+        elif utils.is_newer_or_same_version(context.product_version, "8.0.3"):
+            try:
+                self._validate_input(desired_values)
+                # VC scan drift API doesn't support subset of configuration.
+                # So pull current config and merge with input subset to get full config with desired values.
+
+                # Get components from desired values
+                get_template = {key: {} for key in desired_values.keys()}
+                current_config, get_errors = self.get(context, get_template)
+                if get_errors:
+                    logger.error(f"Get current config failed with errors. {get_errors}")
+                    for get_error in get_errors:
+                        errors.append(
+                            vc_profile_utils.create_error(
+                                vc_profile_utils.source_type_config_module,
+                                get_error,
+                                remediation_msg=vc_profile_utils.REMEDIATION_RETRY_MESSAGE,
+                            )
+                        )
+                else:
+                    # Merge subset with current config
+                    desired_values = self._merge_config(current_config, desired_values)
+                    # Invoke scan drift VCProfile API
+                    try:
+                        task_id = context.vc_rest_client().post_helper(
+                            url=context.vc_rest_client().get_base_url() + vc_consts.DESIRED_STATE_SCAN_URL,
+                            body={"desired_state": desired_values},
+                        )
+                    except Exception as e:
+                        logger.error(f"An error occurred in 'check_compliance' vc_profile: {e}")
+                        errors.append(
+                            vc_profile_utils.create_error(
+                                context.product_category,
+                                str(e),
+                                context.hostname,
+                                context.vc_rest_client().get_base_url() + vc_consts.DESIRED_STATE_SCAN_URL,
+                                vc_profile_utils.REMEDIATION_RETRY_MESSAGE,
+                            )
+                        )
+                    # Monitor task until completion.
+                    if task_id:
+                        logger.info(f"check_compliance initiated on vc: {context.hostname}, task id: {task_id}")
+                        task_response = context.vc_rest_client().wait_for_cis_task_completion(
+                            task_id=task_id,
+                            retry_wait_time=self.vc_profile_config.getint("TaskPollIntervalSeconds"),
+                            timeout=self.vc_profile_config.getint("TaskTimeoutSeconds"),
+                        )
+            except Exception as e:
+                logger.error(f"An error occurred for 'check_compliance' vc_profile: {e}")
+                errors.append(
+                    vc_profile_utils.create_error(
+                        vc_profile_utils.source_type_config_module,
+                        str(e),
+                        remediation_msg=vc_profile_utils.REMEDIATION_RETRY_MESSAGE,
+                    )
+                )
+        else:
+            errors.append(
+                vc_profile_utils.create_error(
+                    vc_profile_utils.source_type_config_module,
+                    f"Version [{context.product_version}] is not supported for product [{context.product_category}]",
                 )
             )
 
