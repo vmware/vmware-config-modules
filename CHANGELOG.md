@@ -1,4 +1,11 @@
 # CURRENTLY-IN-DEVELOPMENT
+# `v0.14.6.0`
+##### Released by codydouglasBC on Sept 05, 2024 @ 11:07 PM UTC
+### Dependency Version Changes
+- lxml version requirement changed to "lxml>=4.9.1,<=5.2.2"
+- requests version requirement changed to "requests>=2.31.0"
+- pyOpenSSL version requirement changed to "pyOpenSSL>=23.2.0,<=24.0.0"
+- urllib3 version requirement changed to "urllib3>=1.26.6,<2.0.0"
 # `v0.14.0.0`
 ##### Released by ravi-pratap-s on Aug 09, 2024 @ 06:33 PM UTC
 ### New Controllers
