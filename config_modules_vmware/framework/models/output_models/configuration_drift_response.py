@@ -384,7 +384,7 @@ class ConfigurationDriftResponse(OutputResponse):
         Initialize a new ConfigurationDriftResponse instance.
         """
         super().__init__()
-        self._schema_version = "1.0"
+        self._schema_version = "1.0-DRAFT"
         self._id = uuid.uuid4()
         self._name = name
         self._timestamp = timestamp
