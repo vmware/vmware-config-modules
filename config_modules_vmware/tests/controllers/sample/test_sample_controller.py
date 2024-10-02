@@ -3,6 +3,7 @@ from mock import patch
 from config_modules_vmware.controllers.sample.sample_controller import SampleController
 from config_modules_vmware.framework.clients.common import consts
 from config_modules_vmware.framework.models.output_models.compliance_response import ComplianceStatus
+from config_modules_vmware.framework.models.output_models.get_schema_response import GetSchemaStatus
 from config_modules_vmware.framework.models.output_models.remediate_response import RemediateStatus
 
 
@@ -141,7 +142,7 @@ class TestSampleController:
     def test_remediate_skipped_already_desired(self, mock_vc_rest_client, mock_vc_context):
         # Setup Mock objects for current value already being the desired value.
         desired_value = 123
-        expected_result = {consts.STATUS: RemediateStatus.SKIPPED, consts.ERRORS: ['Control already compliant']}
+        expected_result = {consts.STATUS: RemediateStatus.SKIPPED, consts.ERRORS: [consts.CONTROL_ALREADY_COMPLIANT]}
         mock_vc_rest_client.get_helper.return_value = desired_value
         mock_vc_context.vc_rest_client.return_value = mock_vc_rest_client
 
@@ -201,4 +202,10 @@ class TestSampleController:
         result = self.controller.remediate(mock_vc_context, desired_value)
 
         # Assert expected results.
+        assert result == expected_result
+
+    @patch('config_modules_vmware.framework.auth.contexts.vc_context.VcenterContext')
+    def test_get_schema(self, mock_vc_context):
+        expected_result = {consts.RESULT: {}, consts.STATUS: GetSchemaStatus.SUCCESS}
+        result = self.controller.get_schema(mock_vc_context)
         assert result == expected_result

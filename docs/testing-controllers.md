@@ -108,7 +108,25 @@ Check compliance response
 Remediation response
 ```json
 {
-  "status": "SUCCESS"
+  "status": "SKIPPED",
+  "changes": {
+    "compliance_config": {
+      "vcenter": {
+        "ntp": {
+          "status": "SKIPPED",
+          "message": [
+            "Control already compliant"
+          ]
+        },
+        "dns": {
+          "status": "SKIPPED",
+          "message": [
+            "Control already compliant"
+          ]
+        }
+      }
+    }
+  }
 }
 ```
 
@@ -162,6 +180,12 @@ Remediate response
               "216.239.35.0"
             ]
           }
+        },
+        "dns": {
+          "status": "SKIPPED",
+          "message": [
+            "Control already compliant"
+          ]
         }
       }
     }
@@ -274,7 +298,133 @@ Remediate response
     }
 }
 ```
-###### Case 5: Remediation is not implemented for the control
+
+
+###### Case 5: Check compliance and/or remediation is skipped
+###### ---- Case 5.1: Control is not applicable on the particular product version
+Check compliance response
+```json
+{
+  "status": "SKIPPED",
+  "changes": {
+    "compliance_config": {
+      "vcenter": {
+        "tls_version": {
+          "status": "SKIPPED",
+          "message": [
+            "Control is not applicable on this product version"
+          ]
+        }
+      }
+    }
+  }
+}
+```
+Remediation response
+```json
+{
+  "status": "SKIPPED",
+  "changes": {
+    "compliance_config": {
+      "vcenter": {
+        "tls_version": {
+          "status": "SKIPPED",
+          "message": [
+            "Remediation Skipped as Check compliance is SKIPPED"
+          ]
+        }
+      }
+    }
+  }
+}
+```
+
+###### ---- Case 5.2: Control is not automated for the particular product version
+Check compliance response
+```json
+{
+    "message": "Skipped for hosts - ['esxi-2.vrack.vsphere.local']",
+    "status": "COMPLIANT",
+    "changes": {
+        "esxi-2.vrack.vsphere.local": {
+            "status": "SKIPPED",
+            "host_changes": {
+                "compliance_config": {
+                    "esxi": {
+                        "ssh_port_forwarding": {
+                            "status": "SKIPPED",
+                            "message": [
+                              "Control is not automated for this product version"
+                              ]
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+```
+Remediation response
+```json
+{
+  "message": "Skipped for hosts - ['esxi-2.vrack.vsphere.local']",
+  "status": "SKIPPED",
+  "changes": {
+    "esxi-2.vrack.vsphere.local": {
+      "status": "SKIPPED",
+      "host_changes": {
+        "compliance_config": {
+          "esxi": {
+            "ssh_port_forwarding": {
+              "status": "SKIPPED",
+              "message": [
+                "Remediation Skipped as Check compliance is SKIPPED"
+              ]
+            }
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+###### ---- Case 5.3: Control is already compliant so remediation is skipped
+Check compliance response
+```json
+{
+  "status": "COMPLIANT",
+  "changes": {
+    "compliance_config": {
+      "vcenter": {
+        "ntp": {
+          "status": "COMPLIANT"
+        }
+      }
+    }
+  }
+}
+```
+Remediate response
+```json
+{
+  "status": "SKIPPED",
+  "changes": {
+    "compliance_config": {
+      "vcenter": {
+        "ntp": {
+          "status": "SKIPPED",
+          "message": [
+            "Control already compliant"
+          ]
+        }
+      }
+    }
+  }
+}
+```
+
+###### ---- Case 5.4: Control is non-compliant but remediation is not supported
 Check compliance response
 ```json
 {
@@ -284,42 +434,45 @@ Check compliance response
             "vcenter": {
                 "cert_config": {
                     "status": "NON_COMPLIANT",
+                    "current": "OU=VMware Engineering, O=vcenter-1.vrack.vsphere.local, ST=California, C=US, DC=local, DC=vsphere, CN=CA",
                     "desired": {
                         "certificate_issuer": [
-                            "test"
+                            "OU=VMware Engineering,O=vcenter-1.vrack.vsphere.local,ST=California,C=US,DC=local,DC=vsphere,CN=CC",
+                            "OU=VMware Engineering,O=vcenter-1.vrack.vsphere.local,ST=California,C=US,DC=local,DC=vsphere,CN=CD"
                         ]
-                    },
-                    "current": "OU=VMware Engineering, O=vcenter-1.vrack.vsphere.local, ST=California, C=US, DC=local, DC=vsphere, CN=CA"
+                    }
                 }
             }
         }
     }
 }
 ```
-Remediate response
+Remediation response
 ```json
 {
-    "status": "SUCCESS",
-    "changes": {
-        "compliance_config": {
-            "vcenter": {
-                "cert_config": {
-                    "status": "SKIPPED",
-                    "message": [
-                        "Set is not implemented as this control requires manual intervention"
-                    ],
-                    "desired": {
-                        "certificate_issuer": [
-                            "test"
-                        ]
-                    },
-                    "current": "OU=VMware Engineering, O=vcenter-1.vrack.vsphere.local, ST=California, C=US, DC=local, DC=vsphere, CN=CA"
-                }
-            }
+  "status": "SKIPPED",
+  "changes": {
+    "compliance_config": {
+      "vcenter": {
+        "cert_config": {
+          "status": "SKIPPED",
+          "current": "OU=VMware Engineering, O=vcenter-1.vrack.vsphere.local, ST=California, C=US, DC=local, DC=vsphere, CN=CA",
+          "desired": {
+            "certificate_issuer": [
+              "OU=VMware Engineering,O=vcenter-1.vrack.vsphere.local,ST=California,C=US,DC=local,DC=vsphere,CN=CC",
+              "OU=VMware Engineering,O=vcenter-1.vrack.vsphere.local,ST=California,C=US,DC=local,DC=vsphere,CN=CD"
+            ]
+          },
+          "message": [
+            "Set is not implemented as this control requires manual intervention"
+          ]
         }
+      }
     }
+  }
 }
 ```
+
 ###### Case 6: Sample response for ESXi product where vcenter is used to perform check compliance/remediation on list of target hosts (Default target is all hosts)
 Check compliance response
 ```json

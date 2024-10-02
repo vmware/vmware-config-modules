@@ -52,7 +52,7 @@ Refer to Jira : VCFSC-147
 
 * **Parameters:**
   * **context** (*VcenterContext*) – Product context instance.
-  * **desired_values** (*String* *or* *list* *of* *strings*) – Desired value for the certificate authority
+  * **desired_values** (*String* *or* *list* *of* *strings*) – Desired value for ldap accounts
 * **Returns:**
   Dict of status (RemediateStatus.SKIPPED) and errors if any
 * **Return type:**

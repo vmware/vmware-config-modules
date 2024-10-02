@@ -42,6 +42,7 @@ class TestEsxiContext:
         with self.context:
             assert self.context.vc_rest_client() is not None
             args = mock_rest_client.call_args.args
+            self.context._vc_rest_client._rest_client_session = None
             assert self.hostname in args
             assert self.username in args
             assert self.password in args

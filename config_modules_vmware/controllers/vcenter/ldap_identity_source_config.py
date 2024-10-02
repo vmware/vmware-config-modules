@@ -101,7 +101,7 @@ class LdapIdentitySourceConfig(BaseController):
 
         :param context: Product context instance.
         :type context: VcenterContext
-        :param desired_values: Desired value for the certificate authority
+        :param desired_values: Desired value for ldap accounts
         :type desired_values: String or list of strings
         :return: Dict of status (RemediateStatus.SKIPPED) and errors if any
         :rtype: tuple

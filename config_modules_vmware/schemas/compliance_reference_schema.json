@@ -686,17 +686,8 @@
                     }
                   },
                   "minProperties": 1,
-                  "anyOf": [
-                    {
-                      "required": [
-                        "__GLOBAL__"
-                      ]
-                    },
-                    {
-                      "required": [
-                        "__OVERRIDES__"
-                      ]
-                    }
+                  "required": [
+                    "__GLOBAL__"
                   ]
                 }
               },
@@ -752,17 +743,8 @@
                     }
                   },
                   "minProperties": 1,
-                  "anyOf": [
-                    {
-                      "required": [
-                        "__GLOBAL__"
-                      ]
-                    },
-                    {
-                      "required": [
-                        "__OVERRIDES__"
-                      ]
-                    }
+                  "required": [
+                    "__GLOBAL__"
                   ]
                 }
               },
@@ -848,35 +830,9 @@
                     }
                   },
                   "minProperties": 1,
-                  "anyOf": [
-                    {
-                      "required": [
-                        "__GLOBAL__"
-                      ]
-                    },
-                    {
-                      "required": [
-                        "__OVERRIDES__"
-                      ]
-                    }
+                  "required": [
+                    "__GLOBAL__"
                   ],
-                  "if": {
-                    "not": {
-                      "required": [
-                        "__GLOBAL__"
-                      ]
-                    }
-                  },
-                  "then": {
-                    "properties": {
-                      "__OVERRIDES__": {
-                        "required": [
-                          "switch_override_config",
-                          "portgroup_override_config"
-                        ]
-                      }
-                    }
-                  },
                   "additionalProperties": false
                 }
               },
@@ -930,17 +886,8 @@
                     }
                   },
                   "minProperties": 1,
-                  "anyOf": [
-                    {
-                      "required": [
-                        "__GLOBAL__"
-                      ]
-                    },
-                    {
-                      "required": [
-                        "__OVERRIDES__"
-                      ]
-                    }
+                  "required": [
+                    "__GLOBAL__"
                   ]
                 }
               },
@@ -997,17 +944,8 @@
                     }
                   },
                   "minProperties": 1,
-                  "anyOf": [
-                    {
-                      "required": [
-                        "__GLOBAL__"
-                      ]
-                    },
-                    {
-                      "required": [
-                        "__OVERRIDES__"
-                      ]
-                    }
+                  "required": [
+                    "__GLOBAL__"
                   ]
                 }
               },
@@ -1064,17 +1002,8 @@
                     }
                   },
                   "minProperties": 1,
-                  "anyOf": [
-                    {
-                      "required": [
-                        "__GLOBAL__"
-                      ]
-                    },
-                    {
-                      "required": [
-                        "__OVERRIDES__"
-                      ]
-                    }
+                  "required": [
+                    "__GLOBAL__"
                   ]
                 }
               },
@@ -1236,6 +1165,73 @@
               ],
               "additionalProperties": false
             },
+            "ip_based_storage_port_group_config": {
+              "type": "object",
+              "description": "ip based storage traffic vlan isolation configuration",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "properties": {
+                    "__GLOBAL__": {
+                      "type": "object",
+                      "description": "Global configuration settings applicable for all ip storage dv port groups",
+                      "properties": {
+                        "is_dedicated_vlan": {
+                          "type": "boolean",
+                          "description": "Flag to check if vlan is isolated for ip based storage portgroups"
+                        },
+                        "allow_mix_traffic_type": {
+                          "type": "boolean",
+                          "description": "Flag to check if allow ip based storage traffic such as iSCSI traffic to go through non-vsan portgroups such as management traffic portgroups"
+                        }
+                      },
+                      "additionalProperties": false,
+                      "required": [
+                        "is_dedicated_vlan"
+                      ]
+                    },
+                    "__OVERRIDES__": {
+                      "type": "array",
+                      "description": "Object to hold overrides for the port groups",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "switch_name": {
+                            "type": "string"
+                          },
+                          "port_group_name": {
+                            "type": "string"
+                          },
+                          "is_dedicated_vlan": {
+                            "type": "boolean"
+                          },
+                          "allow_mix_traffic_type": {
+                            "type": "boolean",
+                            "description": "Flag to check if allow ip based storage traffic such as iSCSI traffic to go through non-vsan portgroups such as management traffic portgroups"
+                          }
+                        },
+                        "required": [
+                          "switch_name",
+                          "port_group_name",
+                          "is_dedicated_vlan"
+                        ]
+                      }
+                    }
+                  },
+                  "minProperties": 1,
+                  "required": [
+                    "__GLOBAL__"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
             "dvpg_vmotion_traffic_isolation": {
               "type": "object",
               "description": "vMotion port groups vlan isolation configuration",
@@ -1298,36 +1294,9 @@
                     }
                   },
                   "minProperties": 1,
-                  "anyOf": [
-                    {
-                      "required": [
-                        "__GLOBAL__"
-                      ]
-                    },
-                    {
-                      "required": [
-                        "__OVERRIDES__"
-                      ]
-                    }
+                  "required": [
+                    "__GLOBAL__"
                   ],
-                  "if": {
-                    "not": {
-                      "required": [
-                        "__GLOBAL__"
-                      ]
-                    }
-                  },
-                  "then": {
-                    "properties": {
-                      "__OVERRIDES__": {
-                        "items": {
-                          "required": [
-                            "is_dedicated_vlan"
-                          ]
-                        }
-                      }
-                    }
-                  },
                   "additionalProperties": false
                 }
               },
@@ -1685,17 +1654,8 @@
                     }
                   },
                   "minProperties": 1,
-                  "anyOf": [
-                    {
-                      "required": [
-                        "__GLOBAL__"
-                      ]
-                    },
-                    {
-                      "required": [
-                        "__OVERRIDES__"
-                      ]
-                    }
+                  "required": [
+                    "__GLOBAL__"
                   ]
                 }
               },
@@ -2408,6 +2368,100 @@
               ],
               "additionalProperties": false
             },
+            "snmp_config": {
+              "type": "object",
+              "title": "SNMP configuration for ESXi",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "object",
+                  "properties": {
+                    "enable": {
+                      "type": "boolean",
+                      "description": "SNMP enable flag"
+                    },
+                    "communities": {
+                      "type": "array",
+                      "description": "SNMP communities values",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "privacy": {
+                      "type": "string",
+                      "description": "Privacy algorithm to be used by SNMP",
+                      "enum": [
+                        "none",
+                        "AES128"
+                      ]
+                    },
+                    "authentication": {
+                      "type": "string",
+                      "description": "Authentication algorithm to be used by SNMP",
+                      "enum": [
+                        "none",
+                        "SHA1"
+                      ]
+                    },
+                    "v3_targets": {
+                      "type": "object",
+                      "description": "SNMP v3 targets",
+                      "properties": {
+                        "hostname": {
+                          "type": "string",
+                          "description": "host name or IP address"
+                        },
+                        "port": {
+                          "type": "number",
+                          "description": "Port number on management system to receive traps or informs"
+                        },
+                        "userid": {
+                          "type": "string",
+                          "description": "user name"
+                        },
+                        "security_level": {
+                          "type": "string",
+                          "description": "the level of authentication and privacy",
+                          "enum": [
+                            "auth",
+                            "priv",
+                            "none"
+                          ]
+                        },
+                        "message_type": {
+                          "type": "string",
+                          "description": "the type of the messages received by the management system. ",
+                          "enum": [
+                            "trap",
+                            "inform"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "hostname",
+                        "port",
+                        "userid",
+                        "security_level",
+                        "message_type"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "enable",
+                    "communities",
+                    "v3_targets"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "minProperties": 1,
+              "additionalProperties": false
+            },
             "ssh_fips_140_2_crypt_config": {
               "type": "object",
               "title": "SSH daemon FIPS 140-2 validated cryptographic modules configuration for ESXi",
@@ -2604,6 +2658,46 @@
                   "required": [
                     "service_running",
                     "service_policy"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "minProperties": 1,
+              "additionalProperties": false
+            },
+            "ntp_config": {
+              "type": "object",
+              "title": "ESXi host must configure NTP time synchronization.",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "object",
+                  "properties": {
+                    "protocol": {
+                      "type": "string",
+                      "enum": [
+                        "ntp"
+                      ],
+                      "description": "time synchronization protocol"
+                    },
+                    "servers": {
+                      "type": "array",
+                      "description": "A valid list of reachable NTP servers",
+                      "items": {
+                        "type": "string"
+                      },
+                      "minItems": 1,
+                      "uniqueItems": true
+                    }
+                  },
+                  "required": [
+                    "protocol",
+                    "servers"
                   ],
                   "additionalProperties": false
                 }
@@ -3205,7 +3299,8 @@
                 },
                 "value": {
                   "type": "string",
-                  "description": "SSH 'AllowTcpForwarding' configuration value"
+                  "description": "SSH 'AllowTcpForwarding' configuration value",
+                  "enum": ["yes", "no"]
                 }
               },
               "required": [
@@ -3221,7 +3316,144 @@
                 },
                 "value": {
                   "type": "string",
-                  "description": "SSH 'IgnoreRhosts' configuration value"
+                  "description": "SSH 'IgnoreRhosts' configuration value",
+                  "enum": ["yes", "no"]
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "ssh_gateway_ports": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "string",
+                  "description": "SSH 'GatewayPorts' configuration value",
+                  "enum": ["yes", "no"]
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "ssh_host_based_authentication": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "string",
+                  "description": "SSH 'HostBasedAuthentication' configuration value",
+                  "enum": ["yes", "no"]
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "ssh_permit_tunnel": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "string",
+                  "description": "SSH 'PermitTunnel' configuration value",
+                  "enum": ["yes", "no"]
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "ssh_permit_user_environment": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "string",
+                  "description": "SSH 'PermitUserEnvironment' configuration value",
+                  "enum": ["yes", "no"]
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "ssh_permit_empty_passwords": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "string",
+                  "description": "SSH 'PermitEmptyPasswords' configuration value",
+                  "enum": ["yes", "no"]
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "ssh_compression": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "string",
+                  "description": "SSH 'Compression' configuration value",
+                  "enum": ["yes", "no"]
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "ssh_strict_mode": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "string",
+                  "description": "SSH 'StrictModes' configuration value",
+                  "enum": ["yes", "no"]
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "ssh_x11_forwarding": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "string",
+                  "description": "SSH 'X11Forwarding' configuration value",
+                  "enum": ["yes", "no"]
                 }
               },
               "required": [
@@ -3289,6 +3521,76 @@
                   "description": "Flag to enable(1)/disable(0) volatile key destruction (Zero out userworld and guest memory pages immediately after free)",
                   "minimum": 0,
                   "maximum": 1
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "password_quality_config": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "object",
+                  "description": "esxi password quality control parameters",
+                  "properties": {
+                    "retry": {
+                      "type": "integer",
+                      "minmum": 0
+                    },
+                    "min": {
+                      "type": "string",
+                      "pattern": "^(disabled|\\d+)(,(disabled|\\d+)){4}$",
+                      "description": "min=N0,N1,N2,N3,N4, N0 is minimum length of passwords from a single character class, N1 is minimum length of passwords from two character classes, N2 is minimum length for a passphrase, N3 is minimum length for three character classes, N4 is minimum length for four character classes."
+                    },
+                    "max": {
+                      "type": "integer",
+                      "minmum": 0
+                    },
+                    "passphrase": {
+                      "type": "integer",
+                      "minmum": 0
+                    },
+                    "similar": {
+                      "type": "string",
+                      "enum": ["permit", "deny"]
+                    }
+                  },
+                  "required": []
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "log_location_config": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "object",
+                  "properties": {
+                    "log_location": {
+                      "type": "string",
+                      "description": "Datastore path of the directory to output logs to. Example: [datastoreName]/logdir"
+                    },
+                    "is_persistent": {
+                      "type": "boolean",
+                      "description": "True for persistent log location or False for non-persistent log location"
+                    }
+                  },
+                  "required": [
+                    "log_location",
+                    "is_persistent"
+                  ],
+                  "additionalProperties": false
                 }
               },
               "required": [

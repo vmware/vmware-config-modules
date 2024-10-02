@@ -77,11 +77,13 @@ class AlarmRemoteSyslogFailureConfig(BaseController):
             # Fetch details of all the alarms for which any expression within an alarm has eventId :
             # ESX_REMOTE_SYSLOG_FAILURE_EVENT
             for alarm_def in alarm_definitions:
-                for expression in alarm_def.info.expression.expression:
-                    if isinstance(expression, vim.alarm.EventAlarmExpression):
-                        if expression.eventTypeId == ESX_REMOTE_SYSLOG_FAILURE_EVENT:
-                            target_type = vc_alarms_utils.get_target_type(expression.objectType)
-                            alarms.append(vc_alarms_utils.get_alarm_details(alarm_def, target_type))
+                # vim.alarm.EventAlarmExpression might not have 'expression' attribute if there is no expression
+                if hasattr(alarm_def.info.expression, "expression"):
+                    for expression in alarm_def.info.expression.expression:
+                        if isinstance(expression, vim.alarm.EventAlarmExpression):
+                            if expression.eventTypeId == ESX_REMOTE_SYSLOG_FAILURE_EVENT:
+                                target_type = vc_alarms_utils.get_target_type(expression.objectType)
+                                alarms.append(vc_alarms_utils.get_alarm_details(alarm_def, target_type))
             result = alarms
 
         except Exception as e:

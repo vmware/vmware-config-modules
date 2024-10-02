@@ -49,7 +49,7 @@ Refer to Jira : VCFSC-202 and VCFSC-274
 
 * **Parameters:**
   * **context** (*VcenterContext*) – Product context instance.
-  * **desired_values** (*String* *or* *list* *of* *strings*) – Desired value for the certificate authority
+  * **desired_values** (*String* *or* *list* *of* *strings*) – Desired value for iscsi auth configuration
 * **Returns:**
   Dict of status (RemediateStatus.SKIPPED) and errors if any
 * **Return type:**
@@ -74,7 +74,7 @@ Sample desired_values spec
 
 * **Parameters:**
   * **context** – Product context instance.
-  * **desired_values** – Desired value for the certificate authority.
+  * **desired_values** – Desired value for iscsi auth configuration.
 * **Returns:**
   Dict of status and current/desired value or errors (for failure).
 * **Return type:**

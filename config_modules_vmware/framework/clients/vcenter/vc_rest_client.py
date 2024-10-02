@@ -68,8 +68,6 @@ class VcRestClient(object):
                 delete_session_func=delete_session,
             )
 
-        self.set_vcsa_version()
-
     @staticmethod
     def _create_vmware_api_session_id(client, hostname, username, password):
         """
@@ -138,6 +136,8 @@ class VcRestClient(object):
         :raise :class:`urllib3.exceptions.RequestException`
             If REST call response reports failed.
         """
+        if not self._rest_client_session:
+            return
         self._rest_client_session.delete_session()
 
     def vcsa_request(self, url, method, **kwargs):
@@ -264,7 +264,7 @@ class VcRestClient(object):
                 f"Key {vc_consts.CIS_TASK_KEY_VALUE} not found in CIS task response,"
                 f"CIS task: {task_id} returned unexpected response"
             )
-            raise err_msg
+            raise Exception(err_msg)
         value = task_response["value"]
 
         # Missing "status"
@@ -273,7 +273,7 @@ class VcRestClient(object):
                 f"Key {vc_consts.CIS_TASK_KEY_STATUS} not found in CIS task response,"
                 f"CIS task: {task_id} returned unexpected response"
             )
-            raise err_msg
+            raise Exception(err_msg)
 
         return value
 
@@ -320,15 +320,6 @@ class VcRestClient(object):
             else:
                 raise Exception(f"Task[{task_id}] returned an invalid status {status}")
 
-    def set_vcsa_version(self):
-        """
-        Set VCSA version.
-
-        return: None
-        """
-        self._vcsa_version = self.get_vcsa_version()
-        logger.info(f"Setting the VCSA version to {self._vcsa_version} in the vc rest client")
-
     def get_vcsa_version(self):
         """
         Make REST call to get the version of vCenter,
@@ -346,7 +337,8 @@ class VcRestClient(object):
 
         # Make REST request
         response = self.get_helper(url)
-        return response["version"]
+        self._vcsa_version = response.get("version")
+        return self._vcsa_version
 
     def get_base_url(self):
         return self._base_url

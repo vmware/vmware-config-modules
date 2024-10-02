@@ -21,6 +21,7 @@ class VcenterContext(BaseContext):
         ssl_thumbprint=None,
         saml_token=None,
         verify_ssl=True,
+        product_version=None,
     ):
         """
         Initialize context for Vcenter config functionalities to work on.
@@ -36,8 +37,10 @@ class VcenterContext(BaseContext):
         :type saml_token: :class:'str'
         :param verify_ssl: Flag to enable/disable SSL verification
         :type verify_ssl: :class:'boolean'
+        :param product_version: vCenter version in <major>.<minor>.<revision> format
+        :type product_version: str
         """
-        super().__init__(BaseContext.ProductEnum.VCENTER, hostname=hostname)
+        super().__init__(BaseContext.ProductEnum.VCENTER, hostname=hostname, product_version=product_version)
         self._username = username
         self._password = password
         self._ssl_thumbprint = ssl_thumbprint
@@ -62,6 +65,7 @@ class VcenterContext(BaseContext):
         if self._vc_vmomi_client:
             self._vc_vmomi_client.disconnect()
         if self._vc_rest_client:
+            self._vc_rest_client.delete_vmware_api_session_id()
             del self._vc_rest_client
             self._vc_rest_client = None
         if self._vc_vmomi_sso_client:

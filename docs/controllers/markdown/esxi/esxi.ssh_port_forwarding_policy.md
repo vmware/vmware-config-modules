@@ -2,7 +2,7 @@
 
 Bases: `BaseController`
 
-ESXi ssh port forwarding configuration.
+ESXi ssh port forwarding configuration. The control is automated only for vsphere 8.x and above.
 
 Config Id - 1111
 <br/>
@@ -53,3 +53,15 @@ Set ssh port forwarding policy for esxi host.
   Tuple of “status” and list of error messages.
 * **Return type:**
   Tuple
+
+#### check_compliance(context, desired_values)
+
+Check compliance of current configuration against provided desired values.
+
+* **Parameters:**
+  * **context** (*HostContext*) – Product context instance.
+  * **desired_values** (*str*) – Desired value for the ‘AllowTcpForwarding’ config.
+* **Returns:**
+  Dict of status and current/desired value(for non_compliant) or errors (for failure).
+* **Return type:**
+  dict

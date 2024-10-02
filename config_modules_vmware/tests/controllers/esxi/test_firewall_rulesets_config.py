@@ -234,3 +234,56 @@ class TestFirewallRulesetsConfig:
         assert result["errors"] == self.mock_9_expected_errors
         assert result["old"] == [self.remediate_mock_9_old]
         assert result["new"] == [self.remediate_mock_9_new]
+
+    def test_remediate_update_ruleset_not_controllable(self):
+        mock_host_ref = MagicMock()
+        ruleset = MagicMock()
+        ruleset.key = "Test rule"
+        ruleset.enabled = False
+        ruleset.allowedHosts.allIp = False
+        ruleset.allowedHosts.ipAddress = []
+        ruleset.allowedHosts.ipNetwork = []
+        ruleset.rules = []
+        ruleset.userControllable = False
+        mock_host_ref.configManager.firewallSystem.firewallInfo.ruleset = [ruleset]
+        mock_context = HostContext(host_ref=mock_host_ref)
+        desired_spec = {
+            "name": "Test rule",
+            "allow_all_ip": True,
+            "enabled": True,
+            "allowed_ips": {
+                "address": [],
+                "network": []
+            },
+            "rules": []
+        }
+        result = self.controller.remediate(mock_context, [desired_spec])
+        assert result["status"] == "PARTIAL"
+        assert result["errors"] == ["Manual intervention required for ruleset [Test rule]. Remediation not supported for configuration [enabled].True"]
+
+    def test_remediate_update_ruleset_ip_not_configurable(self):
+        mock_host_ref = MagicMock()
+        ruleset = MagicMock()
+        ruleset.key = "Test rule"
+        ruleset.enabled = True
+        ruleset.allowedHosts.allIp = True
+        ruleset.allowedHosts.ipAddress = []
+        ruleset.allowedHosts.ipNetwork = []
+        ruleset.rules = []
+        ruleset.userControllable = False
+        ruleset.ipListUserConfigurable = False
+        mock_host_ref.configManager.firewallSystem.firewallInfo.ruleset = [ruleset]
+        mock_context = HostContext(host_ref=mock_host_ref)
+        desired_spec = {
+            "name": "Test rule",
+            "allow_all_ip": False,
+            "enabled": True,
+            "allowed_ips": {
+                "address": [],
+                "network": []
+            },
+            "rules": []
+        }
+        result = self.controller.remediate(mock_context, [desired_spec])
+        assert result["status"] == "FAILED"
+        assert result["errors"] == ["Manual intervention required for ruleset [Test rule]. Remediation not supported for configuration [allow_all_ip].False"]

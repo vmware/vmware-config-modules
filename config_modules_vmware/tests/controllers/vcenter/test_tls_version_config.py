@@ -352,7 +352,7 @@ class TestTlsVersion:
         result = self.controller.check_compliance(mock_vc_context, self.desired_values_only_global)
         expected_result = {
             consts.STATUS: ComplianceStatus.SKIPPED,
-            consts.MESSAGE: "Control is not applicable on this product version"
+            consts.ERRORS: [consts.CONTROL_NOT_APPLICABLE]
         }
         assert result == expected_result
 

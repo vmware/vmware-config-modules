@@ -17,6 +17,7 @@ class TestRHttpProxyFips140_2CryptConfig:
         self.cli_return_non_compliant_value = "   Enabled: false"
         mock_host_ref = MagicMock()
         mock_host_ref.name = 'host-1'
+        mock_host_ref.config.product.version = "7.0.3"
         self.esx_cli_client = MagicMock()
         self.mock_host_context = HostContext(host_ref=mock_host_ref, esx_cli_client_func=self.esx_cli_client)
 
@@ -86,6 +87,30 @@ class TestRHttpProxyFips140_2CryptConfig:
         result = self.controller.remediate(self.mock_host_context, self.compliant_value)
         expected_result = {
             consts.STATUS: RemediateStatus.SKIPPED,
-            consts.ERRORS: ['Control already compliant']
+            consts.ERRORS: [consts.CONTROL_ALREADY_COMPLIANT]
         }
         assert result == expected_result
+
+    def test_get_skipped(self):
+        mock_host_context = MagicMock()
+        mock_host_context.product_version = "8.0.0"
+        result, errors = self.controller.get(mock_host_context)
+        assert result is None
+        assert errors == [consts.SKIPPED]
+
+    def test_set_skipped(self):
+        mock_host_context = MagicMock()
+        mock_host_context.product_version = "8.0.0"
+        status, errors = self.controller.set(mock_host_context, self.compliant_value)
+        assert status == RemediateStatus.SKIPPED
+        assert errors == [consts.CONTROL_NOT_APPLICABLE]
+
+    def test_check_compliance_skipped(self):
+        mock_host_context = MagicMock()
+        mock_host_context.product_version = "8.0.0"
+        expected_result = {
+            consts.STATUS: ComplianceStatus.SKIPPED,
+            consts.ERRORS: [consts.CONTROL_NOT_APPLICABLE]
+        }
+        result = self.controller.check_compliance(mock_host_context, "no")
+        assert expected_result == result

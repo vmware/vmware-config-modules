@@ -108,7 +108,7 @@ class ComplianceOperations(OperationsInterface):
                 del result[consts.RESULT]
             return result
 
-        else:
+        elif operation == Operations.CHECK_COMPLIANCE or operation == Operations.REMEDIATE:
             # For CHECK_COMPLIANCE and REMEDIATE operation, validate desired input spec against schema
             # and perform check compliance/remediation calling iterate_desired_state
             if input_values is None:
@@ -127,6 +127,10 @@ class ComplianceOperations(OperationsInterface):
                 metadata_filter,
                 overall_status,
             )
+        else:
+            err_msg = f"{operation.name} is not a valid operation for compliance controls."
+            logger.error(err_msg)
+            raise Exception(err_msg)
 
     @classmethod
     def _get_current_items(
@@ -287,12 +291,11 @@ class ComplianceOperations(OperationsInterface):
                                     raise Exception("Value key is missing.")
                                 with ControllerMetadataLoggingContext(config_obj.metadata):
                                     control_result = operation_function(context, control_data[consts.VALUE])
-                                # Temporary patch to convert "errors" key to "message" for remediation skipped case
-                                # Need to revisit this post we fix all controllers for which remediate is skipped.
-                                if (
-                                    operation == Operations.REMEDIATE.value
-                                    and control_result.get(consts.STATUS) == RemediateStatus.SKIPPED
-                                    and control_result.get(consts.ERRORS)
+                                # For the controls which are skipped during compliance or remediation with errors set,
+                                # Convert 'errors' key to 'message' key.
+                                if consts.ERRORS in control_result and (
+                                    control_result.get(consts.STATUS) == RemediateStatus.SKIPPED
+                                    or control_result.get(consts.STATUS) == ComplianceStatus.SKIPPED
                                 ):
                                     control_result[consts.MESSAGE] = control_result.get(consts.ERRORS)
                                     del control_result[consts.ERRORS]

@@ -171,7 +171,7 @@ class TlsVersion(BaseController):
             if len(errors) == 1 and errors[0] == consts.SKIPPED:
                 return {
                     consts.STATUS: ComplianceStatus.SKIPPED,
-                    consts.MESSAGE: "Control is not applicable on this product version",
+                    consts.ERRORS: [consts.CONTROL_NOT_APPLICABLE],
                 }
             # If errors are seen during get, return "FAILED" status with errors.
             return {consts.STATUS: ComplianceStatus.FAILED, consts.ERRORS: errors}

@@ -2,7 +2,8 @@
 
 Bases: `BaseController`
 
-ESXi controller to get/config ssh fips 140-2 validated cryptographic modules.
+ESXi controller to get/config ssh fips 140-2 validated cryptographic modules. This control is applicable only
+below vsphere 8.x version.
 
 Config Id - 1117
 <br/>
@@ -48,8 +49,20 @@ Set rhttpproxy daemon FIPS 140-2 validated cryptographic modules config for esxi
 
 * **Parameters:**
   * **context** (*HostContext*) – Esxi context instance.
-  * **desired_values** (*dict*) – boolean value True/False to update config.
+  * **desired_values** (*bool*) – boolean value True/False to update config.
 * **Returns:**
   Tuple of “status” and list of error messages.
 * **Return type:**
   Tuple
+
+#### check_compliance(context, desired_values)
+
+Check compliance of current configuration against provided desired values.
+
+* **Parameters:**
+  * **context** (*HostContext*) – Product context instance.
+  * **desired_values** (*bool*) – boolean value True/False to update config.
+* **Returns:**
+  Dict of status and current/desired value(for non_compliant) or errors (for failure).
+* **Return type:**
+  dict

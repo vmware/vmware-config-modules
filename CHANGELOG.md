@@ -1,4 +1,28 @@
 # CURRENTLY-IN-DEVELOPMENT
+# `v0.15.0.0`
+### New Controllers
+- VCSA Controllers
+    - 1225 - ip_based_storage_port_group_config
+- ESXi Controllers
+    - 1114 - snmp_config
+    - 4 - ssh_host_based_authentication
+    - 7 - ssh_permit_user_environment
+    - 16 - ssh_permit_tunnel
+    - 13 - ssh_gateway_ports
+    - 147 - ntp_config
+    - 22 - password_quality_config
+    - 12 - ssh_compression
+    - 6 - ssh_permit_empty_passwords
+    - 11 - ssh_strict_mode
+    - 14 - ssh_x11_forwarding
+    - 136 - log_location_config
+### Controller enhancements
+- ESXi Controllers
+    - Fix for alarm_esx_remote_syslog_failure by adding check for expression attribute
+    - Add version check for rhttpproxy fips 140 esxi control
+### Bug Fixes
+- Delete vCenter REST session as part of the vc_context `__exit__()`.
+- VM migration fix for template vms
 # `v0.14.6.0`
 ##### Released by codydouglasBC on Sept 05, 2024 @ 11:07 PM UTC
 ### Dependency Version Changes

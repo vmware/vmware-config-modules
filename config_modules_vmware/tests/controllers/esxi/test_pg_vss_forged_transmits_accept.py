@@ -86,6 +86,6 @@ class TestPgVssForgedTransmitsAccept:
         result = self.controller.remediate(HostContext(host_ref=self.mock_host_ref), self.compliant_value)
         expected_result = {
             consts.STATUS: RemediateStatus.SKIPPED,
-            consts.ERRORS: ['Control already compliant']
+            consts.ERRORS: [consts.CONTROL_ALREADY_COMPLIANT]
         }
         assert result == expected_result

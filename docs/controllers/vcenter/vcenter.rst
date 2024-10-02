@@ -29,6 +29,7 @@ Submodules
    vcenter.dvs_network_io_control_policy
    vcenter.dvs_pg_netflow_config
    vcenter.h5_client_session_timeout_config
+   vcenter.ip_based_storage_port_group_config
    vcenter.ldap_identity_source_config
    vcenter.logon_banner_config
    vcenter.managed_object_browser

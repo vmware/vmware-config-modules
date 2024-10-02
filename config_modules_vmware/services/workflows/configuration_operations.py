@@ -9,7 +9,11 @@ from config_modules_vmware.framework.logging.logging_context import ControllerMe
 from config_modules_vmware.framework.models.controller_models.metadata import ControllerMetadata
 from config_modules_vmware.framework.models.output_models.compliance_response import ComplianceStatus
 from config_modules_vmware.framework.models.output_models.get_current_response import GetCurrentConfigurationStatus
+from config_modules_vmware.framework.models.output_models.get_schema_response import GetSchemaStatus
 from config_modules_vmware.framework.models.output_models.remediate_response import RemediateStatus
+from config_modules_vmware.framework.models.output_models.validate_configuration_response import (
+    ValidateConfigurationStatus,
+)
 from config_modules_vmware.services.mapper import mapper_utils
 from config_modules_vmware.services.workflows.operations_interface import Operations
 from config_modules_vmware.services.workflows.operations_interface import OperationsInterface
@@ -42,7 +46,10 @@ class ConfigurationOperations(OperationsInterface):
         :type metadata_filter: Callable[[ControllerMetadata], bool]
         """
         config_template = mapper_utils.get_mapping_template(mapper_utils.CONFIGURATION_MAPPING_FILE)
-        if operation in (Operations.CHECK_COMPLIANCE, Operations.REMEDIATE) and input_values is None:
+        if (
+            operation in (Operations.CHECK_COMPLIANCE, Operations.REMEDIATE, Operations.VALIDATE)
+            and input_values is None
+        ):
             err_msg = f"input_values cannot be None for {operation.name} operation."
             logger.error(err_msg)
             raise Exception(err_msg)
@@ -86,13 +93,15 @@ class ConfigurationOperations(OperationsInterface):
             Operations.CHECK_COMPLIANCE: ComplianceStatus.SKIPPED,
             Operations.REMEDIATE: RemediateStatus.SKIPPED,
             Operations.GET_CURRENT: GetCurrentConfigurationStatus.SKIPPED,
+            Operations.GET_SCHEMA: GetSchemaStatus.SKIPPED,
+            Operations.VALIDATE: ValidateConfigurationStatus.SKIPPED,
         }[operation]
+        # Supported product check
         if context.product_category.value not in config_template:
             msg = f"{context.product_category.value} is not a supported product configuration"
             logger.info(msg)
             result = {consts.STATUS: skipped_status, consts.MESSAGE: msg}
         else:
-            result = {}
             class_file = config_template[context.product_category.value]
             class_ref = mapper_utils.get_class(class_file)
             config_obj = class_ref()
@@ -104,25 +113,30 @@ class ConfigurationOperations(OperationsInterface):
                     with ControllerMetadataLoggingContext(config_obj.metadata):
                         output, errors = config_obj.get(context, input_values)
                     if errors:
+                        logger.error(
+                            f"Get current configuration for {config_obj.metadata.name} returned errors - {errors}"
+                        )
                         if len(errors) == 1 and errors[0] == consts.SKIPPED:
-                            msg = f"Version [{context.product_version}] is not supported for product [{context.product_category}]"
-                            logger.info(msg)
-                            result = {consts.STATUS: skipped_status, consts.MESSAGE: msg}
+                            result = {
+                                consts.STATUS: GetCurrentConfigurationStatus.SKIPPED,
+                                consts.MESSAGE: consts.UNSUPPORTED_VERSION_MESSAGE_FORMAT.format(
+                                    context.product_version, context.product_category
+                                ),
+                            }
                         else:
-                            logger.error(
-                                f"Get current configuration for {config_obj.metadata.name} returned errors - {errors}"
-                            )
                             result = {
                                 consts.STATUS: GetCurrentConfigurationStatus.FAILED,
                                 consts.MESSAGE: f"{errors[0]}" if len(errors) == 1 else f"{errors}",
                             }
                     else:
                         result = {consts.STATUS: GetCurrentConfigurationStatus.SUCCESS, consts.RESULT: output}
-                elif operation == Operations.CHECK_COMPLIANCE:
+                else:
+                    operation_function = getattr(config_obj, operation.value)
+
                     with ControllerMetadataLoggingContext(config_obj.metadata):
-                        result = config_obj.check_compliance(context, input_values)
-                elif operation == Operations.REMEDIATE:
-                    with ControllerMetadataLoggingContext(config_obj.metadata):
-                        result = config_obj.remediate(context, input_values)
+                        if operation == Operations.GET_SCHEMA:
+                            result = operation_function(context)
+                        else:
+                            result = operation_function(context, input_values)
 
         result_config.update(result)

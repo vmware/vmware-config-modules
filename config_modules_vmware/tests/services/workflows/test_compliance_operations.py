@@ -1290,3 +1290,12 @@ class TestComplianceOperations:
             }
         }
         self.compliance_workflow_with_metadata(remediate_response, ntp_config, Operations.REMEDIATE)
+
+    @patch('config_modules_vmware.services.mapper.mapper_utils.get_mapping_template')
+    @patch('logging.Logger.info')
+    def test_operate_unsupported_operation(self, get_mapping_template_mock, logger_error_mock):
+        self.context_mock.product_category.value = "vcenter"
+        get_mapping_template_mock.return_value = self.config_template
+        with pytest.raises(Exception):
+            ComplianceOperations.operate(self.context_mock, Operations.GET_SCHEMA, {}, None)
+            logger_error_mock.assert_called_once_with("GET_SCHEMA is not a valid operation for compliance controls.")

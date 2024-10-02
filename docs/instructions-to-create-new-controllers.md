@@ -29,7 +29,7 @@ This process involves figuring out the publicly available APIs or scripts that c
 
 ##### [NOTE: This is only applicable for `COMPLIANCE` type controls]
 
-Specification for each control should be defined in the [compliance schema](../config_modules_vmware/schemas/compliance_reference_schema.json). This schema serves as a standardized representation of the control's value, and the controller implementation for that control would be implemented based on the schema. The schema is based on [JSONSchema specification](https://json-schema.org/specification).
+Specification for each control should be defined in the [compliance schema](../config_modules_vmware/schemas/compliance_reference_schema.json). This schema serves as a standardized representation of the control's value, and the controller implementation for that control would be implemented based on the schema. The schema is based on [JSONSchema specification](https://json-schema.org/specification) and documentation about the compliance reference schema is captured [here](../docs/compliance-schema-documentation.md)
 
 #### Things to follow while writing schema spec for a new control
 

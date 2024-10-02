@@ -7,6 +7,7 @@ from config_modules_vmware.framework.clients.common import consts
 from config_modules_vmware.framework.models.controller_models.metadata import ControllerMetadata
 from config_modules_vmware.framework.models.output_models.compliance_response import ComplianceStatus
 from config_modules_vmware.framework.models.output_models.get_current_response import GetCurrentConfigurationStatus
+from config_modules_vmware.framework.models.output_models.get_schema_response import GetSchemaStatus
 from config_modules_vmware.framework.models.output_models.remediate_response import RemediateStatus
 from config_modules_vmware.services.workflows.configuration_operations import ConfigurationOperations
 from config_modules_vmware.services.workflows.operations_interface import Operations
@@ -181,13 +182,22 @@ class TestConfigurationOperations:
         assert result == expected_result
 
     @patch('config_modules_vmware.services.mapper.mapper_utils.get_mapping_template')
-    def test_operate_no_matching_product_version(self, get_mapping_template_mock):
+    @patch('config_modules_vmware.services.mapper.mapper_utils.get_class')
+    def test_operate_get_schema(self, get_class_mock, get_mapping_template_mock):
         get_mapping_template_mock.return_value = self.config_template
-        self.context_mock.product_version = "0.0.0"
+
+        class MockControllerGetSchema:
+            metadata = ControllerMetadata(status=ControllerMetadata.ControllerStatus.ENABLED)
+
+            @staticmethod
+            def get_schema(context):
+                return {'status': GetSchemaStatus.SUCCESS, 'result': {"foo": "bar"}}
+
+        get_class_mock.return_value = MockControllerGetSchema
 
         expected_result = {
-            consts.STATUS: GetCurrentConfigurationStatus.SKIPPED,
-            consts.MESSAGE: f"Version [0.0.0] is not supported for product [{self.context_mock.product_category}]"
+            consts.STATUS: GetSchemaStatus.SUCCESS,
+            consts.RESULT: {"foo": "bar"},
         }
-        result = ConfigurationOperations.operate(self.context_mock, Operations.GET_CURRENT, self.input_values)
+        result = ConfigurationOperations.operate(self.context_mock, Operations.GET_SCHEMA, self.input_values)
         assert result == expected_result

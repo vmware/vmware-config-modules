@@ -3,6 +3,7 @@ import logging
 from abc import ABC
 from abc import abstractmethod
 from typing import Any
+from typing import ClassVar
 from typing import Dict
 from typing import List
 from typing import Tuple
@@ -12,7 +13,11 @@ from config_modules_vmware.framework.clients.common import consts
 from config_modules_vmware.framework.logging.logger_adapter import LoggerAdapter
 from config_modules_vmware.framework.models.controller_models.metadata import ControllerMetadata
 from config_modules_vmware.framework.models.output_models.compliance_response import ComplianceStatus
+from config_modules_vmware.framework.models.output_models.get_schema_response import GetSchemaStatus
 from config_modules_vmware.framework.models.output_models.remediate_response import RemediateStatus
+from config_modules_vmware.framework.models.output_models.validate_configuration_response import (
+    ValidateConfigurationStatus,
+)
 from config_modules_vmware.framework.utils.comparator import Comparator
 from config_modules_vmware.framework.utils.comparator import ComparatorOptionForList
 
@@ -20,6 +25,8 @@ logger = LoggerAdapter(logging.getLogger(__name__))
 
 
 class BaseController(ABC):
+    metadata: ClassVar[ControllerMetadata]
+
     def __init__(self):
         self.comparator_option = ComparatorOptionForList.COMPARE_AFTER_SORT
         self.instance_key = "name"
@@ -105,7 +112,7 @@ class BaseController(ABC):
 
         elif compliance_response.get(consts.STATUS) == ComplianceStatus.COMPLIANT:
             # For compliant_status as "COMPLIANT", return remediation as skipped.
-            return {consts.STATUS: RemediateStatus.SKIPPED, consts.ERRORS: ["Control already compliant"]}
+            return {consts.STATUS: RemediateStatus.SKIPPED, consts.ERRORS: [consts.CONTROL_ALREADY_COMPLIANT]}
 
         elif compliance_response.get(consts.STATUS) == ComplianceStatus.SKIPPED:
             # For compliance_status as "SKIPPED", return remediation as SKIPPED since no remediation was performed.
@@ -138,3 +145,27 @@ class BaseController(ABC):
             else:
                 result = {consts.STATUS: RemediateStatus.FAILED, consts.ERRORS: errors}
         return result
+
+    def get_schema(self, context: BaseContext) -> Dict:  # pylint: disable=W0613
+        """Get configuration schema.
+        Note: This is not yet implemented for compliance.
+
+        :param context: Product context instance.
+        :type context: BaseContext
+        :return: Dict of status and schema result.
+        :rtype: dict
+        """
+        return {consts.RESULT: self.metadata.spec, consts.STATUS: GetSchemaStatus.SUCCESS}
+
+    def validate(self, context: BaseContext, desired_values: Any) -> Dict:  # pylint: disable=W0613
+        """Validate configuration.
+        Note: This is not yet implemented for compliance.
+
+        :param context: Product context instance
+        :type context: BaseContext
+        :param desired_values: Desired configuration values.
+        :type desired_values: Any
+        :return: Dict of status and schema result.
+        :rtype: dict
+        """
+        return {consts.STATUS: ValidateConfigurationStatus.SKIPPED}

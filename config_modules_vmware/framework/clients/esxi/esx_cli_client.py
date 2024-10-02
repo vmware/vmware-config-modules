@@ -35,13 +35,15 @@ class EsxCliClient(object):
         self._vc_ssl_thumbprint = vc_ssl_thumbprint
         self._path = shutil.which("esxcli")
 
-    def run_esx_cli_cmd(self, hostname: str, command: str) -> Tuple[str, str, int]:
+    def run_esx_cli_cmd(self, hostname: str, command: str, raise_on_non_zero: bool = True) -> Tuple[str, str, int]:
         """
         Run the esxcli command against the given host.
         :param hostname: ESXi hostname
         :type hostname: str
         :param command: The esx cli command to run
         :type command: str
+        :param raise_on_non_zero: When set to true, it raises called processor error for all non-zero exit codes.
+        :type raise_on_non_zero: bool
         :return: The output from stdout, stderr and return code
         :rtype: Tuple[str, str, int]
         :raise: ValueError if input command is empty or any exception raised by the subprocess module.
@@ -64,4 +66,4 @@ class EsxCliClient(object):
         # Workaround for esxcli dependent on "HOME" environment variable
         if not env.get("HOME"):
             env["HOME"] = "/tmp"  # nosec
-        return utils.run_shell_cmd(command=esx_cli_cmd, env=env)
+        return utils.run_shell_cmd(command=esx_cli_cmd, env=env, raise_on_non_zero=raise_on_non_zero)

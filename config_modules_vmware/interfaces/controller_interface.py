@@ -12,9 +12,17 @@ from config_modules_vmware.framework.models.output_models.compliance_response im
 from config_modules_vmware.framework.models.output_models.compliance_response import ComplianceStatus
 from config_modules_vmware.framework.models.output_models.get_current_response import GetCurrentConfigurationResponse
 from config_modules_vmware.framework.models.output_models.get_current_response import GetCurrentConfigurationStatus
+from config_modules_vmware.framework.models.output_models.get_schema_response import GetSchemaResponse
+from config_modules_vmware.framework.models.output_models.get_schema_response import GetSchemaStatus
 from config_modules_vmware.framework.models.output_models.output_response import OutputResponse
 from config_modules_vmware.framework.models.output_models.remediate_response import RemediateResponse
 from config_modules_vmware.framework.models.output_models.remediate_response import RemediateStatus
+from config_modules_vmware.framework.models.output_models.validate_configuration_response import (
+    ValidateConfigurationResponse,
+)
+from config_modules_vmware.framework.models.output_models.validate_configuration_response import (
+    ValidateConfigurationStatus,
+)
 from config_modules_vmware.interfaces.metadata_interface import ControllerMetadataInterface
 from config_modules_vmware.services.workflows.compliance_operations import ComplianceOperations
 from config_modules_vmware.services.workflows.configuration_operations import ConfigurationOperations
@@ -132,7 +140,7 @@ class ControllerInterface:
                 )
             except Exception as e:
                 logging.error(f"Exception in get current configuration {e}")
-                get_current_output.status = GetCurrentConfigurationStatus.ERROR
+                get_current_output.status = GetCurrentConfigurationStatus.FAILED
                 get_current_output.message = str(e)
             return get_current_output.to_dict()
 
@@ -524,6 +532,85 @@ class ControllerInterface:
                 remediation_output.message = str(e)
             return remediation_output.to_dict()
 
+    def get_schema(
+        self,
+        controller_type: ControllerMetadata.ControllerType = ControllerMetadata.ControllerType.COMPLIANCE,
+    ) -> Dict:
+        """Get schema.
+
+        Sample response for SUCCESS case:
+
+        .. code-block:: json
+
+            {
+              "result": {
+                ...
+              },
+              "status": "SUCCESS"
+            }
+
+        :param controller_type: Type of controller to invoke
+        :type controller_type: ControllerMetadata.ControllerType
+        :return: Get Schema output.
+        :rtype: dict
+        """
+        with HostnameLoggingContext(self._context.hostname):
+            logger.info("Running get schema.")
+            get_schema_output = GetSchemaResponse()
+            try:
+                self._invoke_workflow(
+                    {},
+                    get_schema_output,
+                    Operations.GET_SCHEMA,
+                    None,
+                    controller_type,
+                )
+            except Exception as e:
+                logging.error(f"Exception in get schema {str(e)}")
+                get_schema_output.status = GetSchemaStatus.FAILED
+                get_schema_output.message = str(e)
+            return get_schema_output.to_dict()
+
+    def validate_configuration(
+        self,
+        desired_state_spec: Dict = None,
+        controller_type: ControllerMetadata.ControllerType = ControllerMetadata.ControllerType.COMPLIANCE,
+    ) -> Dict:
+        """Validate Configuration.
+
+        Sample response for VALID case:
+
+        .. code-block:: json
+
+            {
+              "status": "VALID",
+              "result": {}
+            }
+
+        :param desired_state_spec: The desired state spec
+        :type desired_state_spec: dict
+        :param controller_type: Type of controller to invoke
+        :type controller_type: ControllerMetadata.ControllerType
+        :return: Validate output.
+        :rtype: dict
+        """
+        with HostnameLoggingContext(self._context.hostname):
+            logger.info("Running validate configuration.")
+            validate_output = ValidateConfigurationResponse()
+            try:
+                self._invoke_workflow(
+                    desired_state_spec,
+                    validate_output,
+                    Operations.VALIDATE,
+                    None,
+                    controller_type,
+                )
+            except Exception as e:
+                logging.error(f"Exception in validate {str(e)}")
+                validate_output.status = ValidateConfigurationStatus.FAILED
+                validate_output.message = str(e)
+            return validate_output.to_dict()
+
     def _invoke_workflow(
         self,
         desired_state_spec: dict,
@@ -555,7 +642,11 @@ class ControllerInterface:
             metadata_filter=metadata_filter,
         )
         output_response.status = workflow_response.get(consts.STATUS)
-        if operation == Operations.GET_CURRENT:
+        if (
+            operation == Operations.GET_CURRENT
+            or operation == Operations.GET_SCHEMA
+            or operation == Operations.VALIDATE
+        ):
             output_response.result = workflow_response.get(consts.RESULT, {})
         else:
             output_response.changes = workflow_response.get(consts.RESULT, {})

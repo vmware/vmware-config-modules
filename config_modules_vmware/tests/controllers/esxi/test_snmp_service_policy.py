@@ -95,6 +95,6 @@ class TestSnmpServicePolicy:
         result = self.controller.remediate(self.mock_host_context, self.compliant_value)
         expected_result = {
             consts.STATUS: RemediateStatus.SKIPPED,
-            consts.ERRORS: ['Control already compliant']
+            consts.ERRORS: [consts.CONTROL_ALREADY_COMPLIANT]
         }
         assert result == expected_result
