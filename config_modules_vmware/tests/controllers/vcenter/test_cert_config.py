@@ -69,7 +69,7 @@ class TestCertConfig:
     def test_set_skipped(self, mock_vc_rest_client, mock_vc_context):
         # Setup Mock objects for successfully changing the value.
         current_value = ["OU=VMwareEngineering,O=vcenter-1.vrack.vsphere.local,ST=California,C=US,DC=local,DC=vsphere,CN=CA"]
-        expected_result = {consts.STATUS: RemediateStatus.SKIPPED, consts.ERRORS: ["Set is not implemented as this control requires manual intervention"]}
+        expected_result = {consts.STATUS: RemediateStatus.SKIPPED, consts.ERRORS: [consts.REMEDIATION_SKIPPED_MESSAGE]}
         mock_vc_rest_client.get_helper.return_value = current_value
         mock_vc_context.vc_rest_client.return_value = mock_vc_rest_client
 
@@ -86,8 +86,7 @@ class TestCertConfig:
         # Setup Mock objects for successfully changing the value.
 
         current_value = ["OU=VMwareEngineering,O=vcenter-1.vrack.vsphere.local,ST=California,C=US,DC=local,DC=vsphere,CN=CA"]
-        expected_result = {consts.STATUS: RemediateStatus.SKIPPED, consts.ERRORS: [
-            "Set is not implemented as this control requires manual intervention"],
+        expected_result = {consts.STATUS: RemediateStatus.SKIPPED, consts.ERRORS: [consts.REMEDIATION_SKIPPED_MESSAGE],
                            consts.DESIRED: self.control_desired_value, consts.CURRENT: self.non_compliant_display_value}
 
         mock_vc_rest_client.get_base_url.return_value = self.vc_base_url

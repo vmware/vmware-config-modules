@@ -85,7 +85,7 @@ class TestLogonBannerConfig:
     def test_remediate_skipped_already_compliant(self, mock_execute_shell_cmd, mock_vc_context):
         # Setup Mock objects for successfully changing the value.
 
-        expected_result = {consts.STATUS: RemediateStatus.SKIPPED, consts.ERRORS: ['Control already compliant']}
+        expected_result = {consts.STATUS: RemediateStatus.SKIPPED, consts.ERRORS: [consts.CONTROL_ALREADY_COMPLIANT]}
 
         mock_execute_shell_cmd.return_value = self.shell_cmd_set_return_success
 

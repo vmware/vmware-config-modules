@@ -89,7 +89,7 @@ class CertConfig(BaseController):
         :return: Tuple of status (RemediateStatus.SKIPPED) and errors if any
         :rtype: tuple
         """
-        errors = ["Set is not implemented as this control requires manual intervention"]
+        errors = [consts.REMEDIATION_SKIPPED_MESSAGE]
         status = RemediateStatus.SKIPPED
         return status, errors
 

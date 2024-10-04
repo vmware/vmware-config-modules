@@ -17,6 +17,8 @@ class Operations(Enum):
     GET_CURRENT = "get_current"
     REMEDIATE = "remediate"
     CHECK_COMPLIANCE = "check_compliance"
+    GET_SCHEMA = "get_schema"
+    VALIDATE = "validate"
 
 
 class OperationsInterface(ABC):

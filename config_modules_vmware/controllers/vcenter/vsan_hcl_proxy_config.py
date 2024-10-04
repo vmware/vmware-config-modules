@@ -225,7 +225,7 @@ class VSANHCLProxyConfig(BaseController):
             desired_keys=HCL_PROXY_DESIRED_KEYS_FOR_AUDIT,
         )
         if not non_compliant_configs:
-            return {consts.STATUS: RemediateStatus.SKIPPED, consts.ERRORS: ["Control already compliant"]}
+            return {consts.STATUS: RemediateStatus.SKIPPED, consts.ERRORS: [consts.CONTROL_ALREADY_COMPLIANT]}
 
         status, errors = self.set(context=context, desired_values=desired_values)
 

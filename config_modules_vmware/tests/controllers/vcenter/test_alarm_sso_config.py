@@ -12,14 +12,21 @@ from config_modules_vmware.framework.models.output_models.remediate_response imp
 
 class TestAlarmSSOConfig:
 
-    mock_alarm_def = MagicMock()
-
     def setup_method(self):
         self.controller = AlarmSSOConfig()
-        self.mock_alarm_def.info.name = "Mocked Alarm"
-        self.mock_alarm_def.info.description = "Mocked Alarm Description"
-        self.mock_alarm_def.info.enabled = True
-        self.mock_alarm_def.info.actionFrequency = 60
+
+        self.mock_alarm_def1 = MagicMock()
+        self.mock_alarm_def1.info.name = "Mocked Alarm1"
+        self.mock_alarm_def1.info.description = "Mocked Alarm with expression eventType com.vmware.sso.PrincipalManagement"
+        self.mock_alarm_def1.info.enabled = True
+        self.mock_alarm_def1.info.actionFrequency = 60
+
+        self.mock_alarm_def2 = MagicMock()
+        self.mock_alarm_def2.info.name = "Mocked Alarm2"
+        self.mock_alarm_def2.info.description = "Mocked Alarm with no expression"
+        self.mock_alarm_def2.info.enabled = True
+        self.mock_alarm_def2.info.actionFrequency = 60
+        self.mock_alarm_def2.info.expression = None
 
         mock_expression = MagicMock()
         mock_expression.status = "red"
@@ -32,7 +39,7 @@ class TestAlarmSSOConfig:
         mock_comparison.operator = 'startsWith'
         mock_comparison.value = 'A'
         mock_expression.comparisons = [mock_comparison]
-        self.mock_alarm_def.info.expression.expression = [mock_expression]
+        self.mock_alarm_def1.info.expression.expression = [mock_expression]
 
         mock_email_action = MagicMock()
         mock_email_action.transitionSpecs[0].repeats = True
@@ -61,19 +68,19 @@ class TestAlarmSSOConfig:
         mock_script_action.transitionSpecs[0].finalState = "green"
         mock_script_action.action.script = "Mocked Script"
 
-        self.mock_alarm_def.info.action.action = [mock_email_action, mock_snmp_action, mock_script_action]
+        self.mock_alarm_def1.info.action.action = [mock_email_action, mock_snmp_action, mock_script_action]
 
         self.mock_vc_context = MagicMock()
 
         self.mock_alarm_manager = MagicMock()
 
-        self.mock_alarm_manager.GetAlarm.return_value = [self.mock_alarm_def]
+        self.mock_alarm_manager.GetAlarm.return_value = [self.mock_alarm_def1, self.mock_alarm_def2]
 
         self.mock_vc_context.vc_vmomi_client().content.alarmManager = self.mock_alarm_manager
 
         self.expected_alarms = [{
-            'alarm_name': 'Mocked Alarm',
-            'alarm_description': 'Mocked Alarm Description',
+            'alarm_name': 'Mocked Alarm1',
+            'alarm_description': 'Mocked Alarm with expression eventType com.vmware.sso.PrincipalManagement',
             'enabled': True,
             'target_type': 'VCENTER',
             'rule_expressions': [
@@ -135,7 +142,7 @@ class TestAlarmSSOConfig:
         self.mock_vc_context.vc_vmomi_client.side_effect = Exception("Test exception")
         status, errors = self.controller.set(self.mock_vc_context, self.expected_alarms)
         assert status == RemediateStatus.FAILED
-        assert errors == ["Error during Mocked Alarm creation with error Test exception."]
+        assert errors == ["Error during Mocked Alarm1 creation with error Test exception."]
 
     def test_set_failed_exception_duplicate_name(self):
         mock_vc_context = MagicMock()
@@ -144,7 +151,7 @@ class TestAlarmSSOConfig:
         mock_alarm_manager.CreateAlarm.side_effect = vim.fault.DuplicateName
         status, errors = self.controller.set(mock_vc_context, self.expected_alarms)
         assert status == RemediateStatus.FAILED
-        assert errors == ["An alarm with same name 'Mocked Alarm' already exists.",
+        assert errors == ["An alarm with same name 'Mocked Alarm1' already exists.",
                           'Manual remediation required for an update or deletion.',
                           'Please either update/delete that alarm manually or choose different alarm name.']
 
@@ -163,8 +170,8 @@ class TestAlarmSSOConfig:
         result = self.controller.check_compliance(self.mock_vc_context, self.expected_alarms)
         expected_result = {
             consts.STATUS: ComplianceStatus.NON_COMPLIANT,
-            consts.CURRENT: [{'enabled': True, 'alarm_name': 'Mocked Alarm'}],
-            consts.DESIRED: [{'enabled': False, 'alarm_name': 'Mocked Alarm'}]
+            consts.CURRENT: [{'enabled': True, 'alarm_name': 'Mocked Alarm1'}],
+            consts.DESIRED: [{'enabled': False, 'alarm_name': 'Mocked Alarm1'}]
         }
         assert result == expected_result
 

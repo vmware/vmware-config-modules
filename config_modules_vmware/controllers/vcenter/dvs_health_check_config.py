@@ -288,7 +288,7 @@ class DVSHealthCheckConfig(BaseController):
         result = self.check_compliance(context, desired_values)
 
         if result[consts.STATUS] == ComplianceStatus.COMPLIANT:
-            return {consts.STATUS: RemediateStatus.SKIPPED, consts.ERRORS: ["Control already compliant"]}
+            return {consts.STATUS: RemediateStatus.SKIPPED, consts.ERRORS: [consts.CONTROL_ALREADY_COMPLIANT]}
         elif result[consts.STATUS] == ComplianceStatus.NON_COMPLIANT:
             non_compliant_items = result[consts.CURRENT]
         else:

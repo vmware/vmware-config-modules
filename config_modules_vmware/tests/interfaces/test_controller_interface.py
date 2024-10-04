@@ -7,7 +7,10 @@ from config_modules_vmware.framework.clients.common import consts
 from config_modules_vmware.framework.models.controller_models.metadata import ControllerMetadata
 from config_modules_vmware.framework.models.output_models.compliance_response import ComplianceStatus
 from config_modules_vmware.framework.models.output_models.get_current_response import GetCurrentConfigurationStatus
+from config_modules_vmware.framework.models.output_models.get_schema_response import GetSchemaStatus
 from config_modules_vmware.framework.models.output_models.remediate_response import RemediateStatus
+from config_modules_vmware.framework.models.output_models.validate_configuration_response import \
+    ValidateConfigurationStatus
 from config_modules_vmware.interfaces.controller_interface import ControllerInterface
 from config_modules_vmware.services.workflows.operations_interface import Operations
 
@@ -137,7 +140,7 @@ class TestControllerInterface:
         # Assert expected results
         compliance_operation_operate_mock.assert_called_once_with(
             self.context_mock, Operations.GET_CURRENT, input_values=None, metadata_filter=None)
-        assert result == {'status': ComplianceStatus.ERROR, 'message': 'Test Exception'}
+        assert result == {'status': GetCurrentConfigurationStatus.FAILED, 'message': 'Test Exception'}
 
     @patch('config_modules_vmware.services.workflows.configuration_operations.ConfigurationOperations.operate')
     def test_get_current_configuration_configuration_operation(self, configuration_operation_operate_mock):
@@ -285,3 +288,62 @@ class TestControllerInterface:
         configuration_operation_operate_mock.assert_called_once_with(
             self.context_mock, Operations.REMEDIATE, input_values=self.desired_state_spec, metadata_filter=None)
         assert result == expected_remediation_response
+
+    @patch('config_modules_vmware.services.workflows.configuration_operations.ConfigurationOperations.operate')
+    def test_get_schema_exception(self, configuration_operation_operate_mock):
+        configuration_operation_operate_mock.side_effect = Exception('Test Exception')
+        result = self.control_config.get_schema(controller_type=ControllerMetadata.ControllerType.CONFIGURATION)
+
+        # Assert expected results
+        configuration_operation_operate_mock.assert_called_once_with(
+            self.context_mock, Operations.GET_SCHEMA, input_values={}, metadata_filter=None)
+        assert result == {'status': GetSchemaStatus.FAILED, 'message': 'Test Exception'}
+
+    @patch('config_modules_vmware.services.workflows.configuration_operations.ConfigurationOperations.operate')
+    def test_get_schema_configuration_operation(self, configuration_operation_operate_mock):
+        expected_get_schema_response = {
+            'status': GetSchemaStatus.SUCCESS,
+            'result': {"foo": "bar"}
+        }
+        configuration_operation_operate_mock.return_value = {
+            'status': GetSchemaStatus.SUCCESS,
+            'result': expected_get_schema_response.get(consts.RESULT)
+        }
+
+        result = self.control_config.get_schema(controller_type=ControllerMetadata.ControllerType.CONFIGURATION)
+
+        # Assert expected results
+        configuration_operation_operate_mock.assert_called_once_with(
+            self.context_mock, Operations.GET_SCHEMA, input_values={}, metadata_filter=None)
+        assert result == expected_get_schema_response
+
+    @patch('config_modules_vmware.services.workflows.configuration_operations.ConfigurationOperations.operate')
+    def test_validate_configuration_operation(self, configuration_operation_operate_mock):
+        expected_validate_response = {
+            'status': ValidateConfigurationStatus.VALID
+        }
+        configuration_operation_operate_mock.return_value = expected_validate_response
+        desired_state = {"foo": "bar"}
+        result = self.control_config.validate_configuration(
+            desired_state_spec=desired_state,
+            controller_type=ControllerMetadata.ControllerType.CONFIGURATION
+        )
+
+        # Assert expected results
+        configuration_operation_operate_mock.assert_called_once_with(
+            self.context_mock, Operations.VALIDATE, input_values=desired_state, metadata_filter=None)
+        assert result == expected_validate_response
+
+    @patch('config_modules_vmware.services.workflows.configuration_operations.ConfigurationOperations.operate')
+    def test_validate_exception(self, configuration_operation_operate_mock):
+        configuration_operation_operate_mock.side_effect = Exception('Test Exception')
+        desired_state = {"foo": "bar"}
+        result = self.control_config.validate_configuration(
+            desired_state_spec=desired_state,
+            controller_type=ControllerMetadata.ControllerType.CONFIGURATION
+        )
+
+        # Assert expected results
+        configuration_operation_operate_mock.assert_called_once_with(
+            self.context_mock, Operations.VALIDATE, input_values=desired_state, metadata_filter=None)
+        assert result == {'status': ValidateConfigurationStatus.FAILED, 'message': 'Test Exception'}

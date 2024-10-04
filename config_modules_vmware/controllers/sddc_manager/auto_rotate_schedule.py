@@ -200,7 +200,7 @@ class AutoRotateScheduleConfig(BaseController):
         if non_compliant_credentials.get(AUTO_ROTATE_CREDENTIALS):
             status, errors = self.set(context=context, desired_values=desired_value)
         else:
-            return {consts.STATUS: RemediateStatus.SKIPPED, consts.ERRORS: ["Control already compliant"]}
+            return {consts.STATUS: RemediateStatus.SKIPPED, consts.ERRORS: [consts.CONTROL_ALREADY_COMPLIANT]}
 
         if not errors:
             result = {consts.STATUS: status, consts.OLD: non_compliant_credentials, consts.NEW: desired_value}

@@ -76,6 +76,7 @@ class AlarmSSOConfig(BaseController):
 
             # Fetch details of all the alarms for which any expression within an alarm has eventId : SSO_EVENT_ID
             for alarm_def in alarm_definitions:
+                # vim.alarm.EventAlarmExpression might not have 'expression' attribute if there is no expression
                 if hasattr(alarm_def.info.expression, "expression"):
                     for expression in alarm_def.info.expression.expression:
                         if isinstance(expression, vim.alarm.EventAlarmExpression):

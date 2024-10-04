@@ -204,7 +204,7 @@ class TestSNMPv3SecurityPolicy:
     @patch("config_modules_vmware.framework.auth.contexts.vc_context.VcenterContext")
     @patch("config_modules_vmware.framework.utils.utils.run_shell_cmd")
     def test_remediate_skipped_already_desired(self, mock_execute_shell_cmd, mock_vc_context):
-        expected_result = {consts.STATUS: RemediateStatus.SKIPPED, consts.ERRORS: ['Control already compliant']}
+        expected_result = {consts.STATUS: RemediateStatus.SKIPPED, consts.ERRORS: [consts.CONTROL_ALREADY_COMPLIANT]}
 
         mock_execute_shell_cmd.return_value = self.compliant_shell_cmd_return_val
 

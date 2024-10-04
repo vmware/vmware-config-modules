@@ -30,6 +30,8 @@ END_PORT_KEY = "end_port"
 ADDRESS_KEY = "address"
 NETWORK_KEY = "network"
 NETWORK_CIDR_FORMAT = "{}/{}"
+USER_CONTROLLABLE = "userControllable"
+IP_LIST_CONFIGURABLE = "ipListUserConfigurable"
 
 logger = LoggerAdapter(logging.getLogger(__name__))
 
@@ -136,7 +138,7 @@ class FirewallRulesetsConfig(BaseController):
 
         elif compliance_response.get(consts.STATUS) == ComplianceStatus.COMPLIANT:
             # For compliant case, return SKIPPED.
-            return {consts.STATUS: RemediateStatus.SKIPPED, consts.ERRORS: ["Control already compliant"]}
+            return {consts.STATUS: RemediateStatus.SKIPPED, consts.ERRORS: [consts.CONTROL_ALREADY_COMPLIANT]}
         else:
             # Check for non-compliant items and iterate through each of drifts and invoke remediation.
             # Scenario 1. Handle addition/removal of ruleset in desired config
@@ -220,6 +222,14 @@ class FirewallRulesetsConfig(BaseController):
         old = {}
         firewall_config = context.host_ref.configManager.firewallSystem
         ruleset_name = non_compliant_desired_config.get(NAME_KEY)
+        rulesets_metadata = {
+            ruleset.key: {
+                USER_CONTROLLABLE: getattr(ruleset, USER_CONTROLLABLE, True),
+                IP_LIST_CONFIGURABLE: getattr(ruleset, IP_LIST_CONFIGURABLE, True),
+            }
+            for ruleset in firewall_config.firewallInfo.ruleset
+        }
+
         allow_all_ip, allowed_ips = None, None
         # desired_config dict contains only non-compliant config. This operation requires other keys that are
         # compliant as well. So get full desired config from input desired_values.
@@ -235,13 +245,15 @@ class FirewallRulesetsConfig(BaseController):
         for config_key in non_compliant_desired_config.keys():
             if config_key == NAME_KEY:
                 continue
-            if config_key == ENABLED_KEY:
+            if config_key == ENABLED_KEY and rulesets_metadata[ruleset_name].get(USER_CONTROLLABLE):
                 # Handle Enable/Disable Ruleset configuration.
                 config = non_compliant_desired_config.get(ENABLED_KEY)
                 self._toggle_ruleset(
                     firewall_config, ruleset_name, config, new, old, errors, non_compliant_current_config
                 )
-            elif config_key == ALLOW_ALL_IP_KEY or config_key == ALLOWED_IPS_KEY:
+            elif (config_key == ALLOW_ALL_IP_KEY or config_key == ALLOWED_IPS_KEY) and rulesets_metadata[
+                ruleset_name
+            ].get(IP_LIST_CONFIGURABLE):
                 # create tuples with drift and full desired configs.
                 allow_all_ip = (
                     desired_config_full.get(ALLOW_ALL_IP_KEY),

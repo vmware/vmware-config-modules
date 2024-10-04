@@ -2,7 +2,7 @@
 
 Bases: `BaseController`
 
-ESXi ignore ssh rhosts configuration.
+ESXi ignore ssh rhosts configuration. The control is automated only for vsphere 8.x and above.
 
 Config Id - 3
 <br/>
@@ -53,3 +53,15 @@ Set ssh ignore rhosts policy for esxi host.
   Tuple of “status” and list of error messages.
 * **Return type:**
   Tuple
+
+#### check_compliance(context, desired_values)
+
+Check compliance of current configuration against provided desired values.
+
+* **Parameters:**
+  * **context** (*HostContext*) – Product context instance.
+  * **desired_values** (*str*) – Desired value for the host ignore rhosts config.
+* **Returns:**
+  Dict of status and current/desired value(for non_compliant) or errors (for failure).
+* **Return type:**
+  dict

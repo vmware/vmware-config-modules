@@ -162,7 +162,7 @@ class TestSSOBashShellAuthorizedMembersConfig:
     @patch("config_modules_vmware.framework.auth.contexts.vc_context.VcenterContext")
     @patch("config_modules_vmware.framework.clients.vcenter.vc_vmomi_sso_client.VcVmomiSSOClient")
     def test_remediate_skipped_already_desired(self, mock_vc_vmomi_sso_client, mock_vc_context):
-        expected_result = {consts.STATUS: RemediateStatus.SKIPPED, consts.ERRORS: ['Control already compliant']}
+        expected_result = {consts.STATUS: RemediateStatus.SKIPPED, consts.ERRORS: [consts.CONTROL_ALREADY_COMPLIANT]}
 
         mock_vc_vmomi_sso_client.get_system_domain.return_value = self.system_domain
         mock_vc_vmomi_sso_client._get_group.return_value = self.group_mock

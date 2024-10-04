@@ -19,11 +19,12 @@ Config-modules is a library that can be utilized by services written in python t
 | 2. [Configuration](docs/configuration.md)                                                   |
 | 3. [Instructions to Create New Controllers](docs/instructions-to-create-new-controllers.md) |
 | 4. [Testing Controllers](docs/testing-controllers.md)                                       |
-| 5. [Controller Documentation](docs/controllers/markdown/index.md)                           |
-| 6. [Metadata](docs/metadata.md)                                                             |
-| 7. [Functional Test](functional_tests/README.md)                                            |
-| 8. [API Service Documentation](docs/api-service.md)                                         |
-| 9. [Building and Running in Docker](docs/docker-instructions.md)                            |
+| 5. [Compliance Schema Documentation](docs/compliance-schema-documentation.md)               |
+| 6. [Controller Documentation](docs/controllers/markdown/index.md)                           |
+| 7. [Metadata](docs/metadata.md)                                                             |
+| 8. [Functional Test](functional_tests/README.md)                                            |
+| 9. [API Service Documentation](docs/api-service.md)                                         |
+| 10. [Building and Running in Docker](docs/docker-instructions.md)                           |
 
 ## Directory Structure
 

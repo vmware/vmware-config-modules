@@ -135,7 +135,7 @@ class TestDNSConfig:
     @patch('config_modules_vmware.framework.auth.contexts.vc_context.VcenterContext')
     @patch('config_modules_vmware.framework.clients.vcenter.vc_rest_client.VcRestClient')
     def test_remediate_skipped_already_desired(self, mock_vc_rest_client, mock_vc_context):
-        expected_result = {consts.STATUS: RemediateStatus.SKIPPED, consts.ERRORS: ['Control already compliant']}
+        expected_result = {consts.STATUS: RemediateStatus.SKIPPED, consts.ERRORS: [consts.CONTROL_ALREADY_COMPLIANT]}
 
         mock_vc_rest_client.get_base_url.return_value = self.vc_base_url
         mock_vc_rest_client.get_helper.return_value = self.compliant_value

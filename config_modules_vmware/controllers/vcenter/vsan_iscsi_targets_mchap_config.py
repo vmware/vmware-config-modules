@@ -89,7 +89,7 @@ class VsanIscsiTargetsMchapConfig(BaseController):
 
         :param context: Product context instance.
         :type context: VcenterContext
-        :param desired_values: Desired value for the certificate authority
+        :param desired_values: Desired value for iscsi auth configuration
         :type desired_values: String or list of strings
         :return: Dict of status (RemediateStatus.SKIPPED) and errors if any
         :rtype: Tuple
@@ -151,7 +151,7 @@ class VsanIscsiTargetsMchapConfig(BaseController):
             }
 
         :param context: Product context instance.
-        :param desired_values: Desired value for the certificate authority.
+        :param desired_values: Desired value for iscsi auth configuration.
         :return: Dict of status and current/desired value or errors (for failure).
         :rtype: dict
         """

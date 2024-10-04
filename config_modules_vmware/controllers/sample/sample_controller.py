@@ -191,7 +191,7 @@ class SampleController(BaseController):
 
         elif compliance_response.get(consts.STATUS) == ComplianceStatus.COMPLIANT:
             # For compliant case, return SKIPPED.
-            return {consts.STATUS: RemediateStatus.SKIPPED, consts.ERRORS: ["Control already compliant"]}
+            return {consts.STATUS: RemediateStatus.SKIPPED, consts.ERRORS: [consts.CONTROL_ALREADY_COMPLIANT]}
 
         elif compliance_response.get(consts.STATUS) != ComplianceStatus.NON_COMPLIANT:
             # Raise exception for unexpected compliance status (other than FAILED, COMPLIANT, NON_COMPLIANT).

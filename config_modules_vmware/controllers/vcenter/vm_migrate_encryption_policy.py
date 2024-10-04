@@ -109,6 +109,8 @@ class VmMigrateEncryptionPolicy(BaseController):
     def set(self, context: VcenterContext, desired_values: Dict) -> Tuple[str, List[Any]]:
         """
         Set VM migrate Encryption policies for all Virtual machines.
+        If a VM is "template", mark it as "VM" before remediation, and mark it
+        back to "template" after remediation.
 
         | Recommended value for migrate encryption: "opportunistic" | "required"
         | Supported values: ["disabled", "opportunistic", "required"].
@@ -185,6 +187,55 @@ class VmMigrateEncryptionPolicy(BaseController):
             all_vm_migrate_encryption_configs.append(vm_migrate_encryption_config)
         return all_vm_migrate_encryption_configs
 
+    def _get_data_center(self, vm_ref):
+        """
+        Get datacenter where this VM/VM template located.
+
+        :param vm_ref: vm reference object.
+        :type vm_ref: vim.VirtualMachine
+        :return: datacenter and a list of errors if any
+        :rtype: Tuple
+        """
+        errors = []
+        parent = vm_ref.parent
+        while parent:
+            if isinstance(parent, vim.Datacenter):
+                return parent, errors
+            parent = parent.parent
+        errors.append(f"Datacenter not found for the VM: {vm_ref.name}")
+        return parent, errors
+
+    def _get_resource_pool(self, vm_ref):
+        """
+        Get resource pool for converting a VM template to VM for remediation.
+
+        :param vm_ref: vm reference object.
+        :type vm_ref: vim.VirtualMachine
+        :return: resource pool and a list of errors if any
+        :rtype: Tuple
+        """
+        resource_pool = None
+        datacenter, errors = self._get_data_center(vm_ref)
+        if errors:
+            return resource_pool, errors
+        logger.debug(f"Datacenter : {datacenter.name} found for VM: {vm_ref.name}")
+        cluster_resource_pool = None
+        host_resource_pool = None
+        childs = datacenter.hostFolder.childEntity
+        for child in childs:
+            if isinstance(child, vim.ClusterComputeResource):
+                cluster_resource_pool = child.resourcePool
+                break
+            elif isinstance(child, vim.ComputerResource):
+                host_resource_pool = child.resourcePool
+        if cluster_resource_pool:
+            resource_pool = cluster_resource_pool
+        elif host_resource_pool:
+            resource_pool = host_resource_pool
+        else:
+            errors.append(f"Resource pool for VM: {vm_ref.name} not found")
+        return resource_pool, errors
+
     def __set_vm_migrate_encryption_policy_for_all_non_compliant_vms(
         self, vc_vmomi_client: VcVmomiClient, desired_values: Dict
     ) -> List:
@@ -220,13 +271,29 @@ class VmMigrateEncryptionPolicy(BaseController):
                 else desired_global_vm_migrate_encryption_policy
             )
             if current_vm_migrate_encryption_policy != desired_vm_migrate_policy:
-                config_spec = vim.vm.ConfigSpec()
-                config_spec.migrateEncryption = desired_vm_migrate_policy
                 logger.info(f"Setting VM migrate policy {desired_vm_migrate_policy} on VM {vm_ref.name}")
                 # continue to remediate next vm if hitting any errors
                 try:
+                    template = vm_ref.config.template
+                    if template:
+                        # for VM template, convert to VM during remediation
+                        resource_pool, errs = self._get_resource_pool(vm_ref)
+                        if errs:
+                            errors.append(errs)
+                            continue
+                        logger.debug(f"Resource pool for convert template to VM: {resource_pool}")
+                        vm_ref.MarkAsVirtualMachine(pool=resource_pool)
+                        logger.debug(f"Converted VM template to VM, template flag: {vm_ref.config.template}")
+
+                    config_spec = vim.vm.ConfigSpec()
+                    config_spec.migrateEncryption = desired_vm_migrate_policy
                     task = vm_ref.ReconfigVM_Task(config_spec)
                     vc_vmomi_client.wait_for_task(task=task)
+
+                    if template:
+                        # for VM template, convert it back to template after remediation
+                        vm_ref.MarkAsTemplate()
+                        logger.debug(f"Converted VM back to VM template, template flag: {vm_ref.config.template}")
                 except Exception as e:
                     logger.exception(f"An error occurred: {e}")
                     errors.append(f"Failed to remediate VM: {vm_ref.name} - {str(e)}")
@@ -347,7 +414,7 @@ class VmMigrateEncryptionPolicy(BaseController):
         result = self.check_compliance(context, desired_values)
 
         if result[consts.STATUS] == ComplianceStatus.COMPLIANT:
-            return {consts.STATUS: RemediateStatus.SKIPPED, consts.ERRORS: ["Control already compliant"]}
+            return {consts.STATUS: RemediateStatus.SKIPPED, consts.ERRORS: [consts.CONTROL_ALREADY_COMPLIANT]}
         elif result[consts.STATUS] == ComplianceStatus.NON_COMPLIANT:
             non_compliant_configs = result[consts.CURRENT]
         else:

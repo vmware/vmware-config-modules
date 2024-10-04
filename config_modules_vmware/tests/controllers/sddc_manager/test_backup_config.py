@@ -327,7 +327,7 @@ class TestBackupConfig:
     @patch('config_modules_vmware.framework.auth.contexts.sddc_manager_context.SDDCManagerContext')
     @patch('config_modules_vmware.framework.clients.sddc_manager.sddc_manager_rest_client.SDDCManagerRestClient')
     def test_remediate_skipped_already_desired(self, mock_sddc_manager_rest_client, mock_sddc_manager_context):
-        expected_result = {consts.STATUS: RemediateStatus.SKIPPED, consts.ERRORS: ['Control already compliant']}
+        expected_result = {consts.STATUS: RemediateStatus.SKIPPED, consts.ERRORS: [consts.CONTROL_ALREADY_COMPLIANT]}
 
         mock_sddc_manager_rest_client.get_base_url.return_value = self.sddc_base_url
         mock_sddc_manager_rest_client.get_helper.return_value = self.get_helper_values
