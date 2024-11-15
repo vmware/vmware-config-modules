@@ -1122,11 +1122,36 @@
                   "properties": {
                     "reserved_vlan_ids_to_exclude": {
                       "type": "array",
-                      "description": "Reserved VLAN IDs to be excluded from port group configurations.",
+                      "description": "Reserved VLAN IDs to be excluded from port group configurations. Example inputs: {'start':30,'end':35}, 100",
                       "items": {
-                        "type": "number",
-                        "minimum": 0,
-                        "maximum": 4094
+                        "oneOf": [
+                          {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 4094
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "start": {
+                                "type": "number",
+                                "description": "Start VLAN id in allowed vlans.",
+                                "minimum": 0,
+                                "maximum": 4094
+                              },
+                              "end": {
+                                "type": "number",
+                                "description": "End VLAN id in allowed vlans.",
+                                "minimum": 0,
+                                "maximum": 4094
+                              }
+                            },
+                            "required": [
+                              "start",
+                              "end"
+                            ]
+                          }
+                        ]
                       }
                     }
                   }
@@ -1726,7 +1751,14 @@
                         ]
                       },
                       "minItems": 1,
-                      "uniqueItems": true
+                      "uniqueItems": true,
+                      "allOf": [
+                        {
+                          "contains": {
+                            "const": "TLSv1.2"
+                          }
+                        }
+                      ]
                     }
                   },
                   "additionalProperties": {
@@ -1741,7 +1773,14 @@
                       ]
                     },
                     "minItems": 1,
-                    "uniqueItems": true
+                    "uniqueItems": true,
+                    "allOf": [
+                      {
+                        "contains": {
+                          "const": "TLSv1.2"
+                        }
+                      }
+                    ]
                   }
                 }
               }
@@ -1794,14 +1833,18 @@
                   "description": "LDAP identity source configuration",
                   "items": {
                     "type": "object",
-                    "description": "ldap binding accounts: username for the account",
+                    "description": "ldap binding accounts: username and domain for the account",
                     "properties": {
                       "username": {
+                        "type": "string"
+                      },
+                      "domain": {
                         "type": "string"
                       }
                     },
                     "required": [
-                      "username"
+                      "username",
+                      "domain"
                     ],
                     "additionalProperties": false
                   },

@@ -257,7 +257,7 @@ class TestDVPortGroupVlanTrunkingConfig:
         current_value = self.non_compliant_dv_pg_pyvmomi_mocks
         expected_result = {
             'errors': ['Remediation is not implemented as this control requires manual '
-                       'intervention.'],
+                       'intervention'],
             consts.STATUS: RemediateStatus.SKIPPED,
             consts.DESIRED: self.compliant_value,
             consts.CURRENT: self.non_compliant_get_values

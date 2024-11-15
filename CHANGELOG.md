@@ -1,4 +1,19 @@
 # CURRENTLY-IN-DEVELOPMENT
+# `v0.14.0.1`
+### Controller Enhancements
+- VCSA Controllers
+    - 1230 - Add domain to input for each user in ldap identity source control - Feedback item #46
+    - 1202 - Add vlan range input to support combination of individual VLANs and ranges - Feedback item #47
+    - 1234 - Return partial remediation instead of remediation failed for vm_migrate_encryption control - Feedback item #40
+    - 1234 - Remove "_GLOBAL_" from compliance check output for vm_migrate_encryption control - Feedback item #41
+    - 409 - Exclude offloading enabled switch when remediation and add partial remediation for vc control (network io control) - Feedback item #40
+    - 409 - Removed "_GLOBAL_" on compliance check output on VC network IO control - Feedback item #41
+    - 415 - The vCenter Server users must have the correct roles assigned. (alias) - Feedback item #39
+    - 415 - The vCenter Server users must have the correct roles assigned. (excludes certain roles) - #38
+    - 1222 - snmp_v3 (If disabled, shows NON-COMPLIANT. when disabled, should not check additional desired inputs.) - Feedback item #48
+    - 1204 - tlsReconfigurtor (Make tlsv1.2 mandatory for tls control for vcenter) - Feedback item #52
+### Framework Enhancements
+    - Use vsphere local domain to fix 404 errors in sso controls by login as AD users - Feedback item #54
 # `v0.14.0.0`
 ##### Released by ravi-pratap-s on Aug 09, 2024 @ 06:33 PM UTC
 ### New Controllers

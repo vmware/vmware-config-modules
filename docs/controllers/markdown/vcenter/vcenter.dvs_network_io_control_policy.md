@@ -76,7 +76,7 @@ Sample desired state
   "__OVERRIDES__": [
     {
       "switch_name": "Switch-A",
-      "network_io_control_status": false
+      "network_io_control_status": true
     }
   ]
 }

@@ -82,6 +82,8 @@ Sample Get call output
 #### set(context, desired_values)
 
 Set VM migrate Encryption policies for all Virtual machines.
+If a VM is “template”, mark it as “VM” before remediation, and mark it
+back to “template” after remediation.
 
 Recommended value for migrate encryption: “opportunistic” | “required”
 <br/>

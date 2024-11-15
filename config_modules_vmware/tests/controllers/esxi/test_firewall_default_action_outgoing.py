@@ -2,7 +2,6 @@
 from mock import MagicMock
 
 from config_modules_vmware.controllers.esxi.firewall_default_action_outgoing import FirewallDefaultActionOutgoing
-from config_modules_vmware.framework.auth.contexts.esxi_context import HostContext
 from config_modules_vmware.tests.controllers.esxi.test_firewall_default_action_incoming import TestFirewallDefaultActionIncoming
 
 
@@ -16,5 +15,8 @@ class TestFirewallDefaultActionOutgoing(TestFirewallDefaultActionIncoming):
         self.cli_return_non_compliant_value = "   Default Action: PASS\n   Enabled: true\n   Loaded: true"
         mock_host_ref = MagicMock()
         mock_host_ref.name = 'host-1'
-        self.esx_cli_client = MagicMock()
-        self.mock_host_context = HostContext(host_ref=mock_host_ref, esx_cli_client_func=self.esx_cli_client)
+        self.firewallSystem = MagicMock()
+        self.mock_host_context = MagicMock()
+        self.firewallSystem.firewallInfo.defaultPolicy.incomingBlocked = False
+        self.firewallSystem.firewallInfo.defaultPolicy.outgoingBlocked = False
+        self.mock_host_context.host_ref.configManager.firewallSystem = self.firewallSystem

@@ -194,7 +194,7 @@ class TestDVPortGroupNativeVlanExclusionConfig:
 
         result, errors = self.controller.set(mock_vc_context, self.compliant_value)
         assert result == RemediateStatus.SKIPPED
-        assert errors == ['Remediation is not implemented as this control requires manual intervention.']
+        assert errors == ['Remediation is not implemented as this control requires manual intervention']
 
     @patch("config_modules_vmware.framework.auth.contexts.vc_context.VcenterContext")
     @patch("config_modules_vmware.framework.clients.vcenter.vc_vmomi_client.VcVmomiClient")
@@ -302,7 +302,7 @@ class TestDVPortGroupNativeVlanExclusionConfig:
         ]
         expected_result = {
             'errors': ['Remediation is not implemented as this control requires manual '
-                       'intervention.'],
+                       'intervention'],
             consts.STATUS: RemediateStatus.SKIPPED,
             consts.DESIRED: self.compliant_value,
             consts.CURRENT: non_compliant_configs

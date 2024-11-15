@@ -48,8 +48,14 @@ DESIRED = "desired"
 ERRORS = "errors"
 GLOBAL = "global"
 SKIPPED = "SKIPPED"
-REMEDIATION_SKIPPED_MESSAGE = "Remediation is not implemented as this control requires manual intervention."
 COMPLIANCE_CONFIG = "compliance_config"
 METADATA = "metadata"
+UNSUPPORTED_VERSION_MESSAGE_FORMAT = "Version [{}] is not supported for product [{}]"
 # Timestamp format
 DEFAULT_TIMESTAMP_FORMAT = "%Y-%m-%dT%H:%M:%S.%f"
+
+# Message consts for skipped workflows
+REMEDIATION_SKIPPED_MESSAGE = "Remediation is not implemented as this control requires manual intervention"
+CONTROL_ALREADY_COMPLIANT = "Control already compliant"
+CONTROL_NOT_APPLICABLE = "Control is not applicable on this product version"
+CONTROL_NOT_AUTOMATED = "Control is not automated for this product version"

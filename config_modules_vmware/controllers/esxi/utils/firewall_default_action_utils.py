@@ -1,6 +1,5 @@
 # Copyright 2024 Broadcom. All Rights Reserved.
 import logging
-import re
 from typing import List
 from typing import Tuple
 
@@ -21,17 +20,9 @@ def get_firewall_default_action(context: HostContext) -> Tuple[str, List[str]]:
     errors = []
     default_action = None
     try:
-        firewall_default_action_get_command = "network firewall get"
-        cli_output, _, _ = context.esx_cli_client().run_esx_cli_cmd(
-            context.hostname, firewall_default_action_get_command
-        )
-        logger.debug(f"cli_output is {cli_output}")
-        match = re.search(r"Default Action:\s*(\w+)", cli_output)
-        if not match:
-            err_msg = f"Unable to fetch default action using command esxcli {firewall_default_action_get_command}"
-            raise Exception(err_msg)
-        else:
-            default_action = match.group(1)
+        firewall_system = context.host_ref.configManager.firewallSystem
+        is_incoming_blocked = firewall_system.firewallInfo.defaultPolicy.incomingBlocked
+        default_action = "DROP" if is_incoming_blocked else "PASS"
     except Exception as e:
         logger.exception(f"An error occurred: {e}")
         errors.append(str(e))
@@ -49,12 +40,14 @@ def set_firewall_default_action(context: HostContext, desired_values: str) -> Tu
     """
     errors = []
     status = RemediateStatus.SUCCESS
-
-    # Convert 'DROP' to 'false and 'PASS' to 'true' before feeding to set cli.
-    is_action_pass = "true" if desired_values == "PASS" else "false"
     try:
-        firewall_default_action_set_command = f"network firewall set --default-action={is_action_pass}"
-        context.esx_cli_client().run_esx_cli_cmd(context.hostname, firewall_default_action_set_command)
+        is_blocked = True if desired_values == "DROP" else False
+        firewall_system = context.host_ref.configManager.firewallSystem
+        default_policy = firewall_system.firewallInfo.defaultPolicy
+        # Both incoming and outgoing policy needs to be same
+        default_policy.incomingBlocked = is_blocked
+        default_policy.outgoingBlocked = is_blocked
+        firewall_system.UpdateDefaultPolicy(default_policy)
     except Exception as e:
         logger.exception(f"An error occurred: {e}")
         errors.append(str(e))

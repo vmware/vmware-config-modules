@@ -264,7 +264,7 @@ class VcRestClient(object):
                 f"Key {vc_consts.CIS_TASK_KEY_VALUE} not found in CIS task response,"
                 f"CIS task: {task_id} returned unexpected response"
             )
-            raise err_msg
+            raise Exception(err_msg)
         value = task_response["value"]
 
         # Missing "status"
@@ -273,7 +273,7 @@ class VcRestClient(object):
                 f"Key {vc_consts.CIS_TASK_KEY_STATUS} not found in CIS task response,"
                 f"CIS task: {task_id} returned unexpected response"
             )
-            raise err_msg
+            raise Exception(err_msg)
 
         return value
 

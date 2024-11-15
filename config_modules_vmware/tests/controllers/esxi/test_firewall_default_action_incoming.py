@@ -2,7 +2,6 @@
 from mock import MagicMock
 
 from config_modules_vmware.controllers.esxi.firewall_default_action_incoming import FirewallDefaultActionIncoming
-from config_modules_vmware.framework.auth.contexts.esxi_context import HostContext
 from config_modules_vmware.framework.clients.common import consts
 from config_modules_vmware.framework.models.output_models.compliance_response import ComplianceStatus
 from config_modules_vmware.framework.models.output_models.remediate_response import RemediateStatus
@@ -13,55 +12,44 @@ class TestFirewallDefaultActionIncoming:
         self.controller = FirewallDefaultActionIncoming()
         self.compliant_value = 'DROP'
         self.non_compliant_value = 'PASS'
-        self.cli_return_compliant_value = "   Default Action: DROP\n   Enabled: true\n   Loaded: true"
-        self.cli_return_non_compliant_value = "   Default Action: PASS\n   Enabled: true\n   Loaded: true"
-        mock_host_ref = MagicMock()
-        mock_host_ref.name = 'host-1'
-        self.esx_cli_client = MagicMock()
-        self.mock_host_context = HostContext(host_ref=mock_host_ref, esx_cli_client_func=self.esx_cli_client)
+        self.mock_host_ref = MagicMock()
+        self.mock_host_ref.name = 'host-1'
+        self.firewallSystem = MagicMock()
+        self.mock_host_context = MagicMock()
+        self.firewallSystem.firewallInfo.defaultPolicy.incomingBlocked = False
+        self.firewallSystem.firewallInfo.defaultPolicy.outgoingBlocked = False
+        self.mock_host_context.host_ref.configManager.firewallSystem = self.firewallSystem
 
     def test_get_success(self):
-        self.esx_cli_client().run_esx_cli_cmd.return_value = (self.cli_return_compliant_value, "", 0)
         result, errors = self.controller.get(self.mock_host_context)
-        assert result == self.compliant_value
+        assert result == self.non_compliant_value
         assert errors == []
 
     def test_get_failed(self):
-        expected_error = "Test exception"
-        self.esx_cli_client().run_esx_cli_cmd.side_effect = Exception(expected_error)
-        result, errors = self.controller.get(self.mock_host_context)
-        assert result is None
-        assert errors == [expected_error]
-
-    def test_get_failed_cli_not_returning_default_action(self):
-        cli_return_value = "  Enabled: true\n   Loaded: true"
-        expected_error = "Unable to fetch default action using command esxcli network firewall get"
-        self.esx_cli_client().run_esx_cli_cmd.return_value = (cli_return_value, "", 0)
+        expected_error = "'NoneType' object has no attribute 'firewallInfo'"
+        self.mock_host_context.host_ref.configManager.firewallSystem = None
         result, errors = self.controller.get(self.mock_host_context)
         assert result is None
         assert errors == [expected_error]
 
     def test_set_success(self):
-        self.esx_cli_client().run_esx_cli_cmd.return_value = (self.cli_return_non_compliant_value, "", 0)
         status, errors = self.controller.set(self.mock_host_context, self.compliant_value)
         assert status == RemediateStatus.SUCCESS
         assert errors == []
 
     def test_set_failed(self):
         expected_error = "Test exception"
-        self.esx_cli_client().run_esx_cli_cmd.side_effect = Exception(expected_error)
+        self.mock_host_context.host_ref.configManager.firewallSystem.UpdateDefaultPolicy.side_effect = Exception(expected_error)
         status, errors = self.controller.set(self.mock_host_context, self.compliant_value)
         assert status == RemediateStatus.FAILED
         assert errors == [expected_error]
 
     def test_check_compliance_compliant(self):
-        self.esx_cli_client().run_esx_cli_cmd.return_value = (self.cli_return_compliant_value, "", 0)
         expected_result = {consts.STATUS: ComplianceStatus.COMPLIANT}
-        result = self.controller.check_compliance(self.mock_host_context, self.compliant_value)
+        result = self.controller.check_compliance(self.mock_host_context, 'PASS')
         assert result == expected_result
 
     def test_check_compliance_non_compliant(self):
-        self.esx_cli_client().run_esx_cli_cmd.return_value = (self.cli_return_non_compliant_value, "", 0)
         expected_result = {
             consts.STATUS: ComplianceStatus.NON_COMPLIANT,
             consts.CURRENT: self.non_compliant_value,
@@ -71,7 +59,6 @@ class TestFirewallDefaultActionIncoming:
         assert result == expected_result
 
     def test_remediate(self):
-        self.esx_cli_client().run_esx_cli_cmd.return_value = (self.cli_return_non_compliant_value, "", 0)
         result = self.controller.remediate(self.mock_host_context, self.compliant_value)
         expected_result = {
             consts.STATUS: RemediateStatus.SUCCESS,
@@ -81,10 +68,9 @@ class TestFirewallDefaultActionIncoming:
         assert result == expected_result
 
     def test_remediate_with_already_compliant(self):
-        self.esx_cli_client().run_esx_cli_cmd.return_value = (self.cli_return_compliant_value, "", 0)
-        result = self.controller.remediate(self.mock_host_context, self.compliant_value)
+        result = self.controller.remediate(self.mock_host_context, 'PASS')
         expected_result = {
             consts.STATUS: RemediateStatus.SKIPPED,
-            consts.ERRORS: ['Control already compliant']
+            consts.ERRORS: [consts.CONTROL_ALREADY_COMPLIANT]
         }
         assert result == expected_result

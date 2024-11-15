@@ -9,10 +9,13 @@ from typing import Tuple
 from config_modules_vmware.controllers.base_controller import BaseController
 from config_modules_vmware.framework.auth.contexts.base_context import BaseContext
 from config_modules_vmware.framework.auth.contexts.vc_context import VcenterContext
+from config_modules_vmware.framework.clients.common import consts
 from config_modules_vmware.framework.logging.logger_adapter import LoggerAdapter
 from config_modules_vmware.framework.models.controller_models.metadata import ControllerMetadata
+from config_modules_vmware.framework.models.output_models.compliance_response import ComplianceStatus
 from config_modules_vmware.framework.models.output_models.remediate_response import RemediateStatus
 from config_modules_vmware.framework.utils import utils
+from config_modules_vmware.framework.utils.comparator import Comparator
 
 logger = LoggerAdapter(logging.getLogger(__name__))
 
@@ -52,6 +55,7 @@ class LdapIdentitySourceConfig(BaseController):
         identity_source = r"IDENTITY SOURCE INFORMATION\s+([\s\S]*?)?(?=IDENTITY SOURCE INFORMATION|$)"
         domain_type = r"DomainType\s+:\s+EXTERNAL_DOMAIN"
         username_pattern = r"username\s+:\s+(.*?)\s+"
+        domain_pattern = r"IdentitySourceName\s+:\s+(.*?)\s+"
         provider_type_pattern = r"providerType\s+:\s+(.*?)\s+"
         # Search for all text marked with "IDENTITY SOURCE INFORMATION"
         identity_sources = re.finditer(identity_source, output)
@@ -61,15 +65,17 @@ class LdapIdentitySourceConfig(BaseController):
                 # Extract username after "username :"
                 username_match = re.search(username_pattern, identity_source.group())
                 username = username_match.group(1) if username_match else None
+                domain_match = re.search(domain_pattern, identity_source.group())
+                domain = domain_match.group(1) if domain_match else None
                 provider_type_match = re.search(provider_type_pattern, identity_source.group())
                 provider_type = provider_type_match.group(1) if provider_type_match else None
                 if provider_type == LDAP_SOURCE_TYPE:
-                    ldap_accounts.append({"username": username})
+                    ldap_accounts.append({"username": username, "domain": domain})
 
         # if no accounts found, append a empty one (user can put an empty account on
         # desired state if no ldap binding account configured.
         if not ldap_accounts:
-            ldap_accounts.append({"username": ""})
+            ldap_accounts.append({"username": "", "domain": ""})
 
         return ldap_accounts
 
@@ -101,7 +107,7 @@ class LdapIdentitySourceConfig(BaseController):
 
         :param context: Product context instance.
         :type context: VcenterContext
-        :param desired_values: Desired value for the certificate authority
+        :param desired_values: Desired value for ldap accounts
         :type desired_values: String or list of strings
         :return: Dict of status (RemediateStatus.SKIPPED) and errors if any
         :rtype: tuple
@@ -109,3 +115,50 @@ class LdapIdentitySourceConfig(BaseController):
         errors = ["Set is not implemented as modifying config would impact existing auth."]
         status = RemediateStatus.SKIPPED
         return status, errors
+
+    def _to_lower_case(self, values: List[Dict]) -> List[Dict]:
+        """Convert the strings in each item to lower case
+
+        :param values: a list of desired or current configs.
+        :type values: List[Dict]
+        :return: a list of configs with all values converted to lower case.
+        :rtype: List[Dict]
+        """
+        for entry in values:
+            for key, value in entry.items():
+                entry[key] = value.lower()
+        return values
+
+    def check_compliance(self, context: VcenterContext, desired_values: List) -> Dict:
+        """Check compliance of ldap identity source of vcenter server.
+
+        :param context: Product context instance.
+        :type context: VcenterContext
+        :param desired_values: Desired values for the ldap identity source config.
+        :type desired_values: List
+        :return: Dict of status and current/desired value(for non_compliant) or errors (for failure).
+        :rtype: dict
+        """
+        logger.debug("Checking compliance.")
+        current_values, errors = self.get(context=context)
+
+        if errors:
+            # If errors are seen during get, return "FAILED" status with errors.
+            return {consts.STATUS: ComplianceStatus.FAILED, consts.ERRORS: errors}
+
+        # for username and domain in this control, it should be case non sensitive
+        current_values = self._to_lower_case(current_values)
+        desired_values = self._to_lower_case(desired_values)
+
+        # If no errors seen, compare the current and desired value. If not same, return "NON_COMPLIANT" with values.
+        # Otherwise, return "COMPLIANT".
+        current_configs, desired_configs = Comparator.get_non_compliant_configs(current_values, desired_values)
+        if current_configs or desired_configs:
+            result = {
+                consts.STATUS: ComplianceStatus.NON_COMPLIANT,
+                consts.CURRENT: current_configs,
+                consts.DESIRED: desired_configs,
+            }
+        else:
+            result = {consts.STATUS: ComplianceStatus.COMPLIANT}
+        return result
