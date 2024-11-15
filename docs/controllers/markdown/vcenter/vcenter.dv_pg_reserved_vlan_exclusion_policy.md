@@ -47,7 +47,7 @@ Sample get call output
   {
     "switch_name": "DSwitch-test",
     "port_group_name": "DPortGroup",
-    "vlan": ["1-100", "105", "200-250"]
+    "vlan": 105
   },
   {
     "switch_name": "SDDC-Dswitch-Private",

@@ -24,6 +24,7 @@ DESIRED_KEY = "network_io_control_status"
 SWITCH_NAME = "switch_name"
 GLOBAL = "__GLOBAL__"
 OVERRIDES = "__OVERRIDES__"
+OFFLOAD_NONE = "None"
 
 
 class DVSNetworkIOControlPolicy(BaseController):
@@ -104,7 +105,7 @@ class DVSNetworkIOControlPolicy(BaseController):
               "__OVERRIDES__": [
                 {
                   "switch_name": "Switch-A",
-                  "network_io_control_status": false
+                  "network_io_control_status": true
                 }
               ]
             }
@@ -116,16 +117,7 @@ class DVSNetworkIOControlPolicy(BaseController):
         :return: Tuple of "status" and list of error messages.
         :rtype: Tuple
         """
-        vc_vmomi_client = context.vc_vmomi_client()
-        errors = []
-        status = RemediateStatus.SUCCESS
-        try:
-            self.__set_network_io_control_policy_for_all_dv_switches(vc_vmomi_client, desired_values)
-        except Exception as e:
-            logger.exception(f"An error occurred: {e}")
-            errors.append(str(e))
-            status = RemediateStatus.FAILED
-        return status, errors
+        pass  # pylint: disable=unnecessary-pass
 
     def __get_all_dv_switch_network_io_control_policy(self, vc_vmomi_client: VcVmomiClient) -> List[Dict]:
         """
@@ -150,23 +142,46 @@ class DVSNetworkIOControlPolicy(BaseController):
 
     def __set_network_io_control_policy_for_all_dv_switches(
         self, vc_vmomi_client: VcVmomiClient, desired_values: Dict
-    ) -> None:
+    ) -> Tuple[List[dict], List[dict], List[str]]:
         """
         Enable or disable Network I/O control policy for all dv switches.
 
         | Recommended value for network I/O control: true | enabled
+        | Sample desired state
+
+        .. code-block:: json
+
+            {
+              "__GLOBAL__": {
+                "network_io_control_status": false
+              },
+              "__OVERRIDES__": [
+                {
+                  "switch_name": "Switch-A",
+                  "network_io_control_status": true
+                }
+              ]
+            }
 
         :param vc_vmomi_client: VC vmomi client instance.
         :type vc_vmomi_client: VcVmomiClient
         :param desired_values: Desired values for Network I/O control policy.
         :type desired_values: Dict
-        :return:
-        :rtype: None
+        :return: list of previous and current configs and list of errors if any
+        :rtype: Tuple
         """
+        errors = []
+        previous = []
+        current = []
         desired_global_network_io_control_value = desired_values.get(GLOBAL, {}).get(DESIRED_KEY)
         overrides = desired_values.get(OVERRIDES, [])
         # desired_network_io_control_value = desired_values.get(DESIRED_KEY)
-        all_switch_refs = vc_vmomi_client.get_objects_by_vimtype(vim.DistributedVirtualSwitch)
+        try:
+            all_switch_refs = vc_vmomi_client.get_objects_by_vimtype(vim.DistributedVirtualSwitch)
+        except Exception as e:
+            logger.exception(f"An error occurred: {e}")
+            errors.append(str(e))
+            return [], [], errors
 
         for dvs_ref in all_switch_refs:
             # Check if there are overrides for the current DVS
@@ -186,48 +201,64 @@ class DVSNetworkIOControlPolicy(BaseController):
                     f"DV switch {dvs_ref.name} already has desired network I/O control config," f" skipping remediation"
                 )
             else:
-                logger.info(
-                    f"Setting network I/O control config {desired_network_io_control_value} on DV "
-                    f"switch {dvs_ref.name}"
-                )
-                dvs_ref.EnableNetworkResourceManagement(desired_network_io_control_value)
+                # Check if network offload is enabled, if yes, skip remediation
+                if (
+                    hasattr(dvs_ref.config, "networkOffloadSpecId")
+                    and dvs_ref.config.networkOffloadSpecId != OFFLOAD_NONE
+                ):
+                    offload = dvs_ref.config.networkOffloadSpecId
+                    err_msg = f"Network offload - {offload} enabled for: {dvs_ref.name}, skip remediation"
+                    logger.warning(err_msg)
+                    errors.append(err_msg)
+                else:
+                    logger.info(
+                        f"Setting network I/O control config {desired_network_io_control_value} on DV "
+                        f"switch {dvs_ref.name}"
+                    )
+                    try:
+                        dvs_ref.EnableNetworkResourceManagement(desired_network_io_control_value)
+                        previous.append({SWITCH_NAME: dvs_ref.name, DESIRED_KEY: current_network_io_control_value})
+                        current.append({SWITCH_NAME: dvs_ref.name, DESIRED_KEY: desired_network_io_control_value})
+                    except Exception as e:
+                        logger.exception(f"An error occurred: {e}")
+                        errors.append(str(e))
+        return previous, current, errors
 
-    def __get_non_compliant_configs(self, switch_configs: List, desired_values: Dict) -> List:
+    def __get_non_compliant_configs(self, switch_configs: List, desired_values: Dict) -> Tuple[List, List]:
         """
         Get all non-compliant items for the given desired state spec.
 
-        :return:
-        :meta private:
+        :param switch_configs: current all switch configs for Network I/O  control policy.
+        :type switch_configs: List
+        :param desired_values: Desired values for Network I/O control policy.
+        :type desired_values: Dict
+        :return: a list of non compliant and compliant (desired) configs.
+        :rtype: Tuple
         """
-        non_compliant_items = []
-        # convert to dictionary for easy access
-        configs_by_switch_name = {config.get(SWITCH_NAME): config for config in switch_configs}
+        compliant_configs = []
+        non_compliant_configs = []
 
         global_desired_value = desired_values.get(GLOBAL, {}).get(DESIRED_KEY)
         overrides = desired_values.get(OVERRIDES, [])
 
-        # Check global non-compliance
-        non_compliant_global = [config for config in switch_configs if config.get(DESIRED_KEY) != global_desired_value]
-        if non_compliant_global:
-            non_compliant_items.extend(non_compliant_global)
+        for config in switch_configs:
+            switch_name = config.get(SWITCH_NAME)
+            current_value = config.get(DESIRED_KEY)
 
-        # Remove non-compliant override config if exists from global
-        for override in overrides:
-            override_switch_name = override.get(SWITCH_NAME)
-            for config in non_compliant_global:
-                if config.get(SWITCH_NAME) == override_switch_name:
-                    non_compliant_items.remove(config)
+            # Check if an override exists for this switch
+            override_desired_value = None
+            for override_item in overrides:
+                if override_item.get(SWITCH_NAME) == switch_name:
+                    override_desired_value = override_item
+                    break
 
-        # Check overrides for non-compliance
-        for switch_override in overrides:
-            switch_name = switch_override.get(SWITCH_NAME)
-            desired_value = switch_override.get(DESIRED_KEY)
+            desired_value = override_desired_value.get(DESIRED_KEY) if override_desired_value else global_desired_value
 
-            # Find the configuration for the current switch
-            config = configs_by_switch_name.get(switch_name)
-            if config and config.get(DESIRED_KEY) != desired_value:
-                non_compliant_items.append(config)
-        return non_compliant_items
+            if current_value != desired_value:
+                non_compliant_configs.append(config)
+                compliant_configs.append({SWITCH_NAME: switch_name, DESIRED_KEY: desired_value})
+
+        return non_compliant_configs, compliant_configs
 
     def check_compliance(self, context: VcenterContext, desired_values: Dict) -> Dict:
         """
@@ -246,13 +277,15 @@ class DVSNetworkIOControlPolicy(BaseController):
         if errors:
             return {consts.STATUS: ComplianceStatus.FAILED, consts.ERRORS: errors}
 
-        non_compliant_configs = self.__get_non_compliant_configs(dv_switch_network_io_control_configs, desired_values)
+        non_compliant_configs, compliant_configs = self.__get_non_compliant_configs(
+            dv_switch_network_io_control_configs, desired_values
+        )
 
         if non_compliant_configs:
             result = {
                 consts.STATUS: ComplianceStatus.NON_COMPLIANT,
                 consts.CURRENT: non_compliant_configs,
-                consts.DESIRED: desired_values,
+                consts.DESIRED: compliant_configs,
             }
         else:
             result = {consts.STATUS: ComplianceStatus.COMPLIANT}
@@ -289,17 +322,29 @@ class DVSNetworkIOControlPolicy(BaseController):
         result = self.check_compliance(context, desired_values)
 
         if result[consts.STATUS] == ComplianceStatus.COMPLIANT:
-            return {consts.STATUS: RemediateStatus.SKIPPED, consts.ERRORS: ["Control already compliant"]}
-        elif result[consts.STATUS] == ComplianceStatus.NON_COMPLIANT:
-            non_compliant_configs = result[consts.CURRENT]
-        else:
+            return {consts.STATUS: RemediateStatus.SKIPPED, consts.ERRORS: [consts.CONTROL_ALREADY_COMPLIANT]}
+        elif result[consts.STATUS] == ComplianceStatus.FAILED:
             errors = result[consts.ERRORS]
             return {consts.STATUS: RemediateStatus.FAILED, consts.ERRORS: errors}
 
-        status, errors = self.set(context=context, desired_values=desired_values)
+        vc_vmomi_client = context.vc_vmomi_client()
+        previous, current, errors = self.__set_network_io_control_policy_for_all_dv_switches(
+            vc_vmomi_client, desired_values
+        )
 
         if not errors:
-            result = {consts.STATUS: status, consts.OLD: non_compliant_configs, consts.NEW: desired_values}
+            status = RemediateStatus.SUCCESS
+            result = {consts.STATUS: status, consts.OLD: previous, consts.NEW: current}
         else:
-            result = {consts.STATUS: RemediateStatus.FAILED, consts.ERRORS: errors}
+            if previous:
+                status = RemediateStatus.PARTIAL
+                result = {
+                    consts.STATUS: status,
+                    consts.OLD: previous,
+                    consts.NEW: current,
+                    consts.ERRORS: errors,
+                }
+            else:
+                result = {consts.STATUS: RemediateStatus.FAILED, consts.ERRORS: errors}
+
         return result

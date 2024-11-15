@@ -49,3 +49,15 @@ This needs to be reviewed manually before remediation as it could have potential
   * **desired_values** (*Dict*) – 
 * **Return type:**
   *Tuple*
+
+#### check_compliance(context, desired_values)
+
+Check compliance of current configuration against provided desired values.
+
+* **Parameters:**
+  * **context** (*VcenterContext*) – Product context instance.
+  * **desired_values** (*list*) – Desired list of users,groups,roles on vCenter.
+* **Returns:**
+  Dict of status and current/desired value(for non_compliant) or errors (for failure).
+* **Return type:**
+  Dict
