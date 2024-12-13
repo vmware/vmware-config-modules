@@ -1699,6 +1699,10 @@
                               "required"
                             ],
                             "description": "Virtual machine migrate encryption policy"
+                          },
+                          "exclude": {
+                            "type": "boolean",
+                            "description": "flag to skip compliance check and remediation for the VM"
                           }
                         },
                         "required": [

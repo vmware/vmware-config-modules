@@ -209,9 +209,7 @@ def get_smart_rest_client_class(urllib3_manager):
                 # Creates session headers if not exist
                 self._update_session_headers(get_session_headers_func, kwargs)
 
-                data = kwargs[BODY] if BODY in kwargs else ""
                 logger.info(f"Calling '{method}':'{url}'")
-                logger.debug(f"Data for '{method}' request to '{url}': {data}")
 
                 response = super(BaseRestClient, self).request(method=method, url=url, **kwargs)
                 logger.info(f"Response Code of '{method}' request on '{url}': {response.status}")
