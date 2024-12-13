@@ -76,7 +76,7 @@ def run_shell_cmd(
         if not command:
             raise ValueError("Empty shell command provided")
 
-        logger.info(f"Executing command {command} with timeout: {timeout} raise_on_error: {raise_on_non_zero}")
+        logger.info(f"Executing shell command with timeout: {timeout} raise_on_error: {raise_on_non_zero}")
         result = subprocess.run(
             shlex.split(command),
             env=env,
@@ -91,15 +91,15 @@ def run_shell_cmd(
         error = result.stderr
         ret_code = result.returncode
         if output:
-            logger.debug(f"Output for {command} - {output}")
+            logger.debug(f"Output for command - {output}")
         if error:
-            logger.debug(f"Error for {command} - {error}")
+            logger.debug(f"Error for command - {error}")
         if ret_code:
-            logger.debug(f"Return code for {command} - {ret_code}")
+            logger.debug(f"Return code for command - {ret_code}")
 
         return output, error, ret_code
     except Exception as e:
-        logger.error(f"Exception running shell command {command} - {e}")
+        logger.error(f"Exception running shell command - {e}")
         raise e
 
 

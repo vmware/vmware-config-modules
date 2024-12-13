@@ -1,4 +1,10 @@
 # CURRENTLY-IN-DEVELOPMENT
+# `v0.14.0.2`
+### Controller Enhancements
+- VCSA Controllers
+    - 1234 - Add exclude flag to exclude VMs in compliance check and remediation for vm_migrate_encryption control
+### Framework Enhancements
+    - Remove unnecessary logs.
 # `v0.14.0.1`
 ### Controller Enhancements
 - VCSA Controllers

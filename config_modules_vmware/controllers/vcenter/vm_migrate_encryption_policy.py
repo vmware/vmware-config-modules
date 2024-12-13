@@ -25,6 +25,7 @@ GLOBAL = "__GLOBAL__"
 OVERRIDES = "__OVERRIDES__"
 VM_NAME = "vm_name"
 PATH = "path"
+EXCLUDE_THIS_VM = "exclude"
 
 
 class VmMigrateEncryptionPolicy(BaseController):
@@ -247,7 +248,8 @@ class VmMigrateEncryptionPolicy(BaseController):
                 {
                   "vm_name": "nsx-mgmt-1",
                   "path": "SDDC-Datacenter/vm/Networking VMs",
-                  "migrate_encryption_policy": "required"
+                  "migrate_encryption_policy": "required",
+                  "exclude": True
                 }
               ]
             }
@@ -269,20 +271,20 @@ class VmMigrateEncryptionPolicy(BaseController):
         for vm_ref in all_vm_refs:
             vm_path = vc_vmomi_client.get_vm_path_in_datacenter(vm_ref)
             current_vm_migrate_encryption_policy = vm_ref.config.migrateEncryption
-            override_vm_migrate_encryption_policy = next(
+            override_vm_migrate_encryption_policy, exclude_flag = next(
                 (
-                    override.get(DESIRED_KEY)
+                    (override.get(DESIRED_KEY), override.get(EXCLUDE_THIS_VM))
                     for override in overrides
                     if override[VM_NAME] == vm_ref.name and override[PATH] == vm_path
                 ),
-                None,
+                (None, None),
             )
             desired_vm_migrate_policy = (
                 override_vm_migrate_encryption_policy
                 if override_vm_migrate_encryption_policy is not None
                 else desired_global_vm_migrate_encryption_policy
             )
-            if current_vm_migrate_encryption_policy != desired_vm_migrate_policy:
+            if current_vm_migrate_encryption_policy != desired_vm_migrate_policy and not exclude_flag:
                 logger.info(f"Setting VM migrate policy {desired_vm_migrate_policy} on VM {vm_ref.name}")
                 # continue to remediate next vm if hitting any errors
                 try:
@@ -319,7 +321,7 @@ class VmMigrateEncryptionPolicy(BaseController):
             else:
                 logger.info(
                     f"VM {vm_ref.name} already has desired migrate policy {desired_vm_migrate_policy},"
-                    f" no remediation required."
+                    f" no remediation required. Or exclude flag present - {exclude_flag}"
                 )
 
         return remediated, remediated_desired, errors
@@ -355,11 +357,16 @@ class VmMigrateEncryptionPolicy(BaseController):
         for vm_overrides in overrides:
             vm_name = vm_overrides.get(VM_NAME)
             vm_path = vm_overrides.get(PATH)
+            exclude_flag = vm_overrides.get(EXCLUDE_THIS_VM)
             desired_value = vm_overrides.get(DESIRED_KEY)
 
             # Find the configuration for the current virtual machine
             config = next(
-                (config for config in vm_configs if config.get(VM_NAME) == vm_name and config.get(PATH) == vm_path),
+                (
+                    config
+                    for config in vm_configs
+                    if config.get(VM_NAME) == vm_name and config.get(PATH) == vm_path and not exclude_flag
+                ),
                 None,
             )
 

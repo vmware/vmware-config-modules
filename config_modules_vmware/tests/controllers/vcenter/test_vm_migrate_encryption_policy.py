@@ -22,7 +22,8 @@ class TestVmMigrateEncryptionPolicy:
                 "migrate_encryption_policy": "opportunistic"
             },
             "__OVERRIDES__": [
-                {"vm_name": "ms-sql-replica-2", "migrate_encryption_policy": "required", "path": "SDDC-Datacenter/vm/db_workloads/ms-sql"}
+                {"vm_name": "ms-sql-replica-2", "migrate_encryption_policy": "required", "path": "SDDC-Datacenter/vm/db_workloads/ms-sql"},
+                {"vm_name": "ubuntu-dev-box2", "migrate_encryption_policy": "opportunistic", "path": "SDDC-Datacenter/vm/dev2", "exclude": True}
             ]
         }
         self.non_compliant_value_overrides = {
@@ -30,15 +31,17 @@ class TestVmMigrateEncryptionPolicy:
                 "migrate_encryption_policy": "opportunistic"
             },
             "__OVERRIDES__": [
-                {"vm_name": "ms-sql-replica-2", "migrate_encryption_policy": "disabled", "path": "SDDC-Datacenter/vm/db_workloads/ms-sql"}
+                {"vm_name": "ms-sql-replica-2", "migrate_encryption_policy": "disabled", "path": "SDDC-Datacenter/vm/db_workloads/ms-sql"},
+                {"vm_name": "ubuntu-dev-box2", "migrate_encryption_policy": "opportunistic", "path": "SDDC-Datacenter/vm/dev2", "exclude": True}
             ]
         }
         self.non_compliant_vm_configs_overrides = [
             {"vm_name": "nsx-mgmt-1", "migrate_encryption_policy": "opportunistic", "path": "SDDC-Datacenter/vm/Management VMs"},
             {"vm_name": "sddc-manager", "migrate_encryption_policy": "opportunistic", "path": "SDDC-Datacenter/vm/Management VMs"},
             {"vm_name": "ms-sql-replica-1", "migrate_encryption_policy": "opportunistic", "path": "SDDC-Datacenter/vm/db_workloads/ms-sql"},
-            {"vm_name": "ms-sql-replica-2", "migrate_encryption_policy": "opportunistic", "path": "SDDC-Datacenter/vm/db_workloads/ms-sql"},
+            {"vm_name": "ms-sql-replica-2", "migrate_encryption_policy": "required", "path": "SDDC-Datacenter/vm/db_workloads/ms-sql"},
             {"vm_name": "ubuntu-dev-box", "migrate_encryption_policy": "opportunistic", "path": "SDDC-Datacenter/vm/dev"},
+            {"vm_name": "ubuntu-dev-box2", "migrate_encryption_policy": "required", "path": "SDDC-Datacenter/vm/dev2"},
             {"vm_name": "vcenter-1", "migrate_encryption_policy": "opportunistic", "path": "SDDC-Datacenter/vm/Management VMs"}
         ]
         self.compliant_vm_configs_overrides = [
@@ -47,6 +50,7 @@ class TestVmMigrateEncryptionPolicy:
             {"vm_name": "ms-sql-replica-1", "migrate_encryption_policy": "opportunistic", "path": "SDDC-Datacenter/vm/db_workloads/ms-sql"},
             {"vm_name": "ms-sql-replica-2", "migrate_encryption_policy": "required", "path": "SDDC-Datacenter/vm/db_workloads/ms-sql"},
             {"vm_name": "ubuntu-dev-box", "migrate_encryption_policy": "opportunistic", "path": "SDDC-Datacenter/vm/dev"},
+            {"vm_name": "ubuntu-dev-box2", "migrate_encryption_policy": "required", "path": "SDDC-Datacenter/vm/dev2"},
             {"vm_name": "vcenter-1", "migrate_encryption_policy": "opportunistic", "path": "SDDC-Datacenter/vm/Management VMs"}
         ]
         self.compliant_vm_configs = [
@@ -74,7 +78,7 @@ class TestVmMigrateEncryptionPolicy:
         ]
         # Pyvmomi type MagicMock objects
         self.mocked_vm_refs_compliant_overrides = self.create_all_vm_mock_refs(self.compliant_vm_configs_overrides)
-        self.mocked_vm_refs_non_compliant_overrides = self.create_all_vm_mock_refs(self.compliant_vm_configs_overrides)
+        self.mocked_vm_refs_non_compliant_overrides = self.create_all_vm_mock_refs(self.non_compliant_vm_configs_overrides)
         self.mocked_vm_refs_compliant = self.create_all_vm_mock_refs(self.compliant_vm_configs)
         self.mocked_vm_refs_non_compliant = self.create_all_vm_mock_refs(self.non_compliant_vm_configs)
 
@@ -180,6 +184,7 @@ class TestVmMigrateEncryptionPolicy:
                                                                       "SDDC-Datacenter/vm/db_workloads/ms-sql",
                                                                       "SDDC-Datacenter/vm/db_workloads/ms-sql",
                                                                       "SDDC-Datacenter/vm/dev",
+                                                                      "SDDC-Datacenter/vm/dev2",
                                                                       "SDDC-Datacenter/vm/Management VMs"]
         mock_vc_context.vc_vmomi_client.return_value = mock_vc_vmomi_client
 
@@ -204,6 +209,7 @@ class TestVmMigrateEncryptionPolicy:
                                                                       "SDDC-Datacenter/vm/db_workloads/ms-sql",
                                                                       "SDDC-Datacenter/vm/db_workloads/ms-sql",
                                                                       "SDDC-Datacenter/vm/dev",
+                                                                      "SDDC-Datacenter/vm/dev2",
                                                                       "SDDC-Datacenter/vm/Management VMs"]
         mock_vc_context.vc_vmomi_client.return_value = mock_vc_vmomi_client
 
