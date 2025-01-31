@@ -78,7 +78,8 @@ Sample desired state
       "switch_name": "Switch-A",
       "network_io_control_status": true
     }
-  ]
+  ],
+  "ignore_disconnected_hosts": true
 }
 ```
 

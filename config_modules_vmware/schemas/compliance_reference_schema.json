@@ -683,6 +683,11 @@
                         ],
                         "additionalProperties": false
                       }
+                    },
+                    "ignore_disconnected_hosts": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "ignore disconnected hosts caused exceptions."
                     }
                   },
                   "minProperties": 1,
@@ -749,6 +754,11 @@
                         ],
                         "additionalProperties": false
                       }
+                    },
+                    "ignore_disconnected_hosts": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "ignore disconnected hosts caused exceptions."
                     }
                   },
                   "minProperties": 1,
@@ -1868,37 +1878,94 @@
                   "$ref": "#/definitions/metadata"
                 },
                 "value": {
-                  "type": "array",
-                  "description": "A valid list of dictionary with three keys - users, groups and roles",
-                  "items": {
-                    "type": "object",
-                    "properties": {
-                      "name": {
-                        "type": "string",
-                        "description": "User or group name"
-                      },
-                      "type": {
-                        "enum": [
-                          "USER",
-                          "GROUP"
+                  "type": "object",
+                  "properties": {
+                    "global": {
+                      "type": "array",
+                      "description": "A list of dictionary with four keys - name, type, role and propagate flag",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string",
+                            "description": "User or group name"
+                          },
+                          "type": {
+                            "enum": [
+                              "USER",
+                              "GROUP"
+                            ],
+                            "description": "Type to denote its a user or a group"
+                          },
+                          "role": {
+                            "type": "string",
+                            "description": "Role name"
+                          },
+                          "propagate": {
+                            "type": "boolean",
+                            "description": "propagate flag"
+                          }
+                        },
+                        "required": [
+                          "name",
+                          "type",
+                          "role",
+                          "propagate"
                         ],
-                        "description": "Type to denote its a user or a group"
+                        "additionalProperties": false
                       },
-                      "role": {
-                        "type": "string",
-                        "description": "Role name"
-                      }
+                      "minItems": 0
                     },
-                    "required": [
-                      "name",
-                      "type",
-                      "role"
-                    ],
-                    "additionalProperties": false
-                  },
-                  "minItems": 0
+                    "vcenter": {
+                      "type": "array",
+                      "description": "A list of dictionary with four keys - name, type, role and propagate flag",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string",
+                            "description": "User or group name"
+                          },
+                          "type": {
+                            "enum": [
+                              "USER",
+                              "GROUP"
+                            ],
+                            "description": "Type to denote its a user or a group"
+                          },
+                          "role": {
+                            "type": "string",
+                            "description": "Role name"
+                          },
+                          "propagate": {
+                            "type": "boolean",
+                            "description": "propagate flag"
+                          }
+                        },
+                        "required": [
+                          "name",
+                          "type",
+                          "role",
+                          "propagate"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "minItems": 0
+                    },
+                    "exclude_user_patterns": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "description": "User defined patterns to exclude users from compliance check and remediation"
+                      },
+                      "minItems": 1
+                    }
+                  }
                 }
               },
+              "required": [
+                "value"
+              ],
               "additionalProperties": false,
               "minProperties": 1
             },

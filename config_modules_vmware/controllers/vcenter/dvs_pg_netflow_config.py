@@ -193,16 +193,17 @@ class DvsPortGroupNetflowConfig(BaseController):
 
         return status, errors
 
-    def _get_non_compliant_configs(self, all_ipfix_configs, desired_values: Dict) -> Dict:
+    def _get_non_compliant_configs(self, all_ipfix_configs, desired_values: Dict) -> Tuple[Dict, Dict]:
         """Helper method to get non_compliant configs in the current and report current configs and desired configs.
 
         :param desired_values: Desired value for switch and  port groups.
         :type desired_values: dict
-        :return: Return non_compliance netflow configs dvs/pg as current_configs
-        :rtype: dict
+        :return: Return non_compliance netflow configs dvs/pg as current_configs and desired configs
+        :rtype: Tuple
         """
 
         non_compliant_configs = {}
+        desired_configs = {}
         switch_configs = all_ipfix_configs.get(SWITCH_CONFIG)
         for switch_config in switch_configs:
             switch_name = switch_config[SWITCH_NAME]
@@ -216,6 +217,8 @@ class DvsPortGroupNetflowConfig(BaseController):
             ):
                 non_compliant_switch_config_item = {SWITCH_NAME: switch_name, IPFIX_COLLECTOR_IP: ipfix_collector_ip}
                 non_compliant_configs.setdefault(SWITCH_CONFIG, []).append(non_compliant_switch_config_item)
+                desired_switch_config_item = {SWITCH_NAME: switch_name, IPFIX_COLLECTOR_IP: desired_ipfix_collector_ip}
+                desired_configs.setdefault(SWITCH_CONFIG, []).append(desired_switch_config_item)
 
         portgroup_configs = all_ipfix_configs.get(PORTGROUP_CONFIG)
         for portgroup_config in portgroup_configs:
@@ -233,8 +236,14 @@ class DvsPortGroupNetflowConfig(BaseController):
                     IPFIX_ENABLED: ipfix_enabled,
                 }
                 non_compliant_configs.setdefault(PORTGROUP_CONFIG, []).append(non_compliant_portgroup_config_item)
+                desired_portgroup_config_item = {
+                    SWITCH_NAME: switch_name,
+                    PORT_GROUP_NAME: pg_name,
+                    IPFIX_ENABLED: desired_ipfix_enabled,
+                }
+                desired_configs.setdefault(PORTGROUP_CONFIG, []).append(desired_portgroup_config_item)
 
-        return non_compliant_configs
+        return non_compliant_configs, desired_configs
 
     def check_compliance(self, context: VcenterContext, desired_values: Dict) -> Dict:
         """Check compliance of all distributed switches and port groups for netflow configuration.
@@ -319,14 +328,14 @@ class DvsPortGroupNetflowConfig(BaseController):
         if errors:
             return {consts.STATUS: ComplianceStatus.FAILED, consts.ERRORS: errors}
 
-        non_compliant_configs = self._get_non_compliant_configs(
+        non_compliant_configs, desired_configs = self._get_non_compliant_configs(
             all_ipfix_configs=all_ipfix_configs, desired_values=desired_values
         )
         if non_compliant_configs:
             result = {
                 consts.STATUS: ComplianceStatus.NON_COMPLIANT,
                 consts.CURRENT: non_compliant_configs,
-                consts.DESIRED: desired_values,
+                consts.DESIRED: desired_configs,
             }
         else:
             result = {consts.STATUS: ComplianceStatus.COMPLIANT}

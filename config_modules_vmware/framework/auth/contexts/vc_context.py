@@ -1,5 +1,6 @@
 # Copyright 2024 Broadcom. All Rights Reserved.
 from config_modules_vmware.framework.auth.contexts.base_context import BaseContext
+from config_modules_vmware.framework.clients.vcenter.vc_invsvc_mob3_client import VcInvsvcMob3Client
 from config_modules_vmware.framework.clients.vcenter.vc_rest_client import VcRestClient
 from config_modules_vmware.framework.clients.vcenter.vc_vmomi_client import VcVmomiClient
 from config_modules_vmware.framework.clients.vcenter.vc_vmomi_sso_client import VcVmomiSSOClient
@@ -47,6 +48,7 @@ class VcenterContext(BaseContext):
         self._vc_rest_client = None
         self._vc_vmomi_sso_client = None
         self._vc_vsan_vmomi_client = None
+        self._vc_invsvc_mob3_client = None
 
     def __enter__(self):
         """
@@ -68,6 +70,9 @@ class VcenterContext(BaseContext):
             self._vc_vmomi_sso_client.disconnect()
         if self._vc_vsan_vmomi_client:
             self._vc_vsan_vmomi_client.disconnect()
+        if self._vc_invsvc_mob3_client:
+            self._vc_invsvc_mob3_client.disconnect()
+            self._vc_invsvc_mob3_client = None
 
     def vc_vmomi_client(self):
         """
@@ -141,3 +146,18 @@ class VcenterContext(BaseContext):
                 version_arr[2] if len(version_arr) > 2 else 0,
             )
         return self._product_version
+
+    def vc_invsvc_mob3_client(self):
+        """
+        Returns the instance of a VcInvsvcMob3Client
+        Initializes if one does not exist.
+        """
+        if not self._vc_invsvc_mob3_client:
+            self._vc_invsvc_mob3_client = VcInvsvcMob3Client(
+                self._hostname,
+                self._username,
+                self._password,
+                ssl_thumbprint=self._ssl_thumbprint,
+                verify_ssl=self._verify_ssl,
+            )
+        return self._vc_invsvc_mob3_client
