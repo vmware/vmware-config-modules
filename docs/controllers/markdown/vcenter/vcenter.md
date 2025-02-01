@@ -156,6 +156,7 @@
   * [`UsersGroupsRolesConfig.get()`](vcenter.users_groups_roles_config.md#vcenter.users_groups_roles_config.UsersGroupsRolesConfig.get)
   * [`UsersGroupsRolesConfig.set()`](vcenter.users_groups_roles_config.md#vcenter.users_groups_roles_config.UsersGroupsRolesConfig.set)
   * [`UsersGroupsRolesConfig.check_compliance()`](vcenter.users_groups_roles_config.md#vcenter.users_groups_roles_config.UsersGroupsRolesConfig.check_compliance)
+  * [`UsersGroupsRolesConfig.remediate()`](vcenter.users_groups_roles_config.md#vcenter.users_groups_roles_config.UsersGroupsRolesConfig.remediate)
 * [`VcProfile`](vcenter.vc_profile.md)
   * [`VcProfile.get()`](vcenter.vc_profile.md#vcenter.vc_profile.VcProfile.get)
   * [`VcProfile.set()`](vcenter.vc_profile.md#vcenter.vc_profile.VcProfile.set)

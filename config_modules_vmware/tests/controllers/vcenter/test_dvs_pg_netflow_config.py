@@ -278,10 +278,13 @@ class TestDvsPortGroupNetflowConfig:
     @patch("config_modules_vmware.framework.auth.contexts.vc_context.VcenterContext")
     @patch("config_modules_vmware.framework.clients.vcenter.vc_vmomi_client.VcVmomiClient")
     def test_check_compliance_non_compliant(self, mock_vc_vmomi_client, mock_vc_context):
+        non_compliant_configs, desired_configs = self.controller._get_non_compliant_configs(
+            self.non_compliant_value,
+            self.compliant_value)
         expected_result = {
             consts.STATUS: ComplianceStatus.NON_COMPLIANT,
-            consts.CURRENT: self.non_compliant_value,
-            consts.DESIRED: self.compliant_value,
+            consts.CURRENT: non_compliant_configs,
+            consts.DESIRED: desired_configs,
         }
 
         mock_vc_vmomi_client.get_objects_by_vimtype.return_value = self.non_compliant_dvs_pyvmomi_mocks
@@ -306,7 +309,7 @@ class TestDvsPortGroupNetflowConfig:
     @patch("config_modules_vmware.framework.clients.vcenter.vc_vmomi_client.VcVmomiClient")
     def test_remediate_skipped_already_desired(self, mock_vc_vmomi_client, mock_vc_context):
         expected_get_object_result = self.compliant_dvs_pyvmomi_mocks
-        expected_result = {consts.STATUS: RemediateStatus.SKIPPED, consts.ERRORS: ['Control already compliant']}
+        expected_result = {consts.STATUS: RemediateStatus.SKIPPED, consts.ERRORS: [consts.CONTROL_ALREADY_COMPLIANT]}
 
         mock_vc_vmomi_client.get_objects_by_vimtype.return_value = expected_get_object_result
         mock_vc_context.vc_vmomi_client.return_value = mock_vc_vmomi_client
@@ -317,11 +320,14 @@ class TestDvsPortGroupNetflowConfig:
     @patch("config_modules_vmware.framework.auth.contexts.vc_context.VcenterContext")
     @patch("config_modules_vmware.framework.clients.vcenter.vc_vmomi_client.VcVmomiClient")
     def test_remediate_success(self, mock_vc_vmomi_client, mock_vc_context):
+        non_compliant_configs, desired_configs = self.controller._get_non_compliant_configs(
+            self.non_compliant_value,
+            self.compliant_value)
         current_value = self.non_compliant_dvs_pyvmomi_mocks
         expected_result = {
             consts.STATUS: RemediateStatus.SUCCESS,
-            consts.OLD: self.non_compliant_value,
-            consts.NEW: self.compliant_value,
+            consts.OLD: non_compliant_configs,
+            consts.NEW: desired_configs,
         }
 
         mock_vc_vmomi_client.get_objects_by_vimtype.return_value = current_value

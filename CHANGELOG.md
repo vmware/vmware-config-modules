@@ -1,4 +1,12 @@
 # CURRENTLY-IN-DEVELOPMENT
+# `v0.14.0.3`
+### Controller Enhancements
+- VCSA Controllers
+    - 415 - Add remediation support and rewrote compliance check
+    - 415 - Add exclude filters input from desired state
+    - 417 - Port fix from drop 15 to remove "_GLOBAL_" from compliance check output
+    - 409 - Add flag to ignore disconnected hosts caused exception
+    - 1200 - Add flag to ignore disconnected hosts caused exception
 # `v0.14.0.2`
 ### Controller Enhancements
 - VCSA Controllers
