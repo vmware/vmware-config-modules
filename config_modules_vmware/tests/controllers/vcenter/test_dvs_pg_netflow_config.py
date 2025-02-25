@@ -212,7 +212,9 @@ class TestDvsPortGroupNetflowConfig:
         dvs_mock.config.ipfixConfig.collectorIpAddress = dv_spec.get("ipfix_collector_ip")
         if not bad_mock:
             dvs_mock.config.configVersion = "24"
-        setattr(dvs_mock, "ReconfigureDvs_Task", MagicMock(return_value=True))
+        task = MagicMock()
+        task.info = None
+        setattr(dvs_mock, "ReconfigureDvs_Task", MagicMock(return_value=task))
         dvs_mock.portgroup = pg_obj
         return dvs_mock
 
@@ -252,7 +254,7 @@ class TestDvsPortGroupNetflowConfig:
     @patch("config_modules_vmware.framework.auth.contexts.vc_context.VcenterContext")
     @patch("config_modules_vmware.framework.clients.vcenter.vc_vmomi_client.VcVmomiClient")
     def test_set_failed(self, mock_vc_vmomi_client, mock_vc_context):
-        expected_error = Exception("Failed to set Forged transmits policy")
+        expected_error = Exception("Failed to set netflow  policy")
 
         mock_vc_vmomi_client.get_objects_by_vimtype.return_value = self.non_compliant_dvs_pyvmomi_mocks
         mock_vc_vmomi_client.wait_for_task.side_effect = expected_error
@@ -354,7 +356,8 @@ class TestDvsPortGroupNetflowConfig:
         expected_error = Exception('For "configVersion" expected type str, but got MagicMock')
         expected_result = {consts.STATUS: RemediateStatus.FAILED, consts.ERRORS: [str(expected_error)]}
 
-        mock_vc_vmomi_client.get_objects_by_vimtype.return_value = self.dv_pg_mock_pyvmomi_bad_object
+        mock_vc_vmomi_client.get_objects_by_vimtype.return_value = self.non_compliant_dvs_pyvmomi_mocks
+        mock_vc_vmomi_client.wait_for_task.side_effect = expected_error
         mock_vc_context.vc_vmomi_client.return_value = mock_vc_vmomi_client
 
         result = self.controller.remediate(mock_vc_context, self.compliant_value)

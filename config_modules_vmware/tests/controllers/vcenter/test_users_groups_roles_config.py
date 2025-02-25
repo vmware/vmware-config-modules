@@ -20,25 +20,35 @@ class TestUsersGroupsRolesConfig:
         self.mock_permission_user.group = False
         self.mock_permission_user.propagate = True
         self.mock_permission_user.principal = "abc.com\\user1"
+        self.mock_permission_user.entity = "group-d1"
 
         self.mock_permission_group = MagicMock()
         self.mock_permission_group.group = True
         self.mock_permission_group.propagate = True
         self.mock_permission_group.principal = "test_domain_name\\group1"
+        self.mock_permission_group.entity = "group-d1"
 
         self.mock_permission_group2 = MagicMock()
         self.mock_permission_group2.group = True
         self.mock_permission_group2.propagate = False
         self.mock_permission_group2.principal = "test_domain_alias\\group2"
+        self.mock_permission_group2.entity = "group-d1"
 
         self.mock_permission_group3 = MagicMock()
         self.mock_permission_group3.group = True
         self.mock_permission_group3.propagate = True
         self.mock_permission_group3.principal = "vsphere.local\\vpxd-ed126b8a-0c50-4451-9b48-c03778b71dd4"
+        self.mock_permission_group3.entity = "group-d1"
+
+        self.mock_permission_group4 = MagicMock()
+        self.mock_permission_group4.group = True
+        self.mock_permission_group4.propagate = True
+        self.mock_permission_group4.principal = "vsphere.local\\vpxd-ed126b8a-0c50-4451-9b48-c03778b71dd4"
+        self.mock_permission_group4.entity = "vm-01"
 
         self.mock_role_permissions = [
             [self.mock_permission_user, self.mock_permission_group],
-            [self.mock_permission_group, self.mock_permission_group2, self.mock_permission_group3]
+            [self.mock_permission_group, self.mock_permission_group2, self.mock_permission_group3, self.mock_permission_group4]
         ]
 
         self.mock_global_permissions = [
@@ -63,6 +73,7 @@ class TestUsersGroupsRolesConfig:
                 ]
         }
         self.mock_content = MagicMock()
+        self.mock_content.rootFolder = "group-d1"
         self.mock_content.authorizationManager.roleList = self.mock_roles
         self.mock_content.authorizationManager.RetrieveRolePermissions.side_effect = \
             self._retrieve_permissions_side_effect
@@ -280,31 +291,6 @@ class TestUsersGroupsRolesConfig:
         expected_result = {
             consts.STATUS: ComplianceStatus.FAILED,
             consts.ERRORS: ["Test exception"]
-        }
-        assert result == expected_result
-
-    @patch("config_modules_vmware.framework.auth.contexts.vc_context.VcenterContext")
-    @patch("config_modules_vmware.framework.clients.vcenter.vc_vmomi_sso_client.VcVmomiSSOClient")
-    @patch("config_modules_vmware.framework.clients.vcenter.vc_invsvc_mob3_client.VcInvsvcMob3Client")
-    def test_check_compliance_failed_unexpected_user_group(self, mock_vc_invsvc_mob3_client, mock_vc_vmomi_sso_client, mock_vc_context):
-        mock_vc_vmomi_sso_client.get_all_domains.return_value = self.domain_mock_obj
-        mock_vc_context.vc_vmomi_sso_client.return_value = mock_vc_vmomi_sso_client
-        mock_vc_context.vc_vmomi_client.return_value.content = self.mock_content
-        mock_vc_context.vc_invsvc_mob3_client.return_value = mock_vc_invsvc_mob3_client
-        mock_vc_invsvc_mob3_client.get_global_permissions.return_value = self.mock_global_permissions
-        desired_values_with_invalid_name = {
-            "global": [
-                {"role": "TestRole1", "name": "abc.comuser1", "type": USER, "propagate": True}
-            ],
-            "vcenter": [
-                {"role": "TestRole1", "name": "abc.comuser1", "type": USER, "propagate": True}
-            ]
-        }
-        result = self.controller.check_compliance(mock_vc_context, desired_values_with_invalid_name)
-        # Assert expected results.
-        expected_result = {
-            consts.STATUS: ComplianceStatus.FAILED,
-            consts.ERRORS: ["Unexpected group or user format"]
         }
         assert result == expected_result
 

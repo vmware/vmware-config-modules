@@ -855,6 +855,11 @@
                           }
                         }
                       }
+                    },
+                    "ignore_disconnected_hosts": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "ignore disconnected hosts caused exceptions."
                     }
                   },
                   "minProperties": 1,
