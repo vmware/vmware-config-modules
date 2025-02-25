@@ -104,7 +104,7 @@ class UsersGroupsRolesConfig(BaseController):
             domain_name = self.domain_alias_to_name_map.get(domain_or_alias, domain_or_alias)
             return f"{domain_name}\\{user_or_group.lower()}"
         else:
-            raise Exception("Unexpected group or user format")
+            return name.lower()
 
     def get(self, context: VcenterContext) -> Tuple[List[Dict[str, str]], List[Any]]:
         """Get roles for users and groups.
@@ -138,7 +138,11 @@ class UsersGroupsRolesConfig(BaseController):
             for role in role_collection:
                 permissions = authorization_manager.RetrieveRolePermissions(role.roleId)
                 for permission in permissions:
+                    # skip permissions not in vcenter level
                     name = permission.principal
+                    if permission.entity != content.rootFolder:
+                        logger.debug(f"Skip this permission, name: {name}, entity: {permission.entity}")
+                        continue
                     key_tuple = (name, role.name, USER if not permission.group else GROUP)
                     if key_tuple not in unique_entries:
                         unique_entries.add(key_tuple)

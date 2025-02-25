@@ -1,4 +1,10 @@
 # CURRENTLY-IN-DEVELOPMENT
+# `v0.14.0.4`
+### Controller Enhancements
+- VCSA Controllers
+    - 415 - Exclude users not defined on vcenter level
+    - 417 - Add flag to ignore disconnected hosts caused exception
+    - 0000 - Add reconfigure method to vCenter controller "configure an alarm to alert on ESXi remote syslog connection"
 # `v0.14.0.3`
 ### Controller Enhancements
 - VCSA Controllers

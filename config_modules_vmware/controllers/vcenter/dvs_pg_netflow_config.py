@@ -8,6 +8,7 @@ from typing import Tuple
 from pyVmomi import vim  # pylint: disable=E0401
 
 from config_modules_vmware.controllers.base_controller import BaseController
+from config_modules_vmware.controllers.vcenter.utils.vc_dvs_utils import is_host_disconnect_exception
 from config_modules_vmware.framework.auth.contexts.base_context import BaseContext
 from config_modules_vmware.framework.auth.contexts.vc_context import VcenterContext
 from config_modules_vmware.framework.clients.common import consts
@@ -29,6 +30,7 @@ OVERRIDES = "__OVERRIDES__"
 SWITCH_OVERRIDE_CONFIG = "switch_override_config"
 PORTGROUP_OVERRIDE_CONFIG = "portgroup_override_config"
 NSX_BACKING_TYPE = "nsx"
+IGNORE_DISCONNECTED_HOSTS = "ignore_disconnected_hosts"
 
 
 class DvsPortGroupNetflowConfig(BaseController):
@@ -131,6 +133,21 @@ class DvsPortGroupNetflowConfig(BaseController):
 
         return all_ipfix_configs, errors
 
+    def _handle_exception(self, e, task, ignore_disconnected_hosts):
+        errors = []
+        if (
+            hasattr(task.info, "error")
+            and isinstance(task.info.error, vim.fault.DvsOperationBulkFault)
+            and is_host_disconnect_exception(task.info.error)
+            and ignore_disconnected_hosts
+        ):
+            logger.debug(f"TASK ERROR: - {task.info.error}")
+            logger.info(f"Ignoring exception caused by disconnected host - {e}")
+        else:
+            logger.exception(f"An error occurred: {e}")
+            errors.append(str(e))
+        return errors
+
     def set(self, context: VcenterContext, desired_values: Dict) -> Tuple[str, List[Any]]:
         """Set method to configure ipfix configurations for all dvs and pgs..
 
@@ -145,51 +162,63 @@ class DvsPortGroupNetflowConfig(BaseController):
         errors = []
         status = RemediateStatus.SUCCESS
         vc_vmomi_client = context.vc_vmomi_client()
+        ignore_disconnected_hosts = desired_values.get(IGNORE_DISCONNECTED_HOSTS, False)
 
         try:
             all_dv_switches = vc_vmomi_client.get_objects_by_vimtype(vim.DistributedVirtualSwitch)
-            for dvs in all_dv_switches:
-                desired_ipfix_collector_ip = self._get_desired_ipfix_collector_ip(desired_values, dvs.name)
-                ipfix_collector_ip = dvs.config.ipfixConfig.collectorIpAddress
-                logger.debug(
-                    f"Switch: {dvs.name}, ipfix collector ip: {ipfix_collector_ip}, desired ipfix collector ip: {desired_ipfix_collector_ip}"
-                )
-                if (ipfix_collector_ip is not None and ipfix_collector_ip != desired_ipfix_collector_ip) or (
-                    ipfix_collector_ip is None and desired_ipfix_collector_ip != ""
-                ):
-                    dvs.config.ipfixConfig.collectorIpAddress = desired_ipfix_collector_ip
-                    config_spec = dvs.ConfigSpec()
-                    config_spec.configVersion = dvs.config.configVersion
-                    config_spec.ipfixConfig = dvs.config.ipfixConfig
-                    config_spec.ipfixConfig.collectorIpAddress = desired_ipfix_collector_ip
-                    logger.debug(f"Remediate Switch: {dvs.name}")
-                    task = dvs.ReconfigureDvs_Task(spec=config_spec)
-                    vc_vmomi_client.wait_for_task(task=task)
-                for port_group_obj in dvs.portgroup:
-                    # skip nsx portgroup
-                    is_nsx_backed = getattr(port_group_obj.config, "backingType", "") == NSX_BACKING_TYPE
-                    if not is_nsx_backed:
-                        pg_name = port_group_obj.name
-                        desired_ipfix_enabled = self._get_desired_ipfix_enabled(desired_values, dvs.name, pg_name)
-                        ipfix_enabled = port_group_obj.config.defaultPortConfig.ipfixEnabled.value
-                        logger.debug(
-                            f"Portgroup: {pg_name}, ipfix enabled: {ipfix_enabled}, desired ipfix enabled: {desired_ipfix_enabled}"
-                        )
-                        if ipfix_enabled != desired_ipfix_enabled:
-                            config_spec = vim.dvs.DistributedVirtualPortgroup.ConfigSpec()
-                            config_spec.configVersion = port_group_obj.config.configVersion
-                            config_spec.defaultPortConfig = (
-                                vim.dvs.VmwareDistributedVirtualSwitch.VmwarePortConfigPolicy()
-                            )
-                            config_spec.defaultPortConfig.ipfixEnabled = vim.BoolPolicy(value=desired_ipfix_enabled)
-                            logger.debug(f"Remediate portgroup: {pg_name}")
-                            task = port_group_obj.ReconfigureDVPortgroup_Task(spec=config_spec)
-                            vc_vmomi_client.wait_for_task(task=task)
-
         except Exception as e:
             logger.exception(f"An error occurred: {e}")
             errors.append(str(e))
             status = RemediateStatus.FAILED
+            return status, errors
+
+        for dvs in all_dv_switches:
+            desired_ipfix_collector_ip = self._get_desired_ipfix_collector_ip(desired_values, dvs.name)
+            ipfix_collector_ip = dvs.config.ipfixConfig.collectorIpAddress
+            logger.debug(
+                f"Switch: {dvs.name}, ipfix collector ip: {ipfix_collector_ip}, desired ipfix collector ip: {desired_ipfix_collector_ip}"
+            )
+            if (ipfix_collector_ip is not None and ipfix_collector_ip != desired_ipfix_collector_ip) or (
+                ipfix_collector_ip is None and desired_ipfix_collector_ip != ""
+            ):
+                dvs.config.ipfixConfig.collectorIpAddress = desired_ipfix_collector_ip
+                config_spec = dvs.ConfigSpec()
+                config_spec.configVersion = dvs.config.configVersion
+                config_spec.ipfixConfig = dvs.config.ipfixConfig
+                config_spec.ipfixConfig.collectorIpAddress = desired_ipfix_collector_ip
+                logger.debug(f"Remediate Switch: {dvs.name}")
+                try:
+                    task = dvs.ReconfigureDvs_Task(spec=config_spec)
+                    vc_vmomi_client.wait_for_task(task=task)
+                except Exception as e:
+                    errors = self._handle_exception(e, task, ignore_disconnected_hosts)
+                    if errors:
+                        status = RemediateStatus.FAILED
+                        return status, errors
+            for port_group_obj in dvs.portgroup:
+                # skip nsx portgroup
+                is_nsx_backed = getattr(port_group_obj.config, "backingType", "") == NSX_BACKING_TYPE
+                if not is_nsx_backed:
+                    pg_name = port_group_obj.name
+                    desired_ipfix_enabled = self._get_desired_ipfix_enabled(desired_values, dvs.name, pg_name)
+                    ipfix_enabled = port_group_obj.config.defaultPortConfig.ipfixEnabled.value
+                    logger.debug(
+                        f"Portgroup: {pg_name}, ipfix enabled: {ipfix_enabled}, desired ipfix enabled: {desired_ipfix_enabled}"
+                    )
+                    if ipfix_enabled != desired_ipfix_enabled:
+                        config_spec = vim.dvs.DistributedVirtualPortgroup.ConfigSpec()
+                        config_spec.configVersion = port_group_obj.config.configVersion
+                        config_spec.defaultPortConfig = vim.dvs.VmwareDistributedVirtualSwitch.VmwarePortConfigPolicy()
+                        config_spec.defaultPortConfig.ipfixEnabled = vim.BoolPolicy(value=desired_ipfix_enabled)
+                        logger.debug(f"Remediate portgroup: {pg_name}")
+                        try:
+                            task = port_group_obj.ReconfigureDVPortgroup_Task(spec=config_spec)
+                            vc_vmomi_client.wait_for_task(task=task)
+                        except Exception as e:
+                            errors = self._handle_exception(e, task, ignore_disconnected_hosts)
+                            if errors:
+                                status = RemediateStatus.FAILED
+                                return status, errors
 
         return status, errors
 
