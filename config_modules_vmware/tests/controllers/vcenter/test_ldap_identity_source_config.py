@@ -9,11 +9,11 @@ class TestLdapIdentitySourceConfig:
     def setup_method(self):
         self.controller = LdapIdentitySourceConfig()
         self.control_desired_value = [
-            { 'username': 'test_user2@vmware.com' }
+            { 'username': 'test_user2@vmware.com', 'domain': 'sc2-10-186-58-234.eng.vmware.com' }
         ]
         self.compliant_value = self.control_desired_value
         self.non_compliant_value = [
-            { 'username': 'administrator@vmware.com'}
+            { 'username': 'administrator@vmware.com', 'domain': 'sc2-10-186-58-234.eng.vmware.com'}
         ]
         self.shell_cmd_output_compliant = \
             "********** IDENTITY SOURCE INFORMATION **********\n\

@@ -224,8 +224,12 @@ class FirewallRulesetsConfig(BaseController):
         ruleset_name = non_compliant_desired_config.get(NAME_KEY)
         rulesets_metadata = {
             ruleset.key: {
-                USER_CONTROLLABLE: getattr(ruleset, USER_CONTROLLABLE, True),
-                IP_LIST_CONFIGURABLE: getattr(ruleset, IP_LIST_CONFIGURABLE, True),
+                USER_CONTROLLABLE: True
+                if getattr(ruleset, USER_CONTROLLABLE, None) is None
+                else getattr(ruleset, USER_CONTROLLABLE),
+                IP_LIST_CONFIGURABLE: True
+                if getattr(ruleset, IP_LIST_CONFIGURABLE, None) is None
+                else getattr(ruleset, IP_LIST_CONFIGURABLE),
             }
             for ruleset in firewall_config.firewallInfo.ruleset
         }

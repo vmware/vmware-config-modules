@@ -50,11 +50,6 @@ class TestDVPortGroupReservedVlanExclusionConfig:
         ]
         self.compliant_get_values = [
             {
-                "switch_name": "DSwitch-test",
-                "port_group_name": "DPortGroup",
-                "vlan": ["10-100", "105", "200-250"]
-            },
-            {
                 "switch_name": "SDDC-Dswitch-Private",
                 "port_group_name": "SDDC-DPortGroup-vMotion",
                 "vlan": 200
@@ -105,6 +100,9 @@ class TestDVPortGroupReservedVlanExclusionConfig:
         self.non_compliant_get_values = [utils.filter_dict_keys(val, DESIRED_KEYS_CHECK) for val in self.non_compliant_dv_pgs]
         self.compliant_value = {
             "reserved_vlan_ids_to_exclude": [1, 2]
+        }
+        self.compliant_value2 = {
+            "reserved_vlan_ids_to_exclude": [{"start":1,"end":2}, 101,102,{"start":320,"end":350},400]
         }
         # Pyvmomi type MagicMock objects
         self.compliant_dv_pg_pyvmomi_mocks = [
@@ -210,26 +208,21 @@ class TestDVPortGroupReservedVlanExclusionConfig:
 
     @patch("config_modules_vmware.framework.auth.contexts.vc_context.VcenterContext")
     @patch("config_modules_vmware.framework.clients.vcenter.vc_vmomi_client.VcVmomiClient")
+    def test_check_compliance_compliant2(self, mock_vc_vmomi_client, mock_vc_context):
+        expected_result = {consts.STATUS: ComplianceStatus.COMPLIANT}
+
+        expected_get_object_result = self.compliant_dv_pg_pyvmomi_mocks
+        mock_vc_vmomi_client.get_objects_by_vimtype.return_value = expected_get_object_result
+        mock_vc_context.vc_vmomi_client.return_value = mock_vc_vmomi_client
+
+        result = self.controller.check_compliance(mock_vc_context, self.compliant_value2)
+        assert result == expected_result
+
+    @patch("config_modules_vmware.framework.auth.contexts.vc_context.VcenterContext")
+    @patch("config_modules_vmware.framework.clients.vcenter.vc_vmomi_client.VcVmomiClient")
     def test_check_compliance_non_compliant(self, mock_vc_vmomi_client, mock_vc_context):
 
         non_compliant_configs = [
-            {
-                "switch_name": "DSwitch-test",
-                "port_group_name": "DPortGroup",
-                "vlan": [
-                    "1-10",
-                    "15-200",
-                    "1-1000"
-                ]
-            },
-            {
-                "switch_name": "DSwitch-test",
-                "port_group_name": "DPortGroup-new",
-                "vlan": [
-                    "1"
-                ]
-            },
-
             {
                 "switch_name": "SDDC-Dswitch-Private",
                 "port_group_name": "SDDC-DPortGroup-vMotion",
@@ -246,6 +239,29 @@ class TestDVPortGroupReservedVlanExclusionConfig:
         mock_vc_context.vc_vmomi_client.return_value = mock_vc_vmomi_client
 
         result = self.controller.check_compliance(mock_vc_context, self.compliant_value)
+        assert result == expected_result
+
+    @patch("config_modules_vmware.framework.auth.contexts.vc_context.VcenterContext")
+    @patch("config_modules_vmware.framework.clients.vcenter.vc_vmomi_client.VcVmomiClient")
+    def test_check_compliance_non_compliant2(self, mock_vc_vmomi_client, mock_vc_context):
+
+        non_compliant_configs = [
+            {
+                "switch_name": "SDDC-Dswitch-Private",
+                "port_group_name": "SDDC-DPortGroup-vMotion",
+                "vlan": 1
+            }
+        ]
+        expected_result = {
+            consts.STATUS: ComplianceStatus.NON_COMPLIANT,
+            consts.CURRENT: non_compliant_configs,
+            consts.DESIRED: self.compliant_value2,
+        }
+
+        mock_vc_vmomi_client.get_objects_by_vimtype.return_value = self.non_compliant_dv_pg_pyvmomi_mocks
+        mock_vc_context.vc_vmomi_client.return_value = mock_vc_vmomi_client
+
+        result = self.controller.check_compliance(mock_vc_context, self.compliant_value2)
         assert result == expected_result
 
     @patch("config_modules_vmware.framework.auth.contexts.vc_context.VcenterContext")
@@ -277,23 +293,6 @@ class TestDVPortGroupReservedVlanExclusionConfig:
     def test_remediate_success(self, mock_vc_vmomi_client, mock_vc_context):
         current_value = self.non_compliant_dv_pg_pyvmomi_mocks
         non_compliant_configs = [
-            {
-                "switch_name": "DSwitch-test",
-                "port_group_name": "DPortGroup",
-                "vlan": [
-                    "1-10",
-                    "15-200",
-                    "1-1000"
-                ]
-            },
-            {
-                "switch_name": "DSwitch-test",
-                "port_group_name": "DPortGroup-new",
-                "vlan": [
-                    "1"
-                ]
-            },
-
             {
                 "switch_name": "SDDC-Dswitch-Private",
                 "port_group_name": "SDDC-DPortGroup-vMotion",

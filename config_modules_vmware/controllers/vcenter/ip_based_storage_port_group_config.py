@@ -1,6 +1,7 @@
 # Copyright 2024 VMware, Inc.  All rights reserved. -- VMware Confidential
 import logging
 import re
+from copy import deepcopy
 from typing import Any
 from typing import Dict
 from typing import List
@@ -407,6 +408,7 @@ class IPBasedStoragePortGroupConfig(BaseController):
             )
             if allow_mix_traffic_type is not None and not allow_mix_traffic_type:
                 current_ports = []
+                desired_ports = []
                 for port in pg.get(PORTS):
                     # If port is not ip based storage type, append to current, desired to report in check compliance.
                     services = list(port.get("services"))
@@ -414,28 +416,23 @@ class IPBasedStoragePortGroupConfig(BaseController):
                         service == VSAN_SERVICE or service == VSAN_WITNESS_SERVICE for service in services
                     ):
                         current_ports.append(port)
+                        desired_port = deepcopy(port)
+                        desired_port["services"] = [VSAN_SERVICE]
+                        desired_ports.append(desired_port)
 
                 if current_ports:
                     pg_current[PORTS] = current_ports
+                    pg_desired[PORTS] = desired_ports
 
             # If there is any drift in the port group add switch_name and portgroup_name to the portgroup
             # and append to current, desired port groups configs to be reported in check compliance.
             if pg_current:
                 pg_current[SWITCH_NAME] = switch_name
                 pg_current[PORT_GROUP_NAME] = port_group_name
-                if allow_mix_traffic_type is not None:
-                    pg_current[ALLOW_MIX_TRAFFIC_TYPE] = allow_mix_traffic_type
                 current_port_groups_configs.append(pg_current)
-                if key in overrides_map:
-                    pg_desired[SWITCH_NAME] = switch_name
-                    pg_desired[PORT_GROUP_NAME] = port_group_name
-                    if allow_mix_traffic_type is not None:
-                        pg_desired[ALLOW_MIX_TRAFFIC_TYPE] = allow_mix_traffic_type
-                    desired_port_groups_configs.append(pg_desired)
-
-        # add "__GLOBAL__" portion of desired spec for non-compliant display if any drift found.
-        if (current_port_groups_configs or desired_port_groups_configs) and global_desired_value:
-            desired_port_groups_configs.insert(0, {"__GLOBAL__": global_desired_value})
+                pg_desired[SWITCH_NAME] = switch_name
+                pg_desired[PORT_GROUP_NAME] = port_group_name
+                desired_port_groups_configs.append(pg_desired)
 
         return current_port_groups_configs, desired_port_groups_configs, errors
 

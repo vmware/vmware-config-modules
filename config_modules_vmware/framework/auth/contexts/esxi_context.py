@@ -22,6 +22,7 @@ class EsxiContext(VcenterContext):
         vc_saml_token=None,
         esxi_host_names=None,
         verify_ssl=True,
+        vc_product_version=None,
     ):
         """
         Initialize context for ESX.
@@ -39,6 +40,8 @@ class EsxiContext(VcenterContext):
         :type esxi_host_names: list[str]
         :param verify_ssl: Flag to enable/disable SSL verification.
         :type verify_ssl: bool
+        :param vc_product_version: vCenter version in <major>.<minor>.<revision> format
+        :type vc_product_version: str
         """
         super().__init__(
             hostname=vc_hostname,
@@ -47,6 +50,7 @@ class EsxiContext(VcenterContext):
             ssl_thumbprint=vc_ssl_thumbprint,
             saml_token=vc_saml_token,
             verify_ssl=verify_ssl,
+            product_version=vc_product_version,
         )
         self.product_category = BaseContext.ProductEnum.ESXI
         self.esxi_host_names = esxi_host_names

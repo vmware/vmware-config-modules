@@ -8,6 +8,7 @@ from fastapi.openapi.utils import get_openapi
 
 from config_modules_vmware.services.apis.controllers.consts import DOCS_ENDPOINT
 from config_modules_vmware.services.apis.controllers.consts import REDOC_ENDPOINT
+from config_modules_vmware.services.apis.controllers.esxi import esxi_router
 from config_modules_vmware.services.apis.controllers.misc import misc_router
 from config_modules_vmware.services.apis.controllers.vcenter import vcenter_router
 from config_modules_vmware.services.config import Config
@@ -52,5 +53,6 @@ def setup_logging():
 app = FastAPI(title="Config Modules", docs_url=DOCS_ENDPOINT, redoc_url=REDOC_ENDPOINT)
 app.include_router(misc_router, tags=["misc"])
 app.include_router(vcenter_router, tags=["vcenter"])
+app.include_router(esxi_router, tags=["esxi"])
 app.openapi = custom_openapi
 setup_logging()

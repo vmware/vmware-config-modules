@@ -9,6 +9,8 @@ from http import HTTPStatus
 import urllib3
 
 from config_modules_vmware.framework.clients.common import consts
+from config_modules_vmware.framework.clients.common.consts import CONTENT_TYPE
+from config_modules_vmware.framework.clients.common.consts import HEADER_TYPE_WWW_FORM
 from config_modules_vmware.framework.clients.common.consts import JSON_REQUEST_HEADERS
 from config_modules_vmware.framework.clients.common.rest_client import get_smart_rest_client
 from config_modules_vmware.framework.clients.common.rest_client import SmartRestClient
@@ -26,7 +28,9 @@ class VcRestClient(object):
     as the base class for other vCenter REST API client classes.
     """
 
-    def __init__(self, hostname, username, password, ssl_thumbprint=None, verify_ssl=True):
+    def __init__(
+        self, hostname, username, password, ssl_thumbprint=None, verify_ssl=True, cert_info=None, session_based=True
+    ):
         """
         Initialize VcRestClient.
         :param hostname: vCenter hostname
@@ -45,15 +49,28 @@ class VcRestClient(object):
         self.vc_rest_config = Config.get_section("vcenter.rest")
 
         # Set up REST client
-        get_session_headers = partial(
-            VcRestClient._create_vmware_api_session_id, hostname=hostname, username=username, password=password
-        )
-        delete_session = partial(VcRestClient._delete_session_by_hostname, hostname=hostname)
+        if session_based:
+            get_session_headers = partial(
+                VcRestClient._create_vmware_api_session_id, hostname=hostname, username=username, password=password
+            )
+            delete_session = partial(VcRestClient._delete_session_by_hostname, hostname=hostname)
+        else:
+            get_session_headers = None
+            delete_session = None
+
         if not verify_ssl:
             self._rest_client_session = get_smart_rest_client(
                 cert_reqs=consts.CERT_NONE,
                 get_session_headers_func=get_session_headers,
                 delete_session_func=delete_session,
+            )
+        elif cert_info:
+            self._rest_client_session = get_smart_rest_client(
+                cert_reqs=consts.CERT_REQUIRED,
+                get_session_headers_func=get_session_headers,
+                delete_session_func=delete_session,
+                cert_info=cert_info,
+                server_hostname=hostname,
             )
         elif ssl_thumbprint:
             self._rest_client_session = get_smart_rest_client(
@@ -152,12 +169,21 @@ class VcRestClient(object):
         :return: http response
         :rtype: 'HTTPResponse'
         """
-
-        body = json.dumps(kwargs["body"]) if "body" in kwargs else None
-        if "headers" in kwargs:
-            headers = {**kwargs["headers"], **JSON_REQUEST_HEADERS}
+        body = kwargs.get("body", None)
+        headers = kwargs.get("headers", {})
+        if not headers:
+            # If no headers are provided, we should convert the body to JSON
+            body = json.dumps(body) if body else None
+            headers = {**JSON_REQUEST_HEADERS}
         else:
-            headers = JSON_REQUEST_HEADERS.copy()
+            content_type = headers.get(CONTENT_TYPE, "")
+            if HEADER_TYPE_WWW_FORM in content_type.lower():
+                if body:
+                    headers.update({"Content-Length": len(body)})
+            else:
+                body = json.dumps(body) if body else None
+                headers.update(**JSON_REQUEST_HEADERS)
+
         if "timeout" in kwargs:
             timeout = kwargs["timeout"]
         else:

@@ -8,10 +8,13 @@ from typing import Tuple
 from config_modules_vmware.controllers.base_controller import BaseController
 from config_modules_vmware.framework.auth.contexts.base_context import BaseContext
 from config_modules_vmware.framework.auth.contexts.vc_context import VcenterContext
+from config_modules_vmware.framework.clients.common import consts
 from config_modules_vmware.framework.logging.logger_adapter import LoggerAdapter
 from config_modules_vmware.framework.models.controller_models.metadata import ControllerMetadata
+from config_modules_vmware.framework.models.output_models.compliance_response import ComplianceStatus
 from config_modules_vmware.framework.models.output_models.remediate_response import RemediateStatus
 from config_modules_vmware.framework.utils import utils
+from config_modules_vmware.framework.utils.comparator import Comparator
 
 logger = LoggerAdapter(logging.getLogger(__name__))
 
@@ -184,3 +187,38 @@ class SNMPv3SecurityPolicy(BaseController):
         appliancesh_cmd_prefix = APPLIANCE_SHELL_CMD_PREFIX.format(context._username, context._password)
         set_snmp_cmd = appliancesh_cmd_prefix + f'"{snmp_cmd}"'
         utils.run_shell_cmd(command=set_snmp_cmd, timeout=CMD_TIMEOUT)
+
+    def check_compliance(self, context: VcenterContext, desired_values: Dict) -> Dict:
+        """Check compliance of current SNMP_v3 configuration in vCenter.
+
+        :param context: Product context instance.
+        :type context: VcenterContext
+        :param desired_values: Desired values for the SNMP_v3 config.
+        :type desired_values: Dict
+        :return: Dict of status and current/desired value(for non_compliant) or errors (for failure).
+        :rtype: dict
+        """
+        logger.debug("Checking compliance.")
+        current_value, errors = self.get(context=context)
+
+        if errors:
+            # If errors are seen during get, return "FAILED" status with errors.
+            return {consts.STATUS: ComplianceStatus.FAILED, consts.ERRORS: errors}
+
+        # If desired value is to disable snmp_v3, then ignore other keys for checking compliance
+        if not desired_values.get("enable", False):
+            desired_values = {"enable": False}
+            current_value = {"enable": current_value.get("enable")}
+
+        # If no errors seen, compare the current and desired value. If not same, return "NON_COMPLIANT" with values.
+        # Otherwise, return "COMPLIANT".
+        current_configs, desired_configs = Comparator.get_non_compliant_configs(current_value, desired_values)
+        if current_configs or desired_configs:
+            result = {
+                consts.STATUS: ComplianceStatus.NON_COMPLIANT,
+                consts.CURRENT: current_configs,
+                consts.DESIRED: desired_configs,
+            }
+        else:
+            result = {consts.STATUS: ComplianceStatus.COMPLIANT}
+        return result

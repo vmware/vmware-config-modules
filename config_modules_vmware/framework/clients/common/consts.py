@@ -3,11 +3,15 @@ import ssl
 
 # Rest client related
 HTTPS_URL = "https://"
-SSL_VERIFY_CA_PATH = "/etc/ssl/certs/vmware"
+SSL_VERIFY_CA_PATH = "/etc/ssl/certs"
 TLS_VERSION = ssl.PROTOCOL_TLSv1_2
 CERT_REQUIRED = "CERT_REQUIRED"
 CERT_NONE = "CERT_NONE"
 JSON_REQUEST_HEADERS = {"Content-Type": "application/json"}
+HEADER_TYPE_WWW_FORM = "application/x-www-form-urlencoded"
+HEADER_TYPE_NO_CACHE = "no-cache"
+CONTENT_TYPE = "Content-Type"
+CACHE_CONTROL = "Cache-Control"
 
 # VC SSO client related
 STS_PATH = "https://{}/sts/STSService/{}"

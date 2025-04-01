@@ -8,6 +8,7 @@ from typing import Tuple
 from pyVmomi import vim  # pylint: disable=E0401
 
 from config_modules_vmware.controllers.base_controller import BaseController
+from config_modules_vmware.controllers.vcenter.utils.vc_dvs_utils import is_host_disconnect_exception
 from config_modules_vmware.framework.auth.contexts.base_context import BaseContext
 from config_modules_vmware.framework.auth.contexts.vc_context import VcenterContext
 from config_modules_vmware.framework.clients.common import consts
@@ -24,6 +25,8 @@ DESIRED_KEY = "network_io_control_status"
 SWITCH_NAME = "switch_name"
 GLOBAL = "__GLOBAL__"
 OVERRIDES = "__OVERRIDES__"
+OFFLOAD_NONE = "None"
+IGNORE_DISCONNECTED_HOSTS = "ignore_disconnected_hosts"
 
 
 class DVSNetworkIOControlPolicy(BaseController):
@@ -104,9 +107,10 @@ class DVSNetworkIOControlPolicy(BaseController):
               "__OVERRIDES__": [
                 {
                   "switch_name": "Switch-A",
-                  "network_io_control_status": false
+                  "network_io_control_status": true
                 }
-              ]
+              ],
+              "ignore_disconnected_hosts": true
             }
 
         :param context: Product context instance.
@@ -116,16 +120,7 @@ class DVSNetworkIOControlPolicy(BaseController):
         :return: Tuple of "status" and list of error messages.
         :rtype: Tuple
         """
-        vc_vmomi_client = context.vc_vmomi_client()
-        errors = []
-        status = RemediateStatus.SUCCESS
-        try:
-            self.__set_network_io_control_policy_for_all_dv_switches(vc_vmomi_client, desired_values)
-        except Exception as e:
-            logger.exception(f"An error occurred: {e}")
-            errors.append(str(e))
-            status = RemediateStatus.FAILED
-        return status, errors
+        pass  # pylint: disable=unnecessary-pass
 
     def __get_all_dv_switch_network_io_control_policy(self, vc_vmomi_client: VcVmomiClient) -> List[Dict]:
         """
@@ -150,23 +145,48 @@ class DVSNetworkIOControlPolicy(BaseController):
 
     def __set_network_io_control_policy_for_all_dv_switches(
         self, vc_vmomi_client: VcVmomiClient, desired_values: Dict
-    ) -> None:
+    ) -> Tuple[List[dict], List[dict], List[str]]:
         """
         Enable or disable Network I/O control policy for all dv switches.
 
         | Recommended value for network I/O control: true | enabled
+        | Sample desired state
+
+        .. code-block:: json
+
+            {
+              "__GLOBAL__": {
+                "network_io_control_status": false
+              },
+              "__OVERRIDES__": [
+                {
+                  "switch_name": "Switch-A",
+                  "network_io_control_status": true
+                }
+              ],
+              "ignore_disconnected_hosts": true
+            }
 
         :param vc_vmomi_client: VC vmomi client instance.
         :type vc_vmomi_client: VcVmomiClient
         :param desired_values: Desired values for Network I/O control policy.
         :type desired_values: Dict
-        :return:
-        :rtype: None
+        :return: list of previous and current configs and list of errors if any
+        :rtype: Tuple
         """
+        errors = []
+        previous = []
+        current = []
         desired_global_network_io_control_value = desired_values.get(GLOBAL, {}).get(DESIRED_KEY)
         overrides = desired_values.get(OVERRIDES, [])
+        ignore_disconnected_hosts = desired_values.get(IGNORE_DISCONNECTED_HOSTS, False)
         # desired_network_io_control_value = desired_values.get(DESIRED_KEY)
-        all_switch_refs = vc_vmomi_client.get_objects_by_vimtype(vim.DistributedVirtualSwitch)
+        try:
+            all_switch_refs = vc_vmomi_client.get_objects_by_vimtype(vim.DistributedVirtualSwitch)
+        except Exception as e:
+            logger.exception(f"An error occurred: {e}")
+            errors.append(str(e))
+            return [], [], errors
 
         for dvs_ref in all_switch_refs:
             # Check if there are overrides for the current DVS
@@ -186,13 +206,38 @@ class DVSNetworkIOControlPolicy(BaseController):
                     f"DV switch {dvs_ref.name} already has desired network I/O control config," f" skipping remediation"
                 )
             else:
-                logger.info(
-                    f"Setting network I/O control config {desired_network_io_control_value} on DV "
-                    f"switch {dvs_ref.name}"
-                )
-                dvs_ref.EnableNetworkResourceManagement(desired_network_io_control_value)
+                # Check if network offload is enabled, if yes, skip remediation
+                if (
+                    hasattr(dvs_ref.config, "networkOffloadSpecId")
+                    and dvs_ref.config.networkOffloadSpecId != OFFLOAD_NONE
+                ):
+                    offload = dvs_ref.config.networkOffloadSpecId
+                    err_msg = f"Network offload - {offload} enabled for: {dvs_ref.name}, skip remediation"
+                    logger.warning(err_msg)
+                    errors.append(err_msg)
+                else:
+                    logger.info(
+                        f"Setting network I/O control config {desired_network_io_control_value} on DV "
+                        f"switch {dvs_ref.name}"
+                    )
+                    try:
+                        dvs_ref.EnableNetworkResourceManagement(desired_network_io_control_value)
+                        previous.append({SWITCH_NAME: dvs_ref.name, DESIRED_KEY: current_network_io_control_value})
+                        current.append({SWITCH_NAME: dvs_ref.name, DESIRED_KEY: desired_network_io_control_value})
+                    except vim.fault.DvsOperationBulkFault as e:
+                        if is_host_disconnect_exception(e) and ignore_disconnected_hosts:
+                            previous.append({SWITCH_NAME: dvs_ref.name, DESIRED_KEY: current_network_io_control_value})
+                            current.append({SWITCH_NAME: dvs_ref.name, DESIRED_KEY: desired_network_io_control_value})
+                            logger.info(f"Ignore disconnected hosts caused exception - {e}")
+                        else:
+                            logger.exception(f"An error occurred: {e}")
+                            errors.append(str(e))
+                    except Exception as e:
+                        logger.exception(f"An error occurred: {e}")
+                        errors.append(str(e))
+        return previous, current, errors
 
-    def __get_non_compliant_configs(self, switch_configs: List, desired_values: Dict) -> List:
+    def __get_non_compliant_configs(self, switch_configs: List, desired_values: Dict) -> Tuple[List, List]:
         """
         Get all non-compliant items for the given desired state spec.
 
@@ -217,6 +262,7 @@ class DVSNetworkIOControlPolicy(BaseController):
             for config in non_compliant_global:
                 if config.get(SWITCH_NAME) == override_switch_name:
                     non_compliant_items.remove(config)
+        desired_configs = [{**item, DESIRED_KEY: global_desired_value} for item in non_compliant_items]
 
         # Check overrides for non-compliance
         for switch_override in overrides:
@@ -227,7 +273,9 @@ class DVSNetworkIOControlPolicy(BaseController):
             config = configs_by_switch_name.get(switch_name)
             if config and config.get(DESIRED_KEY) != desired_value:
                 non_compliant_items.append(config)
-        return non_compliant_items
+                desired_configs.append({SWITCH_NAME: switch_name, DESIRED_KEY: desired_value})
+
+        return non_compliant_items, desired_configs
 
     def check_compliance(self, context: VcenterContext, desired_values: Dict) -> Dict:
         """
@@ -246,13 +294,15 @@ class DVSNetworkIOControlPolicy(BaseController):
         if errors:
             return {consts.STATUS: ComplianceStatus.FAILED, consts.ERRORS: errors}
 
-        non_compliant_configs = self.__get_non_compliant_configs(dv_switch_network_io_control_configs, desired_values)
+        non_compliant_configs, desired_configs = self.__get_non_compliant_configs(
+            dv_switch_network_io_control_configs, desired_values
+        )
 
         if non_compliant_configs:
             result = {
                 consts.STATUS: ComplianceStatus.NON_COMPLIANT,
                 consts.CURRENT: non_compliant_configs,
-                consts.DESIRED: desired_values,
+                consts.DESIRED: desired_configs,
             }
         else:
             result = {consts.STATUS: ComplianceStatus.COMPLIANT}
@@ -275,7 +325,8 @@ class DVSNetworkIOControlPolicy(BaseController):
                   "switch_name": "Switch-A",
                   "network_io_control_status": false
                 }
-              ]
+              ],
+              "ignore_disconnected_hosts": true
             }
 
         :param context: Product context instance.
@@ -290,16 +341,28 @@ class DVSNetworkIOControlPolicy(BaseController):
 
         if result[consts.STATUS] == ComplianceStatus.COMPLIANT:
             return {consts.STATUS: RemediateStatus.SKIPPED, consts.ERRORS: [consts.CONTROL_ALREADY_COMPLIANT]}
-        elif result[consts.STATUS] == ComplianceStatus.NON_COMPLIANT:
-            non_compliant_configs = result[consts.CURRENT]
-        else:
+        elif result[consts.STATUS] == ComplianceStatus.FAILED:
             errors = result[consts.ERRORS]
             return {consts.STATUS: RemediateStatus.FAILED, consts.ERRORS: errors}
 
-        status, errors = self.set(context=context, desired_values=desired_values)
+        vc_vmomi_client = context.vc_vmomi_client()
+        previous, current, errors = self.__set_network_io_control_policy_for_all_dv_switches(
+            vc_vmomi_client, desired_values
+        )
 
         if not errors:
-            result = {consts.STATUS: status, consts.OLD: non_compliant_configs, consts.NEW: desired_values}
+            status = RemediateStatus.SUCCESS
+            result = {consts.STATUS: status, consts.OLD: previous, consts.NEW: current}
         else:
-            result = {consts.STATUS: RemediateStatus.FAILED, consts.ERRORS: errors}
+            if previous:
+                status = RemediateStatus.PARTIAL
+                result = {
+                    consts.STATUS: status,
+                    consts.OLD: previous,
+                    consts.NEW: current,
+                    consts.ERRORS: errors,
+                }
+            else:
+                result = {consts.STATUS: RemediateStatus.FAILED, consts.ERRORS: errors}
+
         return result

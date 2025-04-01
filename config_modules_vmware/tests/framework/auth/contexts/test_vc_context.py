@@ -2,6 +2,7 @@
 from mock import patch
 
 from config_modules_vmware.framework.auth.contexts.vc_context import VcenterContext
+from config_modules_vmware.framework.auth.ssl.cert_info import CertInfo
 
 
 class TestVcenterContext:
@@ -13,9 +14,11 @@ class TestVcenterContext:
         self.ssl_thumbprint = "ssl_thumbprint"
         self.saml_token = "saml_token"
         self.verify_ssl = False
+        cert_str = "custom certificate string"
+        self.cert_info = CertInfo(certificate_str=cert_str)
         self.context = VcenterContext(hostname=self.hostname, username=self.username, password=self.password,
                                       ssl_thumbprint=self.ssl_thumbprint, saml_token=self.saml_token,
-                                      verify_ssl=self.verify_ssl)
+                                      verify_ssl=self.verify_ssl, cert_info=self.cert_info)
 
     @patch('config_modules_vmware.framework.auth.contexts.vc_context.VcenterContext.__enter__')
     @patch('config_modules_vmware.framework.auth.contexts.vc_context.VcenterContext.__exit__')
@@ -47,13 +50,19 @@ class TestVcenterContext:
         with self.context:
             assert self.context.vc_rest_client() is not None
             args = mock_rest_client.call_args.args
+            kwargs = mock_rest_client.call_args.kwargs
             self.context._vc_rest_client._rest_client_session = None
             assert self.hostname in args
             assert self.username in args
             assert self.password in args
-            assert self.ssl_thumbprint in args
-            assert self.verify_ssl in args
+            assert "ssl_thumbprint" in kwargs
+            assert kwargs["ssl_thumbprint"] == self.ssl_thumbprint
+            assert "verify_ssl" in kwargs
+            assert kwargs["verify_ssl"] == self.verify_ssl
+            assert "cert_info" in kwargs
+            assert kwargs["cert_info"][0] == self.cert_info
         assert self.context._vc_rest_client is None
+
 
     @patch('config_modules_vmware.framework.clients.vcenter.vc_vmomi_sso_client.VcVmomiSSOClient.connect')
     @patch('config_modules_vmware.framework.clients.vcenter.vc_vmomi_sso_client.VcVmomiSSOClient.disconnect')

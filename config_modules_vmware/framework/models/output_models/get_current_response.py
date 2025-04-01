@@ -17,7 +17,6 @@ class GetCurrentConfigurationStatus(str, Enum):
     SUCCESS = "SUCCESS"
     FAILED = "FAILED"
     SKIPPED = "SKIPPED"
-    ERROR = "ERROR"
     PARTIAL = "PARTIAL"
 
 

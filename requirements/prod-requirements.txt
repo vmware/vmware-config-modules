@@ -1,4 +1,4 @@
-pyVmomi==7.0.3
+pyVmomi==8.0.2.0.1
 
 requests>=2.31.0
 
@@ -13,3 +13,6 @@ jsonschema~=4.17.3
 
 #some VCF release doesn't have the updated ssl lib required by Urllib3 2.0.x. Urllib3 1.26.19 is validated to work properly
 urllib3>=1.26.6,<2.0.0
+
+# beautiful soup
+beautifulsoup4>=4.12.3

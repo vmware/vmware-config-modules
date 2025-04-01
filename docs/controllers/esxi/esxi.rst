@@ -16,6 +16,7 @@ Submodules
    esxi.ad_esx_admin_group_config
    esxi.bridge_protocol_data_unit_filter
    esxi.cim_service_policy
+   esxi.cluster_config
    esxi.dcui_idle_timeout
    esxi.dcui_login_banner
    esxi.dv_filter_bind_ip_config

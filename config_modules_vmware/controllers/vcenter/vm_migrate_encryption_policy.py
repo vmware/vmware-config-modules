@@ -25,6 +25,7 @@ GLOBAL = "__GLOBAL__"
 OVERRIDES = "__OVERRIDES__"
 VM_NAME = "vm_name"
 PATH = "path"
+EXCLUDE_THIS_VM = "exclude"
 
 
 class VmMigrateEncryptionPolicy(BaseController):
@@ -152,19 +153,7 @@ class VmMigrateEncryptionPolicy(BaseController):
         :return: Tuple of "status" and list of error messages.
         :rtype: Tuple
         """
-        vc_vmomi_client = context.vc_vmomi_client()
-        errors = []
-        status = RemediateStatus.SUCCESS
-        try:
-            errors = self.__set_vm_migrate_encryption_policy_for_all_non_compliant_vms(vc_vmomi_client, desired_values)
-            if errors:
-                status = RemediateStatus.FAILED
-
-        except Exception as e:
-            logger.exception(f"An error occurred: {e}")
-            errors.append(str(e))
-            status = RemediateStatus.FAILED
-        return status, errors
+        pass  # pylint: disable=unnecessary-pass
 
     def __get_all_vm_migrate_encryption_policy(self, vc_vmomi_client: VcVmomiClient) -> List[Dict]:
         """
@@ -203,7 +192,7 @@ class VmMigrateEncryptionPolicy(BaseController):
                 return parent, errors
             parent = parent.parent
         errors.append(f"Datacenter not found for the VM: {vm_ref.name}")
-        return parent, errors
+        return None, errors
 
     def _get_resource_pool(self, vm_ref):
         """
@@ -221,8 +210,8 @@ class VmMigrateEncryptionPolicy(BaseController):
         logger.debug(f"Datacenter : {datacenter.name} found for VM: {vm_ref.name}")
         cluster_resource_pool = None
         host_resource_pool = None
-        childs = datacenter.hostFolder.childEntity
-        for child in childs:
+        children = datacenter.hostFolder.childEntity
+        for child in children:
             if isinstance(child, vim.ClusterComputeResource):
                 cluster_resource_pool = child.resourcePool
                 break
@@ -238,39 +227,64 @@ class VmMigrateEncryptionPolicy(BaseController):
 
     def __set_vm_migrate_encryption_policy_for_all_non_compliant_vms(
         self, vc_vmomi_client: VcVmomiClient, desired_values: Dict
-    ) -> List:
+    ) -> Tuple[List[dict], List[dict], List[str]]:
         """
         Set VM migrate Encryption policies for all non-compliant VMs.
+
+        | Sample desired state
+
+        .. code-block:: json
+
+            {
+              "__GLOBAL__": {
+                "migrate_encryption_policy": "opportunistic"
+              },
+              "__OVERRIDES__": [
+                {
+                  "vm_name": "sddc-manager",
+                  "path": "SDDC-Datacenter/vm/Management VMs",
+                  "migrate_encryption_policy": "required"
+                },
+                {
+                  "vm_name": "nsx-mgmt-1",
+                  "path": "SDDC-Datacenter/vm/Networking VMs",
+                  "migrate_encryption_policy": "required",
+                  "exclude": True
+                }
+              ]
+            }
 
         :param vc_vmomi_client: VC vmomi client instance.
         :type vc_vmomi_client: VcVmomiClient
         :param desired_values: Dictionary containing VM migration Encryption policy.
         :type desired_values: Dict
-        :return: list of errors if any
-        :rtype: list
+        :return: list of current non compliant and desired configs and list of errors if any
+        :rtype: Tuple
         """
         desired_global_vm_migrate_encryption_policy = desired_values.get(GLOBAL, {}).get(DESIRED_KEY)
         overrides = desired_values.get(OVERRIDES, [])
         all_vm_refs = vc_vmomi_client.get_objects_by_vimtype(vim.VirtualMachine)
         errors = []
+        remediated = []
+        remediated_desired = []
 
         for vm_ref in all_vm_refs:
             vm_path = vc_vmomi_client.get_vm_path_in_datacenter(vm_ref)
             current_vm_migrate_encryption_policy = vm_ref.config.migrateEncryption
-            override_vm_migrate_encryption_policy = next(
+            override_vm_migrate_encryption_policy, exclude_flag = next(
                 (
-                    override.get(DESIRED_KEY)
+                    (override.get(DESIRED_KEY), override.get(EXCLUDE_THIS_VM))
                     for override in overrides
                     if override[VM_NAME] == vm_ref.name and override[PATH] == vm_path
                 ),
-                None,
+                (None, None),
             )
             desired_vm_migrate_policy = (
                 override_vm_migrate_encryption_policy
                 if override_vm_migrate_encryption_policy is not None
                 else desired_global_vm_migrate_encryption_policy
             )
-            if current_vm_migrate_encryption_policy != desired_vm_migrate_policy:
+            if current_vm_migrate_encryption_policy != desired_vm_migrate_policy and not exclude_flag:
                 logger.info(f"Setting VM migrate policy {desired_vm_migrate_policy} on VM {vm_ref.name}")
                 # continue to remediate next vm if hitting any errors
                 try:
@@ -294,18 +308,25 @@ class VmMigrateEncryptionPolicy(BaseController):
                         # for VM template, convert it back to template after remediation
                         vm_ref.MarkAsTemplate()
                         logger.debug(f"Converted VM back to VM template, template flag: {vm_ref.config.template}")
+
+                    remediated.append(
+                        {VM_NAME: vm_ref.name, PATH: vm_path, DESIRED_KEY: current_vm_migrate_encryption_policy}
+                    )
+                    remediated_desired.append(
+                        {VM_NAME: vm_ref.name, PATH: vm_path, DESIRED_KEY: desired_vm_migrate_policy}
+                    )
                 except Exception as e:
                     logger.exception(f"An error occurred: {e}")
                     errors.append(f"Failed to remediate VM: {vm_ref.name} - {str(e)}")
             else:
                 logger.info(
                     f"VM {vm_ref.name} already has desired migrate policy {desired_vm_migrate_policy},"
-                    f" no remediation required."
+                    f" no remediation required. Or exclude flag present - {exclude_flag}"
                 )
 
-        return errors
+        return remediated, remediated_desired, errors
 
-    def __get_non_compliant_configs(self, vm_configs: List, desired_values: Dict) -> List:
+    def __get_non_compliant_configs(self, vm_configs: List, desired_values: Dict) -> Tuple[List, List]:
         """
         Get all non-compliant items for the given desired state spec.
 
@@ -313,6 +334,7 @@ class VmMigrateEncryptionPolicy(BaseController):
         :meta private:
         """
         non_compliant_configs = []
+        desired_configs = []
 
         global_desired_value = desired_values.get(GLOBAL, {}).get(DESIRED_KEY)
         overrides = desired_values.get(OVERRIDES, [])
@@ -329,22 +351,29 @@ class VmMigrateEncryptionPolicy(BaseController):
             for config in non_compliant_global:
                 if config.get(VM_NAME) == override_vm_name and config.get(PATH) == override_path:
                     non_compliant_configs.remove(config)
+        desired_configs = [{**config, DESIRED_KEY: global_desired_value} for config in non_compliant_configs]
 
         # Check overrides for non-compliance
         for vm_overrides in overrides:
             vm_name = vm_overrides.get(VM_NAME)
             vm_path = vm_overrides.get(PATH)
+            exclude_flag = vm_overrides.get(EXCLUDE_THIS_VM)
             desired_value = vm_overrides.get(DESIRED_KEY)
 
             # Find the configuration for the current virtual machine
             config = next(
-                (config for config in vm_configs if config.get(VM_NAME) == vm_name and config.get(PATH) == vm_path),
+                (
+                    config
+                    for config in vm_configs
+                    if config.get(VM_NAME) == vm_name and config.get(PATH) == vm_path and not exclude_flag
+                ),
                 None,
             )
 
             if config and config.get(DESIRED_KEY) != desired_value:
                 non_compliant_configs.append(config)
-        return non_compliant_configs
+                desired_configs.append({VM_NAME: vm_name, PATH: vm_path, DESIRED_KEY: desired_value})
+        return non_compliant_configs, desired_configs
 
     def check_compliance(self, context: VcenterContext, desired_values: Dict) -> Dict:
         """
@@ -365,13 +394,15 @@ class VmMigrateEncryptionPolicy(BaseController):
         if errors:
             return {consts.STATUS: ComplianceStatus.FAILED, consts.ERRORS: errors}
 
-        non_compliant_configs = self.__get_non_compliant_configs(all_vm_migrate_encryption_configs, desired_values)
+        non_compliant_configs, desired_configs = self.__get_non_compliant_configs(
+            all_vm_migrate_encryption_configs, desired_values
+        )
 
         if non_compliant_configs:
             result = {
                 consts.STATUS: ComplianceStatus.NON_COMPLIANT,
                 consts.CURRENT: non_compliant_configs,
-                consts.DESIRED: desired_values,
+                consts.DESIRED: desired_configs,
             }
         else:
             result = {consts.STATUS: ComplianceStatus.COMPLIANT}
@@ -415,16 +446,27 @@ class VmMigrateEncryptionPolicy(BaseController):
 
         if result[consts.STATUS] == ComplianceStatus.COMPLIANT:
             return {consts.STATUS: RemediateStatus.SKIPPED, consts.ERRORS: [consts.CONTROL_ALREADY_COMPLIANT]}
-        elif result[consts.STATUS] == ComplianceStatus.NON_COMPLIANT:
-            non_compliant_configs = result[consts.CURRENT]
-        else:
+        elif result[consts.STATUS] == ComplianceStatus.FAILED:
             errors = result[consts.ERRORS]
             return {consts.STATUS: RemediateStatus.FAILED, consts.ERRORS: errors}
 
-        status, errors = self.set(context=context, desired_values=desired_values)
+        vc_vmomi_client = context.vc_vmomi_client()
+        remediated, remediated_desired, errors = self.__set_vm_migrate_encryption_policy_for_all_non_compliant_vms(
+            vc_vmomi_client, desired_values
+        )
 
         if not errors:
-            result = {consts.STATUS: status, consts.OLD: non_compliant_configs, consts.NEW: desired_values}
+            status = RemediateStatus.SUCCESS
+            result = {consts.STATUS: status, consts.OLD: remediated, consts.NEW: remediated_desired}
         else:
-            result = {consts.STATUS: RemediateStatus.FAILED, consts.ERRORS: errors}
+            if remediated:
+                status = RemediateStatus.PARTIAL
+                result = {
+                    consts.STATUS: status,
+                    consts.OLD: remediated,
+                    consts.NEW: remediated_desired,
+                    consts.ERRORS: errors,
+                }
+            else:
+                result = {consts.STATUS: RemediateStatus.FAILED, consts.ERRORS: errors}
         return result

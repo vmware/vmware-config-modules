@@ -393,20 +393,13 @@ class TestIPBasedStoragePortGroupConfig:
                     'ports': [{'host_name': 'host2', 'device': 'vmk4', 'services': ['vmotion']}],
                     'switch_name': 'Switch1',
                     'port_group_name': 'PortGroup2',
-                    'allow_mix_traffic_type': False,
                 }
             ],
             consts.DESIRED: [
                 {
-                    '__GLOBAL__': {
-                        'is_dedicated_vlan': True,
-                        'allow_mix_traffic_type': False,
-                    },
-                },
-                {
+                    'ports': [{'host_name': 'host2', 'device': 'vmk4', 'services': ['vsan']}],
                     'switch_name': 'Switch1',
                     'port_group_name': 'PortGroup2',
-                    'allow_mix_traffic_type': False,
                 }
             ]
         }
@@ -429,11 +422,6 @@ class TestIPBasedStoragePortGroupConfig:
                 }
             ],
             consts.DESIRED: [
-                {
-                    '__GLOBAL__': {
-                        'is_dedicated_vlan': True,
-                    },
-                },
                 {
                     'is_dedicated_vlan': False,
                     'port_group_name': 'PortGroup1',
@@ -459,30 +447,28 @@ class TestIPBasedStoragePortGroupConfig:
             consts.CURRENT: [
                 {
                     'ports': [{'host_name': 'host2', 'device': 'vmk4', 'services': ['vmotion']}],
-                    'allow_mix_traffic_type': False,
                     'switch_name': 'Switch1',
                     'port_group_name': 'PortGroup2'
                 },
                 {
                     'is_dedicated_vlan': False,
                     'ports': [{'host_name': 'host1', 'device': 'vmk5', 'services': ['vmotion']}],
-                    'allow_mix_traffic_type': False,
                     'switch_name': 'Switch1',
                     'port_group_name': 'PortGroup3'
                 }
             ],
             consts.DESIRED: [
                 {
-                    '__GLOBAL__': {
-                        'is_dedicated_vlan': True,
-                        'allow_mix_traffic_type': False,
-                    },
-                },
-                {
-                    'allow_mix_traffic_type': False,
+                    'ports': [{'host_name': 'host2', 'device': 'vmk4', 'services': ['vsan']}],
                     'switch_name': 'Switch1',
                     'port_group_name': 'PortGroup2'
                 },
+                {
+                    'is_dedicated_vlan': True,
+                    'ports': [{'host_name': 'host1', 'device': 'vmk5', 'services': ['vsan']}],
+                    'switch_name': 'Switch1',
+                    'port_group_name': 'PortGroup3'
+                }
             ]
         }
         assert result == expected_result

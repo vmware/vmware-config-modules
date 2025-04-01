@@ -10,7 +10,7 @@ run_all_files()
 {
   FILES_TO_SCAN=$(find . -name "*.py")
   echo "$FILES_TO_SCAN" | while IFS= read -r file; do
-    if [ "${file##*.}" = "py" ] && [ "${file#*config_modules_vmware/framework/clients/vcenter/dependencies/}" = "$file" ]; then
+    if [ "${file##*.}" = "py" ] && [ "${file#*config_modules_vmware/framework/clients/vcenter/dependencies/}" = "$file" ] && [ "${file#*support/}" = "$file" ] && [ "${file#*vcf_compliance_control_salt/}" = "$file" ]; then
       changed_file=$( (reorder-python-imports --exit-zero-even-if-changed "$file" 1>&2) 2>&1)
         if [ -n "$changed_file" ]
         then
@@ -24,7 +24,7 @@ run_passed_files()
 {
   for file in "$@"
   do
-    if [ "${file##*.}" = "py" ] && [ "${file#*config_modules_vmware/framework/clients/vcenter/dependencies/}" = "$file" ]; then
+    if [ "${file##*.}" = "py" ] && [ "${file#*config_modules_vmware/framework/clients/vcenter/dependencies/}" = "$file" ] && [ "${file#*support/}" = "$file" ] && [ "${file#*vcf_compliance_control_salt/}" = "$file" ]; then
       changed_file=$( (reorder-python-imports --exit-zero-even-if-changed "$file" 1>&2) 2>&1)
         if [ -n "$changed_file" ]
         then

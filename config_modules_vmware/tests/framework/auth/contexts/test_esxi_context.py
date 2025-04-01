@@ -42,12 +42,15 @@ class TestEsxiContext:
         with self.context:
             assert self.context.vc_rest_client() is not None
             args = mock_rest_client.call_args.args
+            kwargs = mock_rest_client.call_args.kwargs
             self.context._vc_rest_client._rest_client_session = None
             assert self.hostname in args
             assert self.username in args
             assert self.password in args
-            assert self.ssl_thumbprint in args
-            assert self.verify_ssl in args
+            assert "ssl_thumbprint" in kwargs
+            assert kwargs["ssl_thumbprint"] == self.ssl_thumbprint
+            assert "verify_ssl" in kwargs
+            assert kwargs["verify_ssl"] == self.verify_ssl
         assert self.context._vc_rest_client is None
 
     @patch('config_modules_vmware.framework.clients.vcenter.vc_vmomi_sso_client.VcVmomiSSOClient.connect')

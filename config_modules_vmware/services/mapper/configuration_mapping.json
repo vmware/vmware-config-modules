@@ -1,3 +1,4 @@
 {
-  "vcenter": "config_modules_vmware.controllers.vcenter.vc_profile.VcProfile"
+  "vcenter": "config_modules_vmware.controllers.vcenter.vc_profile.VcProfile",
+  "esxi": "config_modules_vmware.controllers.esxi.cluster_config.ClusterConfig"
 }

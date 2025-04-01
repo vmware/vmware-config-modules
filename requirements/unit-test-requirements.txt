@@ -1,5 +1,6 @@
 -r prod-requirements.txt
 -r api-requirements.txt
+-r salt-requirements.txt
 
 pytest~=8.2.1; python_version>="3.8"
 pytest~=7.4.4; python_version<="3.7"

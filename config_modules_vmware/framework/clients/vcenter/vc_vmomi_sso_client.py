@@ -24,6 +24,9 @@ USER_QUERY_LIMIT = 32767
 # Set up logger
 logger = LoggerAdapter(logging.getLogger(__name__))
 
+# vSphere local domain
+VSPHERE_LOCAL_DOMAIN = "vsphere.local"
+
 
 class VcVmomiSSOClient(object):
     """
@@ -55,7 +58,8 @@ class VcVmomiSSOClient(object):
         self.ssl_thumbprint = ssl_thumbprint
         self.version = version
         self.verify_ssl = verify_ssl
-        self.domain = user.split("@")[-1]
+        # need to use local domain even for external user like AD user.
+        self.domain = VSPHERE_LOCAL_DOMAIN
         self.vc_vmomi_sso_config = Config.get_section("vcenter.vmomi.sso")
         self.connect()
 

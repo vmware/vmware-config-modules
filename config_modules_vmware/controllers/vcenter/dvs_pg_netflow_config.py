@@ -8,6 +8,7 @@ from typing import Tuple
 from pyVmomi import vim  # pylint: disable=E0401
 
 from config_modules_vmware.controllers.base_controller import BaseController
+from config_modules_vmware.controllers.vcenter.utils.vc_dvs_utils import is_host_disconnect_exception
 from config_modules_vmware.framework.auth.contexts.base_context import BaseContext
 from config_modules_vmware.framework.auth.contexts.vc_context import VcenterContext
 from config_modules_vmware.framework.clients.common import consts
@@ -29,6 +30,7 @@ OVERRIDES = "__OVERRIDES__"
 SWITCH_OVERRIDE_CONFIG = "switch_override_config"
 PORTGROUP_OVERRIDE_CONFIG = "portgroup_override_config"
 NSX_BACKING_TYPE = "nsx"
+IGNORE_DISCONNECTED_HOSTS = "ignore_disconnected_hosts"
 
 
 class DvsPortGroupNetflowConfig(BaseController):
@@ -131,6 +133,21 @@ class DvsPortGroupNetflowConfig(BaseController):
 
         return all_ipfix_configs, errors
 
+    def _handle_exception(self, e, task, ignore_disconnected_hosts):
+        errors = []
+        if (
+            hasattr(task.info, "error")
+            and isinstance(task.info.error, vim.fault.DvsOperationBulkFault)
+            and is_host_disconnect_exception(task.info.error)
+            and ignore_disconnected_hosts
+        ):
+            logger.debug(f"TASK ERROR: - {task.info.error}")
+            logger.info(f"Ignoring exception caused by disconnected host - {e}")
+        else:
+            logger.exception(f"An error occurred: {e}")
+            errors.append(str(e))
+        return errors
+
     def set(self, context: VcenterContext, desired_values: Dict) -> Tuple[str, List[Any]]:
         """Set method to configure ipfix configurations for all dvs and pgs..
 
@@ -145,64 +162,77 @@ class DvsPortGroupNetflowConfig(BaseController):
         errors = []
         status = RemediateStatus.SUCCESS
         vc_vmomi_client = context.vc_vmomi_client()
+        ignore_disconnected_hosts = desired_values.get(IGNORE_DISCONNECTED_HOSTS, False)
 
         try:
             all_dv_switches = vc_vmomi_client.get_objects_by_vimtype(vim.DistributedVirtualSwitch)
-            for dvs in all_dv_switches:
-                desired_ipfix_collector_ip = self._get_desired_ipfix_collector_ip(desired_values, dvs.name)
-                ipfix_collector_ip = dvs.config.ipfixConfig.collectorIpAddress
-                logger.debug(
-                    f"Switch: {dvs.name}, ipfix collector ip: {ipfix_collector_ip}, desired ipfix collector ip: {desired_ipfix_collector_ip}"
-                )
-                if (ipfix_collector_ip is not None and ipfix_collector_ip != desired_ipfix_collector_ip) or (
-                    ipfix_collector_ip is None and desired_ipfix_collector_ip != ""
-                ):
-                    dvs.config.ipfixConfig.collectorIpAddress = desired_ipfix_collector_ip
-                    config_spec = dvs.ConfigSpec()
-                    config_spec.configVersion = dvs.config.configVersion
-                    config_spec.ipfixConfig = dvs.config.ipfixConfig
-                    config_spec.ipfixConfig.collectorIpAddress = desired_ipfix_collector_ip
-                    logger.debug(f"Remediate Switch: {dvs.name}")
-                    task = dvs.ReconfigureDvs_Task(spec=config_spec)
-                    vc_vmomi_client.wait_for_task(task=task)
-                for port_group_obj in dvs.portgroup:
-                    # skip nsx portgroup
-                    is_nsx_backed = getattr(port_group_obj.config, "backingType", "") == NSX_BACKING_TYPE
-                    if not is_nsx_backed:
-                        pg_name = port_group_obj.name
-                        desired_ipfix_enabled = self._get_desired_ipfix_enabled(desired_values, dvs.name, pg_name)
-                        ipfix_enabled = port_group_obj.config.defaultPortConfig.ipfixEnabled.value
-                        logger.debug(
-                            f"Portgroup: {pg_name}, ipfix enabled: {ipfix_enabled}, desired ipfix enabled: {desired_ipfix_enabled}"
-                        )
-                        if ipfix_enabled != desired_ipfix_enabled:
-                            config_spec = vim.dvs.DistributedVirtualPortgroup.ConfigSpec()
-                            config_spec.configVersion = port_group_obj.config.configVersion
-                            config_spec.defaultPortConfig = (
-                                vim.dvs.VmwareDistributedVirtualSwitch.VmwarePortConfigPolicy()
-                            )
-                            config_spec.defaultPortConfig.ipfixEnabled = vim.BoolPolicy(value=desired_ipfix_enabled)
-                            logger.debug(f"Remediate portgroup: {pg_name}")
-                            task = port_group_obj.ReconfigureDVPortgroup_Task(spec=config_spec)
-                            vc_vmomi_client.wait_for_task(task=task)
-
         except Exception as e:
             logger.exception(f"An error occurred: {e}")
             errors.append(str(e))
             status = RemediateStatus.FAILED
+            return status, errors
+
+        for dvs in all_dv_switches:
+            desired_ipfix_collector_ip = self._get_desired_ipfix_collector_ip(desired_values, dvs.name)
+            ipfix_collector_ip = dvs.config.ipfixConfig.collectorIpAddress
+            logger.debug(
+                f"Switch: {dvs.name}, ipfix collector ip: {ipfix_collector_ip}, desired ipfix collector ip: {desired_ipfix_collector_ip}"
+            )
+            if (ipfix_collector_ip is not None and ipfix_collector_ip != desired_ipfix_collector_ip) or (
+                ipfix_collector_ip is None and desired_ipfix_collector_ip != ""
+            ):
+                dvs.config.ipfixConfig.collectorIpAddress = desired_ipfix_collector_ip
+                config_spec = dvs.ConfigSpec()
+                config_spec.configVersion = dvs.config.configVersion
+                config_spec.ipfixConfig = dvs.config.ipfixConfig
+                config_spec.ipfixConfig.collectorIpAddress = desired_ipfix_collector_ip
+                logger.debug(f"Remediate Switch: {dvs.name}")
+                try:
+                    task = dvs.ReconfigureDvs_Task(spec=config_spec)
+                    vc_vmomi_client.wait_for_task(task=task)
+                except Exception as e:
+                    errors = self._handle_exception(e, task, ignore_disconnected_hosts)
+                    if errors:
+                        status = RemediateStatus.FAILED
+                        return status, errors
+            for port_group_obj in dvs.portgroup:
+                # skip nsx portgroup
+                is_nsx_backed = getattr(port_group_obj.config, "backingType", "") == NSX_BACKING_TYPE
+                if not is_nsx_backed:
+                    pg_name = port_group_obj.name
+                    desired_ipfix_enabled = self._get_desired_ipfix_enabled(desired_values, dvs.name, pg_name)
+                    ipfix_enabled = port_group_obj.config.defaultPortConfig.ipfixEnabled.value
+                    logger.debug(
+                        f"Portgroup: {pg_name}, ipfix enabled: {ipfix_enabled}, desired ipfix enabled: {desired_ipfix_enabled}"
+                    )
+                    if ipfix_enabled != desired_ipfix_enabled:
+                        config_spec = vim.dvs.DistributedVirtualPortgroup.ConfigSpec()
+                        config_spec.configVersion = port_group_obj.config.configVersion
+                        config_spec.defaultPortConfig = vim.dvs.VmwareDistributedVirtualSwitch.VmwarePortConfigPolicy()
+                        config_spec.defaultPortConfig.ipfixEnabled = vim.BoolPolicy(value=desired_ipfix_enabled)
+                        logger.debug(f"Remediate portgroup: {pg_name}")
+                        try:
+                            task = port_group_obj.ReconfigureDVPortgroup_Task(spec=config_spec)
+                            vc_vmomi_client.wait_for_task(task=task)
+                        except Exception as e:
+                            errors = self._handle_exception(e, task, ignore_disconnected_hosts)
+                            if errors:
+                                status = RemediateStatus.FAILED
+                                return status, errors
 
         return status, errors
 
-    def _get_non_compliant_configs(self, all_ipfix_configs, desired_values: Dict) -> Dict:
+    def _get_non_compliant_configs(self, all_ipfix_configs, desired_values: Dict) -> Tuple[Dict, Dict]:
         """Helper method to get non_compliant configs in the current and report current configs and desired configs.
 
         :param desired_values: Desired value for switch and  port groups.
         :type desired_values: dict
-        :return: Return non_compliance netflow configs dvs/pg as current_configs
-        :rtype: dict
+        :return: Return non_compliance netflow configs dvs/pg as current_configs and desired configs
+        :rtype: Tuple
         """
 
         non_compliant_configs = {}
+        desired_configs = {}
         switch_configs = all_ipfix_configs.get(SWITCH_CONFIG)
         for switch_config in switch_configs:
             switch_name = switch_config[SWITCH_NAME]
@@ -216,6 +246,8 @@ class DvsPortGroupNetflowConfig(BaseController):
             ):
                 non_compliant_switch_config_item = {SWITCH_NAME: switch_name, IPFIX_COLLECTOR_IP: ipfix_collector_ip}
                 non_compliant_configs.setdefault(SWITCH_CONFIG, []).append(non_compliant_switch_config_item)
+                desired_switch_config_item = {SWITCH_NAME: switch_name, IPFIX_COLLECTOR_IP: desired_ipfix_collector_ip}
+                desired_configs.setdefault(SWITCH_CONFIG, []).append(desired_switch_config_item)
 
         portgroup_configs = all_ipfix_configs.get(PORTGROUP_CONFIG)
         for portgroup_config in portgroup_configs:
@@ -233,8 +265,14 @@ class DvsPortGroupNetflowConfig(BaseController):
                     IPFIX_ENABLED: ipfix_enabled,
                 }
                 non_compliant_configs.setdefault(PORTGROUP_CONFIG, []).append(non_compliant_portgroup_config_item)
+                desired_portgroup_config_item = {
+                    SWITCH_NAME: switch_name,
+                    PORT_GROUP_NAME: pg_name,
+                    IPFIX_ENABLED: desired_ipfix_enabled,
+                }
+                desired_configs.setdefault(PORTGROUP_CONFIG, []).append(desired_portgroup_config_item)
 
-        return non_compliant_configs
+        return non_compliant_configs, desired_configs
 
     def check_compliance(self, context: VcenterContext, desired_values: Dict) -> Dict:
         """Check compliance of all distributed switches and port groups for netflow configuration.
@@ -319,14 +357,14 @@ class DvsPortGroupNetflowConfig(BaseController):
         if errors:
             return {consts.STATUS: ComplianceStatus.FAILED, consts.ERRORS: errors}
 
-        non_compliant_configs = self._get_non_compliant_configs(
+        non_compliant_configs, desired_configs = self._get_non_compliant_configs(
             all_ipfix_configs=all_ipfix_configs, desired_values=desired_values
         )
         if non_compliant_configs:
             result = {
                 consts.STATUS: ComplianceStatus.NON_COMPLIANT,
                 consts.CURRENT: non_compliant_configs,
-                consts.DESIRED: desired_values,
+                consts.DESIRED: desired_configs,
             }
         else:
             result = {consts.STATUS: ComplianceStatus.COMPLIANT}
