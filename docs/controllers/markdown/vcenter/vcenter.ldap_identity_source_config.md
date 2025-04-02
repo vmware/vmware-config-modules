@@ -57,3 +57,15 @@ Refer to Jira : VCFSC-147
   Dict of status (RemediateStatus.SKIPPED) and errors if any
 * **Return type:**
   tuple
+
+#### check_compliance(context, desired_values)
+
+Check compliance of ldap identity source of vcenter server.
+
+* **Parameters:**
+  * **context** (*VcenterContext*) – Product context instance.
+  * **desired_values** (*List*) – Desired values for the ldap identity source config.
+* **Returns:**
+  Dict of status and current/desired value(for non_compliant) or errors (for failure).
+* **Return type:**
+  dict

@@ -79,7 +79,8 @@ Sample desired state
       "switch_name": "Switch-A",
       "health_check_enabled": true
     }
-  ]
+  ],
+  "ignore_disconnected_hosts": true
 }
 ```
 

@@ -35,17 +35,75 @@ Get roles for users and groups.
 * **Parameters:**
   **context** (*VcenterContext*) – Product context instance.
 * **Returns:**
-  Tuple of list of dictionary (with keys-‘role’, ‘name’, ‘type’) objects and a list of error messages.
+  Tuple of list of dictionary (with keys-‘role’, ‘name’, ‘type’, and ‘propagate’) objects and a list of error messages.
 * **Return type:**
   Tuple
 
 #### set(context, desired_values)
 
-Set method is not implemented as this control requires user intervention to remediate.
-This needs to be reviewed manually before remediation as it could have potential impact on vCenter access.
+Set method to remediate drifts found in users, roles and permissions.
 
 * **Parameters:**
   * **context** (*VcenterContext*) – 
   * **desired_values** (*Dict*) – 
 * **Return type:**
   *Tuple*
+
+#### check_compliance(context, desired_values)
+
+Check compliance of current configuration against provided desired values.
+
+* **Parameters:**
+  * **context** (*VcenterContext*) – Product context instance.
+  * **desired_values** (*list*) – Desired list of users,groups,roles on vCenter.
+* **Returns:**
+  Dict of status and current/desired value(for non_compliant) or errors (for failure).
+* **Return type:**
+  Dict
+
+#### remediate(context, desired_values)
+
+Remediate configuration drifts by applying desired values.
+
+Sample desired state
+<br/>
+```json
+{
+  "global": [
+    {
+      "name": "VSPHERE.LOCAL\SyncUsers",
+      "type": "GROUP",
+      "role": "SyncUsers",
+      "propagate": True
+    },
+    {
+      "name": "VSPHERE.LOCAL\Administrator",
+      "type": "USER",
+      "role": "Admin",
+      "propagate": True
+    }
+  ],
+  "vcenter": [
+    {
+      "name": "VSPHERE.LOCAL\Administrator",
+      "type": "USER",
+      "role": "Admin",
+      "propagate": True
+    },
+    {
+      "name": "VSPHERE.LOCAL\Administrators",
+      "type": "USER",
+      "role": "Admin",
+      "propagate": False
+    }
+  ]
+}
+```
+
+* **Parameters:**
+  * **context** (*VcenterContext*) – Product context instance.
+  * **desired_values** (*Dict*) – Desired values for VM migrate encryption policy
+* **Returns:**
+  Dict of status and current/desired value(for non_compliant) or errors (for failure).
+* **Return type:**
+  Dict

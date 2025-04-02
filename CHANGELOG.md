@@ -1,4 +1,14 @@
 # CURRENTLY-IN-DEVELOPMENT
+# `v0.16.0.0`
+### Framework enhancements
+- Removed salt extension as an individual dependent module
+### Controller enhancements
+- VCSA Controllers
+    - Using API for VCSA TLS version compliance check on VCF5.2.
+    - Add 5 minutes command timeout for VCSA TLS version on VCF4411.
+    - Code refactoring, bug fixes for control users, groups and roles.
+### Dependency Version Changes
+- pyVmomi version requirement changed to "pyVmomi==8.0.2.0.1."
 # `v0.15.0.0`
 ### New Controllers
 - VCSA Controllers

@@ -1,3 +1,4 @@
+
 # Config Modules
 
 Config-modules is a library that can be utilized by services written in python to run compliance checks (audit and remediation) for multiple products.
@@ -25,6 +26,7 @@ Config-modules is a library that can be utilized by services written in python t
 | 8. [Functional Test](functional_tests/README.md)                                            |
 | 9. [API Service Documentation](docs/api-service.md)                                         |
 | 10. [Building and Running in Docker](docs/docker-instructions.md)                           |
+| 11. [Salt Module Documentation](docs/salt-modules.md)                                       |
 
 ## Directory Structure
 

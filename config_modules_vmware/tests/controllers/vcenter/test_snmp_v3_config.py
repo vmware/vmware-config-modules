@@ -115,11 +115,11 @@ class TestSNMPv3SecurityPolicy:
         appliancesh_cmd_prefix = APPLIANCE_SHELL_CMD_PREFIX.format(mock_vc_context._username, mock_vc_context._password)
         set_snmp_cmd = appliancesh_cmd_prefix + f'"{ENABLE_SNMP_CMD}"'
         authentication_cmd = (
-            appliancesh_cmd_prefix
-            + f'"{SNMP_SET_CMD.format(AUTHENTICATION, self.compliant_snmp_value.get(AUTHENTICATION))}"'
+                appliancesh_cmd_prefix
+                + f'"{SNMP_SET_CMD.format(AUTHENTICATION, self.compliant_snmp_value.get(AUTHENTICATION))}"'
         )
         privacy_cmd = (
-            appliancesh_cmd_prefix + f'"{SNMP_SET_CMD.format(PRIVACY,self.compliant_snmp_value.get(PRIVACY))}"'
+                appliancesh_cmd_prefix + f'"{SNMP_SET_CMD.format(PRIVACY,self.compliant_snmp_value.get(PRIVACY))}"'
         )
         expected_set_snmp_calls = [
             call(command=set_snmp_cmd, timeout=10),
@@ -173,6 +173,20 @@ class TestSNMPv3SecurityPolicy:
         mock_execute_shell_cmd.return_value = self.compliant_shell_cmd_return_val
 
         result = self.controller.check_compliance(mock_vc_context, self.compliant_snmp_value)
+        assert result == expected_result
+
+    @patch("config_modules_vmware.framework.auth.contexts.vc_context.VcenterContext")
+    @patch("config_modules_vmware.framework.utils.utils.run_shell_cmd")
+    def test_check_compliance_non_compliant_with_desired_as_disabled(self, mock_execute_shell_cmd, mock_vc_context):
+        expected_result = {
+            consts.STATUS: ComplianceStatus.NON_COMPLIANT,
+            consts.CURRENT: {"enable": True},
+            consts.DESIRED: {"enable": False},
+        }
+
+        mock_execute_shell_cmd.return_value = self.compliant_shell_cmd_return_val
+
+        result = self.controller.check_compliance(mock_vc_context, self.compliant_snmp_disabled)
         assert result == expected_result
 
     @patch("config_modules_vmware.framework.auth.contexts.vc_context.VcenterContext")

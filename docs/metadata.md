@@ -1,13 +1,11 @@
-# Config Modules Interface Consumption
-## Metadata config
-Metadata config settings can be made in the [config.ini](../config_modules_vmware/services/config.ini) or config-overrides.ini file. See [configuration](./configuration.md) for more information on creating and using config-overrides.ini.  
-The metadata that is included can either be only the custom provided metadata or all of the controller's metadata. This is controlled in the config.ini with the `IncludeOnlyCustomMetadata` flag. More on custom metadata in the next section. 
-### Including metadata in the responses
-Metadata can be included in the responses from the ControllerInterface get_current_configuration, remediate_with_desired_state and check_compliance functions. 
-To do this, set the value `PublishMetadata` to `true` in the config.ini.
-### Custom Metadata
-Custom metadata can be provided to each controller through a JSON file. The absolute path to the file should be put in the `config.ini` under `metadata:MetadataFileName`.
-The contents of this file should be in json format described below, similar to the controller schema.
+# Config Modules Metadata Publishing
+
+Metadata can be included in the responses from the ControllerInterface get_current_configuration, remediate_with_desired_state and check_compliance functions. Configuration pertaining to metadata publishing can be made in the [config.ini](../config_modules_vmware/services/config.ini) or config-overrides.ini file.
+
+## Steps to create custom metadata and publish using config-modules directly
+1. To enable publishing of metadata in the workflow responses, set the value `PublishMetadata` to `true` in the config.ini. [See [configuration](./configuration.md) for more information on creating and using config-overrides.ini.]
+2. [Optional - Creating custom metadata for publishing]. Custom metadata can be provided to each controller through a JSON file. The absolute path to the file should be put in the `config.ini` under `metadata:MetadataFileName`. Custom metadata can also be pre-validated using the static function  `validate_custom_metadata` from the [ControllerMetadataInterface](../config_modules_vmware/interfaces/metadata_interface.py). It accepts the custom metadata as a dict and will raise an exception if it finds any validation errors.
+The contents of the custom metadata file should be in json format described below, similar to the controller schema.
 ```json
 {
   "PRODUCT": {
@@ -35,19 +33,55 @@ For example:
   }
 }
 ```
+3. The metadata that is published can either be only the custom provided metadata or all of the controller's existing metadata. This is controlled in the config.ini with the `IncludeOnlyCustomMetadata` flag, which only publishes custom metadata and ignores any existing metadata from the controllers.
 
-#### Validating custom metadata
+## Steps to create custom metadata and publish using salt modules.
 
-Custom metadata can be validated using the static function  `validate_custom_metadata` from the [ControllerMetadataInterface](../config_modules_vmware/interfaces/metadata_interface.py). It accepts the custom metadata as a dict and will raise an exception if it finds any validation errors.
+Steps to create custom metadata for publishing through salt.
+1. Create a config-overrides.ini file overwriting the values in config.ini, as below:
+```
+# Configuration for metadata of controllers
+# PublishMetadata: To include / exclude the metadata from the controllers in the response
+# MetadataFileName: An absolute path to the JSON file with the desired custom metadata.
+#   The contents of this file should match the schema starting at product level. For example:
+#     {
+#         "vcenter": {
+#             "ntp": {
+#               "metadata": {
+#                 "new_metadata_key": "new_metadata_value"
+#               }
+#             }
+#         }
+#     }
+# IncludeOnlyCustomMetadata: If the metadata being published in the responses
+#    should include only the custom metadata from the file, or all controller metadata.
+[metadata]
+PublishMetadata=true
+MetadataFileName=/tmp/config-module/controller_metadata.json
+IncludeOnlyCustomMetadata=false
+```
+2. Copy config-overrides.ini file to some directory on the targetted minion (here it is "/opt/saltstack/salt/extras-3.10/config_modules_vmware/services/" but can be any directory)
+```shell
+salt-cp --chunked -G 'product:<<product_category>>' config-overrides.ini /opt/saltstack/salt/extras-3.10/config_modules_vmware/services/
+```
+3. Set the "OVERRIDES_PATH" env variable to that same directory
+```shell
+salt -G 'product:<<product_category>>' environ.setenv '{"OVERRIDES_PATH": "/opt/saltstack/salt/extras-3.10/config_modules_vmware/services/"}' update_minion=True
+```
+4. Create the metadata file under salt environment /srv/salt/custom_metadata.jinja (using jinja format as a sample).
 
-There is also a salt extension module provided by [controller_metadata.py](https://github.com/saltstack/salt-ext-modules-vmware/blob/unified_config_management/src/saltext/vmware/states/controller_metadata.py). This salt state module will invoke the `validate_custom_metadata` method before invoking the `file.managed` state module to persist the file on the salt minions.
-
-##### Sample salt state file
-
-Below is a sample salt state file which uses the controller metadata state module to validate and persist the custom metadata onto the salt minions.
-
-```yaml
-# custom_metadata.sls
+```
+{% load_yaml as custom_metadata %}
+vcenter:
+  ntp:
+    metadata:
+      global_key: "global_value"
+      configuration_id: "1111"
+{% endload %}
+```
+5. Create a new state file ( (/srv/salt/custom_metadata.sls) to validate and persist the custom metadata onto the minions. The state file follows similar approach as the Salt file.managed module and the destination path should match the value specified for key `MetadataFileName` in the config-overrides from step 1. [There is also a salt execution module [controller_metadata.py](../config_modules_vmware/services/salt/modules/controller_metadata.py) that can be used to only validate and not persist the custom metadata.]
+```
+{% from 'custom_metadata.jinja' import custom_metadata with context %}
 
 # Pass controller metadata contents to 'controller_metadata'
 # Supports additional arguments from salt.states.file.managed (except 'contents' param which is being used)
@@ -60,12 +94,12 @@ Below is a sample salt state file which uses the controller metadata state modul
     - mode: 644
     - makedirs: True
     - replace: True
-```
 
-By invoking a command like below using salt, it will first validate the custom metadata, raising an exception if it encounters a validation errors. Otherwise, it will proceed with persisting the file onto the minions.
+```
+6. By invoking the below salt command, the custom metadata will first be validated, raising an exception if it encounters any validation errors. Otherwise, it will proceed with persisting the file onto the minions.
 
 ```shell
-$ salt -G 'product:<<product_category>>' state.apply custom_metadata
+salt -G 'product:<<product_category>>' state.apply custom_metadata
 ```
 
 ## Querying Metadata

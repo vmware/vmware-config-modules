@@ -55,6 +55,7 @@ class TestDVSNetworkIOControlPolicy:
         dvs_mock.name = dv_spec.get("switch_name")
         dvs_mock.config = MagicMock()
         dvs_mock.config.healthCheckConfig = MagicMock()
+        dvs_mock.config.networkOffloadSpecId = "None"
         dvs_mock.config.networkResourceManagementEnabled = dv_spec.get("network_io_control_status")
         if not bad_mock:
             setattr(dvs_mock, "EnableNetworkResourceManagement", MagicMock(return_value=True))
@@ -82,26 +83,20 @@ class TestDVSNetworkIOControlPolicy:
         assert result == []
         assert errors == [str(expected_error)]
 
-    @patch("config_modules_vmware.framework.auth.contexts.vc_context.VcenterContext")
     @patch("config_modules_vmware.framework.clients.vcenter.vc_vmomi_client.VcVmomiClient")
-    def test_set_success(self, mock_vc_vmomi_client, mock_vc_context):
+    def test_set_success(self, mock_vc_vmomi_client):
         mock_vc_vmomi_client.get_objects_by_vimtype.return_value = self.compliant_dvs_mocks
-        mock_vc_context.vc_vmomi_client.return_value = mock_vc_vmomi_client
 
-        result, errors = self.controller.set(mock_vc_context, self.compliant_value)
-        assert result == RemediateStatus.SUCCESS
+        _, _, errors = self.controller._DVSNetworkIOControlPolicy__set_network_io_control_policy_for_all_dv_switches(mock_vc_vmomi_client, self.compliant_value)
         assert errors == []
 
-    @patch("config_modules_vmware.framework.auth.contexts.vc_context.VcenterContext")
     @patch("config_modules_vmware.framework.clients.vcenter.vc_vmomi_client.VcVmomiClient")
-    def test_set_failed(self, mock_vc_vmomi_client, mock_vc_context):
+    def test_set_failed(self, mock_vc_vmomi_client):
         expected_error = Exception("Failed to set network I/O control policy")
 
         mock_vc_vmomi_client.get_objects_by_vimtype.side_effect = expected_error
-        mock_vc_context.vc_vmomi_client.return_value = mock_vc_vmomi_client
 
-        result, errors = self.controller.set(mock_vc_context, self.compliant_value)
-        assert result == RemediateStatus.FAILED
+        _, _, errors = self.controller._DVSNetworkIOControlPolicy__set_network_io_control_policy_for_all_dv_switches(mock_vc_vmomi_client, self.compliant_value)
         assert errors == [str(expected_error)]
 
     @patch("config_modules_vmware.framework.auth.contexts.vc_context.VcenterContext")
@@ -118,15 +113,17 @@ class TestDVSNetworkIOControlPolicy:
     @patch("config_modules_vmware.framework.auth.contexts.vc_context.VcenterContext")
     @patch("config_modules_vmware.framework.clients.vcenter.vc_vmomi_client.VcVmomiClient")
     def test_check_compliance_non_compliant(self, mock_vc_vmomi_client, mock_vc_context):
+        desired_value = self.compliant_value.get("__GLOBAL__", {}).get(DESIRED_KEY)
         non_compliant_configs = [
             config for config in self.non_compliant_switch_configs
-            if config.get(DESIRED_KEY) != self.compliant_value.get("__GLOBAL__", {}).get(DESIRED_KEY)
+            if config.get(DESIRED_KEY) != desired_value
         ]
+        desired_configs = [{**config, DESIRED_KEY: desired_value} for config in non_compliant_configs]
 
         expected_result = {
             consts.STATUS: ComplianceStatus.NON_COMPLIANT,
             consts.CURRENT: non_compliant_configs,
-            consts.DESIRED: self.compliant_value,
+            consts.DESIRED: desired_configs,
         }
 
         mock_vc_vmomi_client.get_objects_by_vimtype.return_value = self.non_compliant_dvs_mocks
@@ -160,15 +157,34 @@ class TestDVSNetworkIOControlPolicy:
 
     @patch("config_modules_vmware.framework.auth.contexts.vc_context.VcenterContext")
     @patch("config_modules_vmware.framework.clients.vcenter.vc_vmomi_client.VcVmomiClient")
+    def test_remediate_partial_network_offload(self, mock_vc_vmomi_client, mock_vc_context):
+        expected_error = "Network offload - TestId enabled for: SwitchB, skip remediation"
+        expected_result = {
+            consts.STATUS: RemediateStatus.PARTIAL,
+            consts.OLD: [{'network_io_control_status': True, 'switch_name': 'SwitchA'}],
+            consts.NEW: [{'network_io_control_status': False, 'switch_name': 'SwitchA'}],
+            consts.ERRORS: [str(expected_error)]}
+
+        self.non_compliant_dvs_mocks[0].config.networkOffloadSpecId = "TestId"
+        mock_vc_vmomi_client.get_objects_by_vimtype.return_value = self.non_compliant_dvs_mocks
+        mock_vc_context.vc_vmomi_client.return_value = mock_vc_vmomi_client
+
+        result = self.controller.remediate(mock_vc_context, self.compliant_value)
+        assert result == expected_result
+
+    @patch("config_modules_vmware.framework.auth.contexts.vc_context.VcenterContext")
+    @patch("config_modules_vmware.framework.clients.vcenter.vc_vmomi_client.VcVmomiClient")
     def test_remediate_success(self, mock_vc_vmomi_client, mock_vc_context):
+        desired_value = self.compliant_value.get("__GLOBAL__", {}).get(DESIRED_KEY)
         non_compliant_configs = [
             config for config in self.non_compliant_switch_configs
-            if config.get(DESIRED_KEY) != self.compliant_value.get("__GLOBAL__", {}).get(DESIRED_KEY)
+            if config.get(DESIRED_KEY) != desired_value
         ]
+        desired_configs = [{**config, DESIRED_KEY: desired_value} for config in non_compliant_configs]
         expected_result = {
             consts.STATUS: RemediateStatus.SUCCESS,
             consts.OLD: non_compliant_configs,
-            consts.NEW: self.compliant_value,
+            consts.NEW: desired_configs,
         }
 
         mock_vc_vmomi_client.get_objects_by_vimtype.return_value = self.non_compliant_dvs_mocks
@@ -180,14 +196,14 @@ class TestDVSNetworkIOControlPolicy:
     @patch("config_modules_vmware.framework.auth.contexts.vc_context.VcenterContext")
     @patch("config_modules_vmware.framework.clients.vcenter.vc_vmomi_client.VcVmomiClient")
     def test_check_compliance_non_compliant_overrides(self, mock_vc_vmomi_client, mock_vc_context):
-        non_compliant_items = self.controller._DVSNetworkIOControlPolicy__get_non_compliant_configs(
+        non_compliant_items, desired_configs = self.controller._DVSNetworkIOControlPolicy__get_non_compliant_configs(
             self.non_compliant_switch_configs,
             self.compliant_value_with_overrides)
 
         expected_result = {
             consts.STATUS: ComplianceStatus.NON_COMPLIANT,
             consts.CURRENT: non_compliant_items,
-            consts.DESIRED: self.compliant_value_with_overrides,
+            consts.DESIRED: desired_configs,
         }
 
         mock_vc_vmomi_client.get_objects_by_vimtype.return_value = self.non_compliant_dvs_mocks
@@ -211,18 +227,18 @@ class TestDVSNetworkIOControlPolicy:
     @patch("config_modules_vmware.framework.auth.contexts.vc_context.VcenterContext")
     @patch("config_modules_vmware.framework.clients.vcenter.vc_vmomi_client.VcVmomiClient")
     def test_remediate_success_with_overrides(self, mock_vc_vmomi_client, mock_vc_context):
-        non_compliant_items = self.controller._DVSNetworkIOControlPolicy__get_non_compliant_configs(
-            self.non_compliant_switch_configs,
+        mock_vc_vmomi_client.get_objects_by_vimtype.return_value = self.non_compliant_dvs_mocks
+        mock_vc_context.vc_vmomi_client.return_value = mock_vc_vmomi_client
+
+        remediated, desired_configs, errors = self.controller._DVSNetworkIOControlPolicy__set_network_io_control_policy_for_all_dv_switches(
+            mock_vc_vmomi_client,
             self.compliant_value_with_overrides)
 
         expected_result = {
             consts.STATUS: RemediateStatus.SUCCESS,
-            consts.OLD: non_compliant_items,
-            consts.NEW: self.compliant_value_with_overrides,
+            consts.OLD: remediated,
+            consts.NEW: desired_configs,
         }
-
-        mock_vc_vmomi_client.get_objects_by_vimtype.return_value = self.non_compliant_dvs_mocks
-        mock_vc_context.vc_vmomi_client.return_value = mock_vc_vmomi_client
 
         result = self.controller.remediate(mock_vc_context, self.compliant_value_with_overrides)
         assert result == expected_result
@@ -230,14 +246,13 @@ class TestDVSNetworkIOControlPolicy:
     @patch("config_modules_vmware.framework.auth.contexts.vc_context.VcenterContext")
     @patch("config_modules_vmware.framework.clients.vcenter.vc_vmomi_client.VcVmomiClient")
     def test_remediate_set_failed(self, mock_vc_vmomi_client, mock_vc_context):
-        expected_error = Exception('For "configVersion" expected type str, but got MagicMock')
-        expected_result = {consts.STATUS: RemediateStatus.FAILED, consts.ERRORS: [str(expected_error)]}
+        expected_error = Exception('remediation failed for this switch')
+        expected_result = {consts.STATUS: RemediateStatus.FAILED, consts.ERRORS: [str(expected_error), str(expected_error)]}
 
         mock_vc_vmomi_client.get_objects_by_vimtype.return_value = self.non_compliant_dvs_mocks
         mock_vc_context.vc_vmomi_client.return_value = mock_vc_vmomi_client
+        for mock in self.non_compliant_dvs_mocks:
+            mock.EnableNetworkResourceManagement.side_effect = expected_error
 
-        # Mocking the set method to simulate failure and return the desired errors
-        with patch.object(DVSNetworkIOControlPolicy, "set", return_value=(RemediateStatus.FAILED,
-                                                                          [str(expected_error)])):
-            result = self.controller.remediate(mock_vc_context, self.compliant_value)
-            assert result == expected_result
+        result = self.controller.remediate(mock_vc_context, self.compliant_value)
+        assert result == expected_result

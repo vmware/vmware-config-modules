@@ -78,3 +78,15 @@ Sample desired state for SNMP security config
   Tuple of “status” and list of error messages.
 * **Return type:**
   Tuple
+
+#### check_compliance(context, desired_values)
+
+Check compliance of current SNMP_v3 configuration in vCenter.
+
+* **Parameters:**
+  * **context** (*VcenterContext*) – Product context instance.
+  * **desired_values** (*Dict*) – Desired values for the SNMP_v3 config.
+* **Returns:**
+  Dict of status and current/desired value(for non_compliant) or errors (for failure).
+* **Return type:**
+  dict

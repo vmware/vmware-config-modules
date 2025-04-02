@@ -1,4 +1,6 @@
 # Copyright 2024 Broadcom. All Rights Reserved.
+import os
+
 from setuptools import setup
 
 import config_modules_vmware
@@ -22,13 +24,20 @@ def _parse_requirements(requirements_file):
 
 setup(
     name=config_modules_vmware.name,
-    # duplicate information due to concourse pipeline requirement
     version=config_modules_vmware.version,
     description=config_modules_vmware.description,
     author=config_modules_vmware.author,
     install_requires=_parse_requirements("requirements/prod-requirements.txt"),
-    extras_require={"api": _parse_requirements("requirements/api-requirements.txt")},
-    python_requires=">=3.7, <3.12.0",
+    extras_require={
+        "api": _parse_requirements("requirements/api-requirements.txt"),
+        "salt": _parse_requirements("requirements/salt-requirements.txt"),
+    },
+    entry_points={
+        "salt.loader": [
+            "config_modules_vmware = config_modules_vmware.services.salt",
+        ]
+    },
+    python_requires=">=3.9",
     tests_require=_parse_requirements("requirements/unit-test-requirements.txt"),
     long_description=read("README.md"),
     long_description_content_type="text/markdown",

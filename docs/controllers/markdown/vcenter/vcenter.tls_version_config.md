@@ -37,6 +37,8 @@ Controller Metadata
 #### get(context)
 
 Get TLS versions for the services on vCenter.
+For 5.2.x, this returns only the global TLS version since it is applicable for all services.
+For 4.4.x, this returns the individual services TLS versions.
 
 * **Parameters:**
   **context** (*VcenterContext*) – Product context instance.

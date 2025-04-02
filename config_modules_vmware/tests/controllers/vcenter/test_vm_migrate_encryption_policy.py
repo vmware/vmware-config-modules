@@ -22,7 +22,8 @@ class TestVmMigrateEncryptionPolicy:
                 "migrate_encryption_policy": "opportunistic"
             },
             "__OVERRIDES__": [
-                {"vm_name": "ms-sql-replica-2", "migrate_encryption_policy": "required", "path": "SDDC-Datacenter/vm/db_workloads/ms-sql"}
+                {"vm_name": "ms-sql-replica-2", "migrate_encryption_policy": "required", "path": "SDDC-Datacenter/vm/db_workloads/ms-sql"},
+                {"vm_name": "ubuntu-dev-box2", "migrate_encryption_policy": "opportunistic", "path": "SDDC-Datacenter/vm/dev2", "exclude": True}
             ]
         }
         self.non_compliant_value_overrides = {
@@ -30,15 +31,17 @@ class TestVmMigrateEncryptionPolicy:
                 "migrate_encryption_policy": "opportunistic"
             },
             "__OVERRIDES__": [
-                {"vm_name": "ms-sql-replica-2", "migrate_encryption_policy": "disabled", "path": "SDDC-Datacenter/vm/db_workloads/ms-sql"}
+                {"vm_name": "ms-sql-replica-2", "migrate_encryption_policy": "disabled", "path": "SDDC-Datacenter/vm/db_workloads/ms-sql"},
+                {"vm_name": "ubuntu-dev-box2", "migrate_encryption_policy": "opportunistic", "path": "SDDC-Datacenter/vm/dev2", "exclude": True}
             ]
         }
         self.non_compliant_vm_configs_overrides = [
             {"vm_name": "nsx-mgmt-1", "migrate_encryption_policy": "opportunistic", "path": "SDDC-Datacenter/vm/Management VMs"},
             {"vm_name": "sddc-manager", "migrate_encryption_policy": "opportunistic", "path": "SDDC-Datacenter/vm/Management VMs"},
             {"vm_name": "ms-sql-replica-1", "migrate_encryption_policy": "opportunistic", "path": "SDDC-Datacenter/vm/db_workloads/ms-sql"},
-            {"vm_name": "ms-sql-replica-2", "migrate_encryption_policy": "opportunistic", "path": "SDDC-Datacenter/vm/db_workloads/ms-sql"},
+            {"vm_name": "ms-sql-replica-2", "migrate_encryption_policy": "required", "path": "SDDC-Datacenter/vm/db_workloads/ms-sql"},
             {"vm_name": "ubuntu-dev-box", "migrate_encryption_policy": "opportunistic", "path": "SDDC-Datacenter/vm/dev"},
+            {"vm_name": "ubuntu-dev-box2", "migrate_encryption_policy": "required", "path": "SDDC-Datacenter/vm/dev2"},
             {"vm_name": "vcenter-1", "migrate_encryption_policy": "opportunistic", "path": "SDDC-Datacenter/vm/Management VMs"}
         ]
         self.compliant_vm_configs_overrides = [
@@ -47,6 +50,7 @@ class TestVmMigrateEncryptionPolicy:
             {"vm_name": "ms-sql-replica-1", "migrate_encryption_policy": "opportunistic", "path": "SDDC-Datacenter/vm/db_workloads/ms-sql"},
             {"vm_name": "ms-sql-replica-2", "migrate_encryption_policy": "required", "path": "SDDC-Datacenter/vm/db_workloads/ms-sql"},
             {"vm_name": "ubuntu-dev-box", "migrate_encryption_policy": "opportunistic", "path": "SDDC-Datacenter/vm/dev"},
+            {"vm_name": "ubuntu-dev-box2", "migrate_encryption_policy": "required", "path": "SDDC-Datacenter/vm/dev2"},
             {"vm_name": "vcenter-1", "migrate_encryption_policy": "opportunistic", "path": "SDDC-Datacenter/vm/Management VMs"}
         ]
         self.compliant_vm_configs = [
@@ -74,7 +78,7 @@ class TestVmMigrateEncryptionPolicy:
         ]
         # Pyvmomi type MagicMock objects
         self.mocked_vm_refs_compliant_overrides = self.create_all_vm_mock_refs(self.compliant_vm_configs_overrides)
-        self.mocked_vm_refs_non_compliant_overrides = self.create_all_vm_mock_refs(self.compliant_vm_configs_overrides)
+        self.mocked_vm_refs_non_compliant_overrides = self.create_all_vm_mock_refs(self.non_compliant_vm_configs_overrides)
         self.mocked_vm_refs_compliant = self.create_all_vm_mock_refs(self.compliant_vm_configs)
         self.mocked_vm_refs_non_compliant = self.create_all_vm_mock_refs(self.non_compliant_vm_configs)
 
@@ -135,8 +139,8 @@ class TestVmMigrateEncryptionPolicy:
         mock_vc_vmomi_client.get_objects_by_vimtype.return_value = self.mocked_vm_refs_non_compliant
         mock_vc_context.vc_vmomi_client.return_value = mock_vc_vmomi_client
 
-        result, errors = self.controller.set(mock_vc_context, self.compliant_value)
-        assert result == RemediateStatus.SUCCESS
+        vc_vmomi_client = mock_vc_context.vc_vmomi_client()
+        _, _, errors = self.controller._VmMigrateEncryptionPolicy__set_vm_migrate_encryption_policy_for_all_non_compliant_vms(vc_vmomi_client, self.compliant_value)
         assert errors == []
 
     @patch("config_modules_vmware.framework.auth.contexts.vc_context.VcenterContext")
@@ -148,8 +152,8 @@ class TestVmMigrateEncryptionPolicy:
         mock_vc_vmomi_client.wait_for_task.side_effect = expected_error
         mock_vc_context.vc_vmomi_client.return_value = mock_vc_vmomi_client
 
-        result, errors = self.controller.set(mock_vc_context, self.compliant_value)
-        assert result == RemediateStatus.FAILED
+        vc_vmomi_client = mock_vc_context.vc_vmomi_client()
+        _, _, errors = self.controller._VmMigrateEncryptionPolicy__set_vm_migrate_encryption_policy_for_all_non_compliant_vms(vc_vmomi_client, self.compliant_value)
         assert errors == self.remediate_failure_messages
 
     @patch("config_modules_vmware.framework.auth.contexts.vc_context.VcenterContext")
@@ -180,6 +184,7 @@ class TestVmMigrateEncryptionPolicy:
                                                                       "SDDC-Datacenter/vm/db_workloads/ms-sql",
                                                                       "SDDC-Datacenter/vm/db_workloads/ms-sql",
                                                                       "SDDC-Datacenter/vm/dev",
+                                                                      "SDDC-Datacenter/vm/dev2",
                                                                       "SDDC-Datacenter/vm/Management VMs"]
         mock_vc_context.vc_vmomi_client.return_value = mock_vc_vmomi_client
 
@@ -192,7 +197,9 @@ class TestVmMigrateEncryptionPolicy:
         expected_result = {consts.CURRENT: [{'migrate_encryption_policy': 'required',
                                              'path': 'SDDC-Datacenter/vm/db_workloads/ms-sql',
                                              'vm_name': 'ms-sql-replica-2'}],
-                           consts.DESIRED: self.non_compliant_value_overrides,
+                           consts.DESIRED: [{'migrate_encryption_policy': 'disabled',
+                                             'path': 'SDDC-Datacenter/vm/db_workloads/ms-sql',
+                                             'vm_name': 'ms-sql-replica-2'}],
                            consts.STATUS: ComplianceStatus.NON_COMPLIANT}
 
 
@@ -202,6 +209,7 @@ class TestVmMigrateEncryptionPolicy:
                                                                       "SDDC-Datacenter/vm/db_workloads/ms-sql",
                                                                       "SDDC-Datacenter/vm/db_workloads/ms-sql",
                                                                       "SDDC-Datacenter/vm/dev",
+                                                                      "SDDC-Datacenter/vm/dev2",
                                                                       "SDDC-Datacenter/vm/Management VMs"]
         mock_vc_context.vc_vmomi_client.return_value = mock_vc_vmomi_client
 
@@ -211,14 +219,14 @@ class TestVmMigrateEncryptionPolicy:
     @patch("config_modules_vmware.framework.auth.contexts.vc_context.VcenterContext")
     @patch("config_modules_vmware.framework.clients.vcenter.vc_vmomi_client.VcVmomiClient")
     def test_check_compliance_non_compliant(self, mock_vc_vmomi_client, mock_vc_context):
-        non_compliant_configs = self.controller._VmMigrateEncryptionPolicy__get_non_compliant_configs(
+        non_compliant_configs, desired_configs = self.controller._VmMigrateEncryptionPolicy__get_non_compliant_configs(
             self.non_compliant_vm_configs,
             self.compliant_value)
 
         expected_result = {
             consts.STATUS: ComplianceStatus.NON_COMPLIANT,
             consts.CURRENT: non_compliant_configs,
-            consts.DESIRED: self.compliant_value,
+            consts.DESIRED: desired_configs,
         }
 
         mock_vc_vmomi_client.get_objects_by_vimtype.return_value = self.mocked_vm_refs_non_compliant
@@ -259,14 +267,14 @@ class TestVmMigrateEncryptionPolicy:
     @patch("config_modules_vmware.framework.auth.contexts.vc_context.VcenterContext")
     @patch("config_modules_vmware.framework.clients.vcenter.vc_vmomi_client.VcVmomiClient")
     def test_remediate_success(self, mock_vc_vmomi_client, mock_vc_context):
-        non_compliant_configs = self.controller._VmMigrateEncryptionPolicy__get_non_compliant_configs(
+        non_compliant_configs, desired_configs = self.controller._VmMigrateEncryptionPolicy__get_non_compliant_configs(
             self.non_compliant_vm_configs,
             self.compliant_value)
 
         expected_result = {
             consts.STATUS: RemediateStatus.SUCCESS,
             consts.OLD: non_compliant_configs,
-            consts.NEW: self.compliant_value,
+            consts.NEW: desired_configs,
         }
         mock_vc_vmomi_client.get_objects_by_vimtype.return_value = self.mocked_vm_refs_non_compliant
         mock_vc_vmomi_client.get_vm_path_in_datacenter.side_effect = ["SDDC-Datacenter/vm/Management VMs",
@@ -290,14 +298,14 @@ class TestVmMigrateEncryptionPolicy:
     @patch("config_modules_vmware.framework.clients.vcenter.vc_vmomi_client.VcVmomiClient")
     @patch("config_modules_vmware.controllers.vcenter.vm_migrate_encryption_policy.VmMigrateEncryptionPolicy._get_resource_pool")
     def test_remediate_template_success(self, mock_get_resource_pool, mock_vc_vmomi_client, mock_vc_context):
-        non_compliant_configs = self.controller._VmMigrateEncryptionPolicy__get_non_compliant_configs(
+        non_compliant_configs, desired_configs = self.controller._VmMigrateEncryptionPolicy__get_non_compliant_configs(
             self.non_compliant_vm_configs,
             self.compliant_value)
 
         expected_result = {
             consts.STATUS: RemediateStatus.SUCCESS,
             consts.OLD: non_compliant_configs,
-            consts.NEW: self.compliant_value,
+            consts.NEW: desired_configs,
         }
         # Mark VM as template
         for vm_ref in self.mocked_vm_refs_non_compliant:
@@ -364,14 +372,24 @@ class TestVmMigrateEncryptionPolicy:
     @patch("config_modules_vmware.framework.auth.contexts.vc_context.VcenterContext")
     @patch("config_modules_vmware.framework.clients.vcenter.vc_vmomi_client.VcVmomiClient")
     def test_remediate_set_failed(self, mock_vc_vmomi_client, mock_vc_context):
-        expected_error = Exception("Pyvmomi exception while setting VM migrate encryption policy")
-        expected_result = {consts.STATUS: RemediateStatus.FAILED, consts.ERRORS: [str(expected_error)]}
+        pyvmomi_error = Exception("Pyvmomi exception while setting VM migrate encryption policy")
+        expected_error = [
+                             'Failed to remediate VM: nsx-mgmt-1 - Pyvmomi exception while setting '
+                             'VM migrate encryption policy',
+                             'Failed to remediate VM: ms-sql-replica-1 - Pyvmomi exception while '
+                             'setting VM migrate encryption policy',
+                             'Failed to remediate VM: ms-sql-replica-2 - Pyvmomi exception while '
+                             'setting VM migrate encryption policy',
+                             'Failed to remediate VM: ubuntu-dev-box - Pyvmomi exception while '
+                             'setting VM migrate encryption policy',
+                             'Failed to remediate VM: vcenter-1 - Pyvmomi exception while setting '
+                             'VM migrate encryption policy',
+                          ]
+        expected_result = {consts.STATUS: RemediateStatus.FAILED, consts.ERRORS: expected_error}
 
         mock_vc_vmomi_client.get_objects_by_vimtype.return_value = self.mocked_vm_refs_non_compliant
         mock_vc_context.vc_vmomi_client.return_value = mock_vc_vmomi_client
+        mock_vc_vmomi_client.wait_for_task.side_effect = pyvmomi_error
 
-        # Mocking the set method to simulate failure and return the desired errors
-        with patch.object(VmMigrateEncryptionPolicy, "set", return_value=(RemediateStatus.FAILED,
-                                                                          [str(expected_error)])):
-            result = self.controller.remediate(mock_vc_context, self.compliant_value)
-            assert result == expected_result
+        result = self.controller.remediate(mock_vc_context, self.compliant_value)
+        assert result == expected_result

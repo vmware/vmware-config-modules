@@ -133,15 +133,13 @@ class TestDVSHealthCheckConfig:
     @patch("config_modules_vmware.framework.auth.contexts.vc_context.VcenterContext")
     @patch("config_modules_vmware.framework.clients.vcenter.vc_vmomi_client.VcVmomiClient")
     def test_check_compliance_non_compliant(self, mock_vc_vmomi_client, mock_vc_context):
-        non_compliant_configs = [
-            config for config in self.non_compliant_switch_configs
-            if config.get(DESIRED_KEY) != self.compliant_value.get("__GLOBAL__", {}).get(DESIRED_KEY)
-        ]
-
+        non_compliant_configs, desired_configs = self.controller._DVSHealthCheckConfig__get_non_compliant_configs(
+            self.non_compliant_switch_configs,
+            self.compliant_value)
         expected_result = {
             consts.STATUS: ComplianceStatus.NON_COMPLIANT,
             consts.CURRENT: non_compliant_configs,
-            consts.DESIRED: self.compliant_value,
+            consts.DESIRED: desired_configs,
         }
 
         mock_vc_vmomi_client.get_objects_by_vimtype.return_value = self.non_compliant_dvs_mocks
@@ -153,14 +151,14 @@ class TestDVSHealthCheckConfig:
     @patch("config_modules_vmware.framework.auth.contexts.vc_context.VcenterContext")
     @patch("config_modules_vmware.framework.clients.vcenter.vc_vmomi_client.VcVmomiClient")
     def test_check_compliance_non_compliant_overrides(self, mock_vc_vmomi_client, mock_vc_context):
-        non_compliant_items = self.controller._DVSHealthCheckConfig__get_non_compliant_configs(
+        non_compliant_items, desired_configs = self.controller._DVSHealthCheckConfig__get_non_compliant_configs(
             self.non_compliant_switch_configs,
             self.compliant_value_with_overrides)
 
         expected_result = {
             consts.STATUS: ComplianceStatus.NON_COMPLIANT,
             consts.CURRENT: non_compliant_items,
-            consts.DESIRED: self.compliant_value_with_overrides,
+            consts.DESIRED: desired_configs,
         }
 
         mock_vc_vmomi_client.get_objects_by_vimtype.return_value = self.non_compliant_dvs_mocks
@@ -195,14 +193,13 @@ class TestDVSHealthCheckConfig:
     @patch("config_modules_vmware.framework.auth.contexts.vc_context.VcenterContext")
     @patch("config_modules_vmware.framework.clients.vcenter.vc_vmomi_client.VcVmomiClient")
     def test_remediate_success(self, mock_vc_vmomi_client, mock_vc_context):
-        non_compliant_configs = [
-            config for config in self.non_compliant_switch_configs
-            if config.get(DESIRED_KEY) != self.compliant_value.get("__GLOBAL__", {}).get(DESIRED_KEY)
-        ]
+        non_compliant_configs, desired_configs = self.controller._DVSHealthCheckConfig__get_non_compliant_configs(
+            self.non_compliant_switch_configs,
+            self.compliant_value)
         expected_result = {
             consts.STATUS: RemediateStatus.SUCCESS,
             consts.OLD: non_compliant_configs,
-            consts.NEW: self.compliant_value,
+            consts.NEW: desired_configs,
         }
 
         mock_vc_vmomi_client.get_objects_by_vimtype.return_value = self.non_compliant_dvs_mocks
@@ -214,14 +211,14 @@ class TestDVSHealthCheckConfig:
     @patch("config_modules_vmware.framework.auth.contexts.vc_context.VcenterContext")
     @patch("config_modules_vmware.framework.clients.vcenter.vc_vmomi_client.VcVmomiClient")
     def test_remediate_success_with_overrides(self, mock_vc_vmomi_client, mock_vc_context):
-        non_compliant_items = self.controller._DVSHealthCheckConfig__get_non_compliant_configs(
+        non_compliant_items, desired_configs = self.controller._DVSHealthCheckConfig__get_non_compliant_configs(
             self.non_compliant_switch_configs,
             self.compliant_value_with_overrides)
 
         expected_result = {
             consts.STATUS: RemediateStatus.SUCCESS,
             consts.OLD: non_compliant_items,
-            consts.NEW: self.compliant_value_with_overrides,
+            consts.NEW: desired_configs,
         }
 
         mock_vc_vmomi_client.get_objects_by_vimtype.return_value = self.non_compliant_dvs_mocks

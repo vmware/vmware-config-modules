@@ -27,9 +27,15 @@ class Target:
     Target configuration
     """
 
-    def __init__(self, type: BaseContext.ProductEnum, hostname):  # pylint: disable=W0622
+    def __init__(
+        self,
+        type: BaseContext.ProductEnum,
+        hostname: str,
+        id: str = None,
+    ):  # pylint: disable=W0622
         self._type = type
         self._hostname = hostname
+        self._id = id
 
     def to_dict(self):
         """
@@ -43,6 +49,8 @@ class Target:
             target["hostname"] = self._hostname
         if self._type:
             target["type"] = self._type
+        if self._id:
+            target["id"] = self._id
         return target
 
 
@@ -379,13 +387,14 @@ class ConfigurationDriftResponse(OutputResponse):
         status: Status = None,
         result: Result = None,
         errors: List[Error] = None,
+        id: uuid.UUID = None,  # pylint: disable=W0622
     ):
         """
         Initialize a new ConfigurationDriftResponse instance.
         """
         super().__init__()
-        self._schema_version = "1.0-DRAFT"
-        self._id = uuid.uuid4()
+        self._schema_version = "1.0"
+        self._id = id if id else uuid.uuid4()
         self._name = name
         self._timestamp = timestamp
         self._description = description
@@ -393,6 +402,46 @@ class ConfigurationDriftResponse(OutputResponse):
         self._result = result
         self._target = target
         self._errors = errors
+
+    @property
+    def id(self) -> uuid.UUID:
+        """
+        Return id.
+
+        :return: id
+        :rtype: uuid.UUID
+        """
+        return self._id
+
+    @id.setter
+    def id(self, id: uuid.UUID):  # pylint: disable=W0622
+        """
+        Set id.
+
+        :param id: id.
+        :type id: uuid.UUID
+        """
+        self._id = id
+
+    @property
+    def timestamp(self) -> str:
+        """
+        Return timestamp.
+
+        :return: timestamp
+        :rtype: str
+        """
+        return self._timestamp
+
+    @timestamp.setter
+    def timestamp(self, timestamp: str):
+        """
+        Set timestamp.
+
+        :param timestamp: timestamp.
+        :type timestamp: str
+        """
+        self._timestamp = timestamp
 
     @property
     def status(self) -> Status:

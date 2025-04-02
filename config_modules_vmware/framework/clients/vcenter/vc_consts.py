@@ -53,3 +53,6 @@ LIST_HOSTS_URL = "api/vcenter/host"
 # Backup schedule
 BACKUP_SCHEDULE_URL = "api/appliance/recovery/backup/schedules"
 BACKUP_SCHEDULE_BY_NAME_URL = "api/appliance/recovery/backup/schedules/{}"
+
+# TLS profiles
+TLS_PROFILE_API = "api/appliance/tls/profiles/{}"

@@ -8,6 +8,7 @@ from typing import Tuple
 from pyVmomi import vim  # pylint: disable=E0401
 
 from config_modules_vmware.controllers.base_controller import BaseController
+from config_modules_vmware.controllers.vcenter.utils.vc_dvs_utils import is_host_disconnect_exception
 from config_modules_vmware.framework.auth.contexts.base_context import BaseContext
 from config_modules_vmware.framework.auth.contexts.vc_context import VcenterContext
 from config_modules_vmware.framework.clients.common import consts
@@ -24,6 +25,7 @@ DESIRED_KEY = "health_check_enabled"
 SWITCH_NAME = "switch_name"
 GLOBAL = "__GLOBAL__"
 OVERRIDES = "__OVERRIDES__"
+IGNORE_DISCONNECTED_HOSTS = "ignore_disconnected_hosts"
 
 
 class DVSHealthCheckConfig(BaseController):
@@ -107,7 +109,8 @@ class DVSHealthCheckConfig(BaseController):
                   "switch_name": "Switch-A",
                   "health_check_enabled": true
                 }
-              ]
+              ],
+              "ignore_disconnected_hosts": true
             }
 
         :param context: Product context instance.
@@ -118,10 +121,12 @@ class DVSHealthCheckConfig(BaseController):
         :rtype: Tuple
         """
         vc_vmomi_client = context.vc_vmomi_client()
-        errors = []
         status = RemediateStatus.SUCCESS
+        errors = []
         try:
-            self.__set_health_check_config_for_all_dv_switches(vc_vmomi_client, desired_values)
+            errors = self.__set_health_check_config_for_all_dv_switches(vc_vmomi_client, desired_values)
+            if errors:
+                status = RemediateStatus.FAILED
         except Exception as e:
             logger.exception(f"An error occurred: {e}")
             errors.append(str(e))
@@ -150,7 +155,7 @@ class DVSHealthCheckConfig(BaseController):
 
     def __set_health_check_config_for_all_dv_switches(
         self, vc_vmomi_client: VcVmomiClient, desired_values: Dict
-    ) -> None:
+    ) -> List:
         """
         Enable or disable health check config for all DV switches.
 
@@ -158,11 +163,13 @@ class DVSHealthCheckConfig(BaseController):
         :type vc_vmomi_client: VcVmomiClient
         :param desired_values: Desired values for DVS health check config.
         :type desired_values: Dict
-        :return:
-        :rtype: None
+        :return errors in case of partial set
+        :rtype: List
         """
+        errors = []
         desired_global_health_check_value = desired_values.get(GLOBAL, {}).get(DESIRED_KEY)
         overrides = desired_values.get(OVERRIDES, [])
+        ignore_disconnected_hosts = desired_values.get(IGNORE_DISCONNECTED_HOSTS, False)
         all_dv_switch_refs = vc_vmomi_client.get_objects_by_vimtype(vim.DistributedVirtualSwitch)
 
         for dvs_ref in all_dv_switch_refs:
@@ -188,17 +195,32 @@ class DVSHealthCheckConfig(BaseController):
             )
 
             health_check_config = [vlan_mtu_health_check_config, teaming_health_check_config]
-            dvs_health_config_task = dvs_ref.UpdateDVSHealthCheckConfig_Task(health_check_config)
-            vc_vmomi_client.wait_for_task(dvs_health_config_task)
+            try:
+                dvs_health_config_task = dvs_ref.UpdateDVSHealthCheckConfig_Task(health_check_config)
+                vc_vmomi_client.wait_for_task(dvs_health_config_task)
+            except Exception as e:
+                if hasattr(dvs_health_config_task.info, "error") and isinstance(
+                    dvs_health_config_task.info.error, vim.fault.DvsOperationBulkFault
+                ):
+                    logger.debug(f"DVS TASK ERROR: - {dvs_health_config_task.info.error}")
+                    if is_host_disconnect_exception(dvs_health_config_task.info.error) and ignore_disconnected_hosts:
+                        logger.info(f"Ignore disconnected hosts caused exception - {e}")
+                        continue
+                logger.exception(f"An error occurred: {e}")
+                errors.append(str(e))
 
-    def __get_non_compliant_configs(self, switch_configs: List, desired_values: Dict) -> List:
+        return errors
+
+    def __get_non_compliant_configs(self, switch_configs: List, desired_values: Dict) -> Tuple[List, List]:
         """
         Get all non-compliant items for the given desired state spec.
 
-        :return:
+        :return: a list of non compliant configs and a list of desired configs
+        :rtype: Tuple
         :meta private:
         """
         non_compliant_configs = []
+        desired_configs = []
         # convert to dictionary for easy access
         configs_by_switch_name = {config.get(SWITCH_NAME): config for config in switch_configs}
 
@@ -216,6 +238,7 @@ class DVSHealthCheckConfig(BaseController):
             for config in non_compliant_global:
                 if config.get(SWITCH_NAME) == override_switch_name:
                     non_compliant_configs.remove(config)
+        desired_configs = [{**config, DESIRED_KEY: global_desired_value} for config in non_compliant_configs]
 
         # Check overrides for non-compliance
         for switch_override in overrides:
@@ -226,7 +249,8 @@ class DVSHealthCheckConfig(BaseController):
             config = configs_by_switch_name.get(switch_name)
             if config and config.get(DESIRED_KEY) != desired_value:
                 non_compliant_configs.append(config)
-        return non_compliant_configs
+                desired_configs.append({SWITCH_NAME: switch_name, DESIRED_KEY: desired_value})
+        return non_compliant_configs, desired_configs
 
     def check_compliance(self, context: VcenterContext, desired_values: Dict) -> Dict:
         """
@@ -245,13 +269,15 @@ class DVSHealthCheckConfig(BaseController):
         if errors:
             return {consts.STATUS: ComplianceStatus.FAILED, consts.ERRORS: errors}
 
-        non_compliant_configs = self.__get_non_compliant_configs(dv_switch_health_check_configs, desired_values)
+        non_compliant_configs, desired_configs = self.__get_non_compliant_configs(
+            dv_switch_health_check_configs, desired_values
+        )
 
         if non_compliant_configs:
             result = {
                 consts.STATUS: ComplianceStatus.NON_COMPLIANT,
                 consts.CURRENT: non_compliant_configs,
-                consts.DESIRED: desired_values,
+                consts.DESIRED: desired_configs,
             }
         else:
             result = {consts.STATUS: ComplianceStatus.COMPLIANT}
@@ -291,6 +317,7 @@ class DVSHealthCheckConfig(BaseController):
             return {consts.STATUS: RemediateStatus.SKIPPED, consts.ERRORS: [consts.CONTROL_ALREADY_COMPLIANT]}
         elif result[consts.STATUS] == ComplianceStatus.NON_COMPLIANT:
             non_compliant_items = result[consts.CURRENT]
+            desired_configs = result[consts.DESIRED]
         else:
             errors = result[consts.ERRORS]
             return {consts.STATUS: RemediateStatus.FAILED, consts.ERRORS: errors}
@@ -298,7 +325,7 @@ class DVSHealthCheckConfig(BaseController):
         status, errors = self.set(context=context, desired_values=desired_values)
 
         if not errors:
-            result = {consts.STATUS: status, consts.OLD: non_compliant_items, consts.NEW: desired_values}
+            result = {consts.STATUS: status, consts.OLD: non_compliant_items, consts.NEW: desired_configs}
         else:
             result = {consts.STATUS: RemediateStatus.FAILED, consts.ERRORS: errors}
         return result

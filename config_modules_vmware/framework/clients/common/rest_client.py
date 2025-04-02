@@ -8,6 +8,7 @@ from threading import Lock
 
 import urllib3
 
+from config_modules_vmware.framework.clients.common import certificate_verification
 from config_modules_vmware.framework.clients.common import consts
 from config_modules_vmware.framework.logging.logger_adapter import LoggerAdapter
 from config_modules_vmware.services.config import Config
@@ -31,6 +32,7 @@ def get_smart_rest_client_class(urllib3_manager):
             retries=None,
             ssl_version=consts.TLS_VERSION,
             ca_cert_dir=consts.SSL_VERIFY_CA_PATH,
+            cert_info=None,
             **kwargs,
         ):
             """
@@ -82,7 +84,17 @@ def get_smart_rest_client_class(urllib3_manager):
 
             cert_validation_asked = "cert_reqs" in kwargs and kwargs["cert_reqs"] == consts.CERT_REQUIRED
 
-            if ("assert_fingerprint" in kwargs and not cert_validation_asked) or (
+            if cert_info:
+                context, successful_cert = certificate_verification.validate_all_certificates(
+                    hostname=kwargs.get("server_hostname"), certificate_list=cert_info
+                )
+                if context:
+                    if successful_cert:
+                        kwargs["assert_hostname"] = successful_cert.enforce_hostname_verification
+                    super(BaseRestClient, self).__init__(
+                        retries=retries, ssl_version=ssl_version, ssl_context=context, **kwargs
+                    )
+            elif ("assert_fingerprint" in kwargs and not cert_validation_asked) or (
                 "cert_reqs" in kwargs and kwargs["cert_reqs"] == consts.CERT_NONE
             ):
                 # Cert dir is not used for validation
@@ -209,9 +221,7 @@ def get_smart_rest_client_class(urllib3_manager):
                 # Creates session headers if not exist
                 self._update_session_headers(get_session_headers_func, kwargs)
 
-                data = kwargs[BODY] if BODY in kwargs else ""
                 logger.info(f"Calling '{method}':'{url}'")
-                logger.debug(f"Data for '{method}' request to '{url}': {data}")
 
                 response = super(BaseRestClient, self).request(method=method, url=url, **kwargs)
                 logger.info(f"Response Code of '{method}' request on '{url}': {response.status}")
@@ -242,7 +252,7 @@ def get_smart_rest_client_class(urllib3_manager):
                     if self._session_headers is None:
                         self._session_headers = get_session_headers_func(client=super(BaseRestClient, self))
                     if self._session_headers and isinstance(self._session_headers, dict):
-                        if HEADERS not in kwargs:
+                        if HEADERS not in kwargs or kwargs[HEADERS] is None:
                             kwargs[HEADERS] = dict()
                         kwargs[HEADERS].update(self._session_headers)
                     else:

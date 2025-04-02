@@ -37,6 +37,7 @@ class AlarmRemoteSyslogFailureConfig(BaseController):
         super().__init__()
         self.comparator_option = ComparatorOptionForList.IDENTIFIER_BASED_COMPARISON
         self.instance_key = vc_alarms_utils.ALARM_NAME
+        self.alarm_name_to_def_map = {}
 
     metadata = ControllerMetadata(
         name="alarm_esx_remote_syslog_failure",  # controller name
@@ -73,6 +74,7 @@ class AlarmRemoteSyslogFailureConfig(BaseController):
             # Get all alarm definitions (currently there is no support to query an alarm for specific event)
             alarm_definitions = alarm_manager.GetAlarm(content.rootFolder)
             alarms = []
+            self.alarm_name_to_def_map = {}
 
             # Fetch details of all the alarms for which any expression within an alarm has eventId :
             # ESX_REMOTE_SYSLOG_FAILURE_EVENT
@@ -80,16 +82,27 @@ class AlarmRemoteSyslogFailureConfig(BaseController):
                 # vim.alarm.EventAlarmExpression might not have 'expression' attribute if there is no expression
                 if hasattr(alarm_def.info.expression, "expression"):
                     for expression in alarm_def.info.expression.expression:
-                        if isinstance(expression, vim.alarm.EventAlarmExpression):
-                            if expression.eventTypeId == ESX_REMOTE_SYSLOG_FAILURE_EVENT:
-                                target_type = vc_alarms_utils.get_target_type(expression.objectType)
-                                alarms.append(vc_alarms_utils.get_alarm_details(alarm_def, target_type))
+                        if (
+                            isinstance(expression, vim.alarm.EventAlarmExpression)
+                            and expression.eventTypeId == ESX_REMOTE_SYSLOG_FAILURE_EVENT
+                        ):
+                            target_type = vc_alarms_utils.get_target_type(expression.objectType)
+                            alarms.append(vc_alarms_utils.get_alarm_details(alarm_def, target_type))
+                            # create a map for later use
+                            self.alarm_name_to_def_map[alarm_def.info.name] = alarm_def
             result = alarms
 
         except Exception as e:
             logger.exception(f"An error occurred: {e}")
             errors.append(str(e))
         return result, errors
+
+    def _get_esx_remote_syslog_failure_alarm(self, alarm_name):
+        if self.alarm_name_to_def_map:
+            alarm_def = self.alarm_name_to_def_map.get(alarm_name, None)
+            logger.info(f"Finding alarm def {alarm_def} for {alarm_name} in map.")
+            return alarm_def
+        return None
 
     def set(self, context: VcenterContext, desired_values: List[Dict]) -> Tuple[str, List[Any]]:
         """
@@ -104,15 +117,26 @@ class AlarmRemoteSyslogFailureConfig(BaseController):
         """
         errors = []
         status = RemediateStatus.SUCCESS
+
         logger.info(f"Set the desired alarms for eventId {ESX_REMOTE_SYSLOG_FAILURE_EVENT}.")
+
         # Iterate over all the alarm in desired list of alarms and create an alarm for each of them.
         for desired_alarm_value in desired_values:
             alarm_name = desired_alarm_value.get(vc_alarms_utils.ALARM_NAME)
-            logger.info(f"Create the alarm with name: {alarm_name}.")
             try:
                 content = context.vc_vmomi_client().content
                 spec = vc_alarms_utils.create_alarm_spec(desired_alarm_value, ESX_REMOTE_SYSLOG_FAILURE_EVENT)
-                content.alarmManager.CreateAlarm(content.rootFolder, spec)
+
+                # Check if alarm already exist.
+                alarm = self._get_esx_remote_syslog_failure_alarm(alarm_name)
+                if not alarm:
+                    # if alarm not exist, create new
+                    logger.debug(f"Creating new alarm with spec: {spec}.")
+                    content.alarmManager.CreateAlarm(content.rootFolder, spec)
+                else:
+                    # if alarm already exist, reconfigure to expected values
+                    logger.debug(f"Reconfiguring alarm with spec: {spec}.")
+                    alarm.ReconfigureAlarm(spec)
             except vim.fault.DuplicateName:
                 logger.exception(f"Error creating duplicate alarm {alarm_name}")
                 status = RemediateStatus.FAILED

@@ -8,6 +8,7 @@
     * [`AdEsxAdminGroupConfig`](esxi/esxi.ad_esx_admin_group_config.md)
     * [`BridgeProtocolDataUnitFilter`](esxi/esxi.bridge_protocol_data_unit_filter.md)
     * [`CimServicePolicy`](esxi/esxi.cim_service_policy.md)
+    * [`ClusterConfig`](esxi/esxi.cluster_config.md)
     * [`DcuiIdleTimeout`](esxi/esxi.dcui_idle_timeout.md)
     * [`DcuiLoginBanner`](esxi/esxi.dcui_login_banner.md)
     * [`DvFilterBindIpConfig`](esxi/esxi.dv_filter_bind_ip_config.md)

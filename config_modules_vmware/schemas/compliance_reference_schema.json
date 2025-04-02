@@ -683,6 +683,11 @@
                         ],
                         "additionalProperties": false
                       }
+                    },
+                    "ignore_disconnected_hosts": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "ignore disconnected hosts caused exceptions."
                     }
                   },
                   "minProperties": 1,
@@ -740,6 +745,11 @@
                         ],
                         "additionalProperties": false
                       }
+                    },
+                    "ignore_disconnected_hosts": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "ignore disconnected hosts caused exceptions."
                     }
                   },
                   "minProperties": 1,
@@ -827,6 +837,11 @@
                           }
                         }
                       }
+                    },
+                    "ignore_disconnected_hosts": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "ignore disconnected hosts caused exceptions."
                     }
                   },
                   "minProperties": 1,
@@ -1051,11 +1066,36 @@
                   "properties": {
                     "reserved_vlan_ids_to_exclude": {
                       "type": "array",
-                      "description": "Reserved VLAN IDs to be excluded from port group configurations.",
+                      "description": "Reserved VLAN IDs to be excluded from port group configurations. Example inputs: {'start':30,'end':35}, 100",
                       "items": {
-                        "type": "number",
-                        "minimum": 0,
-                        "maximum": 4094
+                        "oneOf": [
+                          {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 4094
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "start": {
+                                "type": "number",
+                                "description": "Start VLAN id in allowed vlans.",
+                                "minimum": 0,
+                                "maximum": 4094
+                              },
+                              "end": {
+                                "type": "number",
+                                "description": "End VLAN id in allowed vlans.",
+                                "minimum": 0,
+                                "maximum": 4094
+                              }
+                            },
+                            "required": [
+                              "start",
+                              "end"
+                            ]
+                          }
+                        ]
                       }
                     }
                   }
@@ -1643,6 +1683,10 @@
                               "required"
                             ],
                             "description": "Virtual machine migrate encryption policy"
+                          },
+                          "exclude": {
+                            "type": "boolean",
+                            "description": "flag to skip compliance check and remediation for the VM"
                           }
                         },
                         "required": [
@@ -1682,11 +1726,19 @@
                         "enum": [
                           "TLSv1.0",
                           "TLSv1.1",
-                          "TLSv1.2"
+                          "TLSv1.2",
+                          "TLSv1.3"
                         ]
                       },
                       "minItems": 1,
-                      "uniqueItems": true
+                      "uniqueItems": true,
+                      "allOf": [
+                        {
+                          "contains": {
+                            "enum": ["TLSv1.2", "TLSv1.3"]
+                          }
+                        }
+                      ]
                     }
                   },
                   "additionalProperties": {
@@ -1697,14 +1749,28 @@
                       "enum": [
                         "TLSv1.0",
                         "TLSv1.1",
-                        "TLSv1.2"
+                        "TLSv1.2",
+                        "TLSv1.3"
                       ]
                     },
                     "minItems": 1,
-                    "uniqueItems": true
-                  }
+                    "uniqueItems": true,
+                    "allOf": [
+                      {
+                        "contains": {
+                          "enum": ["TLSv1.2", "TLSv1.3"]
+                        }
+                      }
+                    ]
+                  },
+                  "required": [
+                    "global"
+                  ]
                 }
-              }
+              },
+              "required": [
+                "value"
+              ]
             },
             "logon_banner_config": {
               "type": "object",
@@ -1754,14 +1820,18 @@
                   "description": "LDAP identity source configuration",
                   "items": {
                     "type": "object",
-                    "description": "ldap binding accounts: username for the account",
+                    "description": "ldap binding accounts: username and domain for the account",
                     "properties": {
                       "username": {
+                        "type": "string"
+                      },
+                      "domain": {
                         "type": "string"
                       }
                     },
                     "required": [
-                      "username"
+                      "username",
+                      "domain"
                     ],
                     "additionalProperties": false
                   },
@@ -1781,37 +1851,94 @@
                   "$ref": "#/definitions/metadata"
                 },
                 "value": {
-                  "type": "array",
-                  "description": "A valid list of dictionary with three keys - users, groups and roles",
-                  "items": {
-                    "type": "object",
-                    "properties": {
-                      "name": {
-                        "type": "string",
-                        "description": "User or group name"
-                      },
-                      "type": {
-                        "enum": [
-                          "USER",
-                          "GROUP"
+                  "type": "object",
+                  "properties": {
+                    "global": {
+                      "type": "array",
+                      "description": "A list of global permissions with four keys - name, type, role and propagate flag",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string",
+                            "description": "User or group name"
+                          },
+                          "type": {
+                            "enum": [
+                              "USER",
+                              "GROUP"
+                            ],
+                            "description": "Type to denote its a user or a group"
+                          },
+                          "role": {
+                            "type": "string",
+                            "description": "Role name"
+                          },
+                          "propagate": {
+                            "type": "boolean",
+                            "description": "propagate flag, if set to true, permission will be propagated to all vcenters and its sub entities"
+                          }
+                        },
+                        "required": [
+                          "name",
+                          "type",
+                          "role",
+                          "propagate"
                         ],
-                        "description": "Type to denote its a user or a group"
+                        "additionalProperties": false
                       },
-                      "role": {
-                        "type": "string",
-                        "description": "Role name"
-                      }
+                      "minItems": 0
                     },
-                    "required": [
-                      "name",
-                      "type",
-                      "role"
-                    ],
-                    "additionalProperties": false
-                  },
-                  "minItems": 0
+                    "vcenter": {
+                      "type": "array",
+                      "description": "A list of vcenter local permissions  with four keys - name, type, role and propagate flag",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string",
+                            "description": "User or group name"
+                          },
+                          "type": {
+                            "enum": [
+                              "USER",
+                              "GROUP"
+                            ],
+                            "description": "Type to denote its a user or a group"
+                          },
+                          "role": {
+                            "type": "string",
+                            "description": "Role name"
+                          },
+                          "propagate": {
+                            "type": "boolean",
+                            "description": "propagate flag, if set to true, the permission will be propagated to all entities under this vcenter"
+                          }
+                        },
+                        "required": [
+                          "name",
+                          "type",
+                          "role",
+                          "propagate"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "minItems": 0
+                    },
+                    "exclude_user_patterns": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "description": "User defined patterns to exclude users from compliance check and remediation"
+                      },
+                      "minItems": 0
+                    }
+                  }
                 }
               },
+              "required": [
+                "value"
+              ],
               "additionalProperties": false,
               "minProperties": 1
             },

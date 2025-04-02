@@ -333,26 +333,36 @@ class TestTlsVersion:
         assert result == expected_result
 
     @patch("config_modules_vmware.framework.auth.contexts.vc_context.VcenterContext")
-    def test_get_skipped_for_versions_not_applicable(self, mock_vc_context):
+    @patch('config_modules_vmware.framework.clients.vcenter.vc_rest_client.VcRestClient')
+    def test_get_for_8_x_vc(self, mock_vc_rest_client, mock_vc_context):
         mock_vc_context.product_version = "8.0.2.00100"
+        mock_vc_rest_client.get_base_url.return_value = "http://localhost"
+        mock_vc_rest_client.get_helper.return_value = {"protocol_versions": [{"version": "tlsv1_2"}]}
+        mock_vc_context.vc_rest_client.return_value = mock_vc_rest_client
+
         result = self.controller.get(mock_vc_context)
-        expected_result = ({}, [consts.SKIPPED])
+        expected_result = ({"global": ["TLSv1.2"]}, [])
         assert result == expected_result
 
     @patch("config_modules_vmware.framework.auth.contexts.vc_context.VcenterContext")
     def test_set_skipped_for_versions_not_applicable(self, mock_vc_context):
         mock_vc_context.product_version = "8.0.2.00100"
         result = self.controller.set(mock_vc_context, self.desired_values_only_global)
-        expected_result = (RemediateStatus.SKIPPED, [consts.SKIPPED])
+        expected_result = (RemediateStatus.SKIPPED, [consts.CONTROL_NOT_AUTOMATED])
         assert result == expected_result
 
     @patch("config_modules_vmware.framework.auth.contexts.vc_context.VcenterContext")
-    def test_check_compliance_for_versions_not_applicable(self, mock_vc_context):
+    @patch('config_modules_vmware.framework.clients.vcenter.vc_rest_client.VcRestClient')
+    def test_check_compliance_for_8_x_vc(self, mock_vc_rest_client, mock_vc_context):
         mock_vc_context.product_version = "8.0.2.00100"
+        mock_vc_rest_client.get_base_url.return_value = "http://localhost"
+        mock_vc_rest_client.get_helper.side_effect = [{"profile": "COMPATIBLE"},
+                                                      {"protocol_versions": [{"version": "tlsv1_2"}]}]
+        mock_vc_context.vc_rest_client.return_value = mock_vc_rest_client
+
         result = self.controller.check_compliance(mock_vc_context, self.desired_values_only_global)
         expected_result = {
-            consts.STATUS: ComplianceStatus.SKIPPED,
-            consts.ERRORS: [consts.CONTROL_NOT_APPLICABLE]
+            consts.STATUS: ComplianceStatus.COMPLIANT
         }
         assert result == expected_result
 
@@ -362,6 +372,8 @@ class TestTlsVersion:
         result = self.controller.remediate(mock_vc_context, self.desired_values_only_global)
         expected_result = {
             consts.STATUS: RemediateStatus.SKIPPED,
-            consts.ERRORS: ["Remediation Skipped as Check compliance is SKIPPED"]
+            consts.ERRORS: [consts.CONTROL_NOT_AUTOMATED],
+            consts.DESIRED: self.desired_values_only_global,
+            consts.CURRENT: {"global": []}
         }
         assert result == expected_result

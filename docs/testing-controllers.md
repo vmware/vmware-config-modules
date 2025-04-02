@@ -553,10 +553,10 @@ For testing with salt,
      - Install the wheel artifact on the target minions:
         ```
         salt-cp --chunked '*' dist/config_modules.whl ~/config_modules.whl
-        salt '*' pip.install ~/config-module.whl
+        salt '*' pip.install ~/config-module.wh[salt]
         ```
   2. Copy or replace the individual file changes to the corresponding config-modules install location in the salt minion (default location is `/opt/saltstack/salt/extras-3.10/config_modules_vmware/..`)
-- Create a desired state file (based on the compliance schema) and a state file to invoke check_compliance or remediate workflows (https://github.com/saltstack/salt-ext-modules-vmware/blob/jpmc_compatibility_control/src/saltext/vmware/states/compliance_control.py#L17).
+- Create a desired state file (based on the compliance schema) and a state file to invoke check_compliance or remediate workflows.
 
    Sample desired state file (_desired_state.jinja_):
    ```

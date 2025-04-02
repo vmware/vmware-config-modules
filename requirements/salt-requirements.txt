@@ -1,0 +1,4 @@
+-r prod-requirements.txt
+salt>=3006
+# Addding this dependency as a temp fix since the CI pipeline doesn't install it for some reason
+looseversion

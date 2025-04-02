@@ -10,6 +10,7 @@ from config_modules_vmware.controllers.base_controller import BaseController
 from config_modules_vmware.framework.auth.contexts.base_context import BaseContext
 from config_modules_vmware.framework.auth.contexts.vc_context import VcenterContext
 from config_modules_vmware.framework.clients.common import consts
+from config_modules_vmware.framework.clients.vcenter.vc_consts import TLS_PROFILE_API
 from config_modules_vmware.framework.logging.logger_adapter import LoggerAdapter
 from config_modules_vmware.framework.models.controller_models.metadata import ControllerMetadata
 from config_modules_vmware.framework.models.output_models.compliance_response import ComplianceStatus
@@ -23,6 +24,7 @@ logger = LoggerAdapter(logging.getLogger(__name__))
 RECONFIGURE_VC_TLS_SCRIPT_PATH = "/usr/lib/vmware-TlsReconfigurator/VcTlsReconfigurator/reconfigureVc"
 SCAN_COMMAND = "scan"
 UPDATE_COMMAND = "update"
+CMD_TIMEOUT = 300
 REGEX_PATTERN = r"\|\s*([^|]+)\s*\|\s*([^|]+)\s*\|\s*([^|]+)\s*\|"
 NOT_RUNNING = "NOT RUNNING"
 SERVICES_TO_BE_IGNORED = ["VC Storage Clients"]
@@ -54,6 +56,55 @@ class TlsVersion(BaseController):
         functional_test_targets=["vcenter"],  # location where functional tests are run.
     )
 
+    @staticmethod
+    def _normalize_tls_version(tls_version: str) -> str:
+        """Converts a TLS version string from the format "tlsv1_0" to "TLSv1.0".
+
+        :param tls_version: The TLS version to normalize.
+        :type tls_version: str
+        :return: The normalized TLS version.
+        :rtype: str
+        """
+        return tls_version.replace("tls", "TLS").replace("_", ".")
+
+    def _get_tls_versions_from_profile(self, tls_profile):
+        if not tls_profile:
+            raise Exception("Empty response for global TLS.")
+
+        tls_versions = []
+        protocol_versions = tls_profile.get("protocol_versions", [])
+        for item in protocol_versions:
+            version = item.get("version")
+            if version:
+                tls_versions.append(self._normalize_tls_version(version))
+        return tls_versions
+
+    def _get_tls_version_using_api(self, context: VcenterContext) -> Dict:
+        """Get TLS versions for the services on vCenter through APIs.
+        For 5.2, the global TLS version is applicable for all services.
+
+        :param context: Product context instance.
+        :type context: VcenterContext
+        :return: A dictionary of services and the TLS versions.
+        :rtype: dict
+        """
+
+        logger.info("Getting TLS versions using API")
+        tls_versions = {}
+        vc_rest_client = context.vc_rest_client()
+        tls_base_url = vc_rest_client.get_base_url()
+
+        # get global TLS profile which is applicable for all services.
+        global_tls_type = vc_rest_client.get_helper(tls_base_url + TLS_PROFILE_API.format("global"))
+        logger.debug(f"Global TLS type: {global_tls_type}")
+        global_tls_type = global_tls_type.get("profile")
+        global_tls_profile = vc_rest_client.get_helper(tls_base_url + TLS_PROFILE_API.format(global_tls_type))
+        logger.debug(f"Global TLS profile: {global_tls_profile}")
+        global_tls_versions = self._get_tls_versions_from_profile(global_tls_profile)
+        global_tls_versions = [self._normalize_tls_version(tls) for tls in global_tls_versions]
+        tls_versions[consts.GLOBAL] = global_tls_versions
+        return tls_versions
+
     def _get_environment_variables(self) -> Dict[str, str]:
         """Helper method to return all environment variables needed."""
         environment = {
@@ -66,8 +117,35 @@ class TlsVersion(BaseController):
         }
         return environment
 
+    def _get_tls_version_using_cmd(self) -> Dict[str, List[str]]:
+        """
+        Gets TLS versions using command line.
+        :param context: Product context instance.
+        :type context: VcenterContext
+        :return: Dictionary of services and its TLS versions.
+        :rtype: Dict[str, list[str]]
+        """
+        command = "{} {}".format(RECONFIGURE_VC_TLS_SCRIPT_PATH, SCAN_COMMAND)
+        _, tls_output_data, _ = utils.run_shell_cmd(
+            command=f"{command}", env=self._get_environment_variables(), timeout=CMD_TIMEOUT
+        )
+        # Currently,the required data is captured in std.error.
+        tls_versions = {}
+        matches = re.findall(REGEX_PATTERN, tls_output_data)
+        matches = matches[1:]
+        for match in matches:
+            service_name = match[0].strip()
+            tls_version = match[2].strip()
+            if tls_version and tls_version != NOT_RUNNING:
+                tls_versions[service_name] = [v.strip() for v in tls_version.split()]
+            else:
+                tls_versions[service_name] = [tls_version]
+        return tls_versions
+
     def get(self, context: VcenterContext) -> Tuple[Dict[str, List[str]], List[str]]:
         """Get TLS versions for the services on vCenter.
+        For 5.2.x, this returns only the global TLS version since it is applicable for all services.
+        For 4.4.x, this returns the individual services TLS versions.
 
         :param context: Product context instance.
         :type context: VcenterContext
@@ -80,25 +158,13 @@ class TlsVersion(BaseController):
         errors = []
         tls_versions = {}
 
-        # Check product version, if product version is >= 8.0.2.x, this control is not applicable.
-        if utils.is_newer_or_same_version(context.product_version, "8.0.2"):
-            errors.append(consts.SKIPPED)
-            return tls_versions, errors
-
         try:
-            command = "{} {}".format(RECONFIGURE_VC_TLS_SCRIPT_PATH, SCAN_COMMAND)
-            _, tls_output_data, _ = utils.run_shell_cmd(command=f"{command}", env=self._get_environment_variables())
-            # Currently,the required data is captured in std.error.
-            matches = re.findall(REGEX_PATTERN, tls_output_data)
-            matches = matches[1:]
-            for match in matches:
-                service_name = match[0].strip()
-                tls_version = match[2].strip()
-                if tls_version and tls_version != NOT_RUNNING:
-                    tls_versions[service_name] = [v.strip() for v in tls_version.split()]
-                else:
-                    tls_versions[service_name] = [tls_version]
+            if utils.is_newer_or_same_version(context.product_version, "8.0.2"):
+                tls_versions = self._get_tls_version_using_api(context)
+            else:
+                tls_versions = self._get_tls_version_using_cmd()
         except Exception as e:
+            logger.error(f"Exception in getting TLS versions: {e}")
             errors.append(str(e))
         return tls_versions, errors
 
@@ -117,38 +183,40 @@ class TlsVersion(BaseController):
         logger.info("Setting TLS versions for all the services.")
         errors = []
 
-        # Check product version, if product version is >= 8.0.2.x, this control is not applicable.
-        if utils.is_newer_or_same_version(context.product_version, "8.0.2"):
-            errors.append(consts.SKIPPED)
-            return RemediateStatus.SKIPPED, errors
-
         try:
-            remediation_commands = []
-            if consts.GLOBAL in desired_values:
-                command = "{} {} -p {} --quiet".format(
-                    RECONFIGURE_VC_TLS_SCRIPT_PATH, UPDATE_COMMAND, " ".join(desired_values[consts.GLOBAL])
-                )
-                remediation_commands.append(command)
-            for service_key, tls_versions in desired_values.items():
-                if service_key == consts.GLOBAL:
-                    continue
-                command = "{} {} -s {} -p {} --quiet".format(
-                    RECONFIGURE_VC_TLS_SCRIPT_PATH,
-                    UPDATE_COMMAND,
-                    service_key,
-                    " ".join(tls_versions),
-                )
-                remediation_commands.append(command)
+            # Check product version, if product version is >= 8.0.2.x, this control is not applicable.
+            if utils.is_newer_or_same_version(context.product_version, "8.0.2"):
+                return RemediateStatus.SKIPPED, [consts.CONTROL_NOT_AUTOMATED]
+            else:
+                # Set TLS using command line
+                remediation_commands = []
+                if consts.GLOBAL in desired_values:
+                    command = "{} {} -p {} --quiet".format(
+                        RECONFIGURE_VC_TLS_SCRIPT_PATH, UPDATE_COMMAND, " ".join(desired_values[consts.GLOBAL])
+                    )
+                    remediation_commands.append(command)
+                for service_key, tls_versions in desired_values.items():
+                    if service_key == consts.GLOBAL:
+                        continue
+                    command = "{} {} -s {} -p {} --quiet".format(
+                        RECONFIGURE_VC_TLS_SCRIPT_PATH,
+                        UPDATE_COMMAND,
+                        service_key,
+                        " ".join(tls_versions),
+                    )
+                    remediation_commands.append(command)
 
-            total_commands = len(remediation_commands)
-            for idx in range(total_commands - 1):
-                remediation_commands[idx] = remediation_commands[idx] + " --no-restart"
+                total_commands = len(remediation_commands)
+                for idx in range(total_commands - 1):
+                    remediation_commands[idx] = remediation_commands[idx] + " --no-restart"
 
-            logger.debug(f"remediation commands {remediation_commands}")
-            for command in remediation_commands:
-                _, tls_output_data, _ = utils.run_shell_cmd(command=f"{command}", env=self._get_environment_variables())
-                logger.debug(f"Captured output post update: {tls_output_data}")
-            status = RemediateStatus.SUCCESS
+                logger.debug(f"remediation commands {remediation_commands}")
+                for command in remediation_commands:
+                    _, tls_output_data, _ = utils.run_shell_cmd(
+                        command=f"{command}", env=self._get_environment_variables(), timeout=CMD_TIMEOUT
+                    )
+                    logger.debug(f"Captured output post update: {tls_output_data}")
+                status = RemediateStatus.SUCCESS
         except Exception as e:
             errors.append(str(e))
             status = RemediateStatus.FAILED

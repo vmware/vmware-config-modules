@@ -1,9 +1,16 @@
 # Copyright 2024 Broadcom. All Rights Reserved.
+import logging
+
 from config_modules_vmware.framework.auth.contexts.base_context import BaseContext
+from config_modules_vmware.framework.auth.ssl.cert_info import CertInfo
+from config_modules_vmware.framework.clients.vcenter.vc_invsvc_mob3_client import VcInvsvcMob3Client
 from config_modules_vmware.framework.clients.vcenter.vc_rest_client import VcRestClient
 from config_modules_vmware.framework.clients.vcenter.vc_vmomi_client import VcVmomiClient
 from config_modules_vmware.framework.clients.vcenter.vc_vmomi_sso_client import VcVmomiSSOClient
 from config_modules_vmware.framework.clients.vcenter.vc_vsan_vmomi_client import VcVsanVmomiClient
+from config_modules_vmware.framework.logging.logger_adapter import LoggerAdapter
+
+logger = LoggerAdapter(logging.getLogger(__name__))
 
 
 class VcenterContext(BaseContext):
@@ -22,6 +29,7 @@ class VcenterContext(BaseContext):
         saml_token=None,
         verify_ssl=True,
         product_version=None,
+        cert_info=None,
     ):
         """
         Initialize context for Vcenter config functionalities to work on.
@@ -46,10 +54,14 @@ class VcenterContext(BaseContext):
         self._ssl_thumbprint = ssl_thumbprint
         self._saml_token = saml_token
         self._verify_ssl = verify_ssl
+        if isinstance(cert_info, CertInfo):
+            cert_info = [cert_info]
+        self._cert_info = cert_info
         self._vc_vmomi_client = None
         self._vc_rest_client = None
         self._vc_vmomi_sso_client = None
         self._vc_vsan_vmomi_client = None
+        self._vc_invsvc_mob3_client = None
 
     def __enter__(self):
         """
@@ -64,7 +76,7 @@ class VcenterContext(BaseContext):
         """
         if self._vc_vmomi_client:
             self._vc_vmomi_client.disconnect()
-        if self._vc_rest_client:
+        if self._vc_rest_client and isinstance(self._vc_rest_client, VcRestClient):
             self._vc_rest_client.delete_vmware_api_session_id()
             del self._vc_rest_client
             self._vc_rest_client = None
@@ -72,6 +84,10 @@ class VcenterContext(BaseContext):
             self._vc_vmomi_sso_client.disconnect()
         if self._vc_vsan_vmomi_client:
             self._vc_vsan_vmomi_client.disconnect()
+        if self._vc_invsvc_mob3_client and isinstance(self._vc_invsvc_mob3_client, VcInvsvcMob3Client):
+            self._vc_invsvc_mob3_client.disconnect()
+            del self._vc_invsvc_mob3_client
+            self._vc_invsvc_mob3_client = None
 
     def vc_vmomi_client(self):
         """
@@ -95,9 +111,21 @@ class VcenterContext(BaseContext):
         Initializes if one does not exist.
         """
         if not self._vc_rest_client:
-            self._vc_rest_client = VcRestClient(
-                self._hostname, self._username, self._password, self._ssl_thumbprint, self._verify_ssl
-            )
+            try:
+                self._vc_rest_client = VcRestClient(
+                    self._hostname,
+                    self._username,
+                    self._password,
+                    ssl_thumbprint=self._ssl_thumbprint,
+                    verify_ssl=self._verify_ssl,
+                    cert_info=self._cert_info,
+                )
+            except Exception as e:
+                logger.error(f"VcRestClient initialization failed: [{str(e)}]")
+                self._vc_rest_client = e
+                raise e
+        elif isinstance(self._vc_rest_client, Exception):
+            raise self._vc_rest_client
         return self._vc_rest_client
 
     def vc_vmomi_sso_client(self):
@@ -145,3 +173,19 @@ class VcenterContext(BaseContext):
                 version_arr[2] if len(version_arr) > 2 else 0,
             )
         return self._product_version
+
+    def vc_invsvc_mob3_client(self):
+        """
+        Returns the instance of a VcInvsvcMob3Client
+        Initializes if one does not exist.
+        """
+        if not self._vc_invsvc_mob3_client:
+            self._vc_invsvc_mob3_client = VcInvsvcMob3Client(
+                self._hostname,
+                self._username,
+                self._password,
+                ssl_thumbprint=self._ssl_thumbprint,
+                verify_ssl=self._verify_ssl,
+                cert_info=self._cert_info,
+            )
+        return self._vc_invsvc_mob3_client
