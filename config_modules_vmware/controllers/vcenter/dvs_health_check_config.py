@@ -163,7 +163,7 @@ class DVSHealthCheckConfig(BaseController):
         :type vc_vmomi_client: VcVmomiClient
         :param desired_values: Desired values for DVS health check config.
         :type desired_values: Dict
-        :return errors if any:
+        :return errors in case of partial set
         :rtype: List
         """
         errors = []
