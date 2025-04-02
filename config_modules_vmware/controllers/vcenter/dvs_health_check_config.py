@@ -122,8 +122,14 @@ class DVSHealthCheckConfig(BaseController):
         """
         vc_vmomi_client = context.vc_vmomi_client()
         status = RemediateStatus.SUCCESS
-        errors = self.__set_health_check_config_for_all_dv_switches(vc_vmomi_client, desired_values)
-        if errors:
+        errors = []
+        try:
+            errors = self.__set_health_check_config_for_all_dv_switches(vc_vmomi_client, desired_values)
+            if errors:
+                status = RemediateStatus.FAILED
+        except Exception as e:
+            logger.exception(f"An error occurred: {e}")
+            errors.append(str(e))
             status = RemediateStatus.FAILED
         return status, errors
 
@@ -164,13 +170,7 @@ class DVSHealthCheckConfig(BaseController):
         desired_global_health_check_value = desired_values.get(GLOBAL, {}).get(DESIRED_KEY)
         overrides = desired_values.get(OVERRIDES, [])
         ignore_disconnected_hosts = desired_values.get(IGNORE_DISCONNECTED_HOSTS, False)
-
-        try:
-            all_dv_switch_refs = vc_vmomi_client.get_objects_by_vimtype(vim.DistributedVirtualSwitch)
-        except Exception as e:
-            logger.exception(f"An error occurred: {e}")
-            errors.append(str(e))
-            return errors
+        all_dv_switch_refs = vc_vmomi_client.get_objects_by_vimtype(vim.DistributedVirtualSwitch)
 
         for dvs_ref in all_dv_switch_refs:
             # Check if there are overrides for the current DVS

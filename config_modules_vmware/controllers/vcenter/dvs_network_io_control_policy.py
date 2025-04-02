@@ -209,6 +209,7 @@ class DVSNetworkIOControlPolicy(BaseController):
                 # Check if network offload is enabled, if yes, skip remediation
                 if (
                     hasattr(dvs_ref.config, "networkOffloadSpecId")
+                    and dvs_ref.config.networkOffloadSpecId is not None
                     and dvs_ref.config.networkOffloadSpecId != OFFLOAD_NONE
                 ):
                     offload = dvs_ref.config.networkOffloadSpecId

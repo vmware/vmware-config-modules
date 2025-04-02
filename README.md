@@ -27,7 +27,6 @@ Config-modules is a library that can be utilized by services written in python t
 | 9. [API Service Documentation](docs/api-service.md)                                         |
 | 10. [Building and Running in Docker](docs/docker-instructions.md)                           |
 | 11. [Salt Module Documentation](docs/salt-modules.md)                                       |
-| 12. [Sandbox and Official build instructions](support/gobuild.md)                                       |
 
 ## Directory Structure
 
