@@ -1695,6 +1695,35 @@
                           "migrate_encryption_policy"
                         ]
                       }
+                    },
+                    "exclude_vms": {
+                      "type": "object",
+                      "properties": {
+                        "vm_type": {
+                          "type": "object",
+                          "properties": {
+                            "vm_disconnected": {
+                              "type": "boolean",
+                              "description": "exclude VMs not in connected state",
+                              "default": false
+                            },
+                            "vm_fully_encrypted": {
+                              "type": "boolean",
+                              "description": "exclude VMs that are fully encrypted",
+                              "default": false
+                            }
+                          }
+                        },
+                        "vm_name_match": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "description": "exclude VMs with the name match the name or pattern",
+                            "default": []
+                          }
+                        }
+                      },
+                      "additionalProperties": false
                     }
                   },
                   "minProperties": 1,
