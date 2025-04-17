@@ -1,5 +1,6 @@
 # Copyright 2024 Broadcom. All Rights Reserved.
 import logging
+import re
 from typing import Any
 from typing import Dict
 from typing import List
@@ -155,6 +156,78 @@ class VmMigrateEncryptionPolicy(BaseController):
         """
         pass  # pylint: disable=unnecessary-pass
 
+    def _vm_name_check(self, vm_name: str, exclude_vm_names: List) -> bool:
+        """
+        Check if a given vm name matches any name/pattern in exclude list.
+
+        :param vm_name: vm name.
+        :type vm_name: str
+        :param exclude_vm_names: a list of vm names/patterns to compare.
+        :type exclude_vm_names: List
+        :return: True if vm_name matches any name or pattern in exclude list
+        :rtype: bool
+        """
+        for exclude_vm_name in exclude_vm_names:
+            if re.match(exclude_vm_name, vm_name, re.IGNORECASE):
+                logger.debug(f"VM name: {vm_name} -match-: {exclude_vm_name}")
+                return True
+        return False
+
+    def _filter_vm_configs(self, all_vm_migrate_encryption_configs: List, exclude_vms: Dict) -> List:
+        """
+        Remove vm configs in vm exclude list.
+
+        :param all_vm_migrate_encryption_configs: all vm configs.
+        :type all_vm_migrate_encryption_configs: List
+        :param exclude_vms: user input VM exclude patterns.
+        :type exclude_vms: Dict
+        :return: a list of configs to compare with desired input.
+        :rtype: List
+        """
+        all_vm_configs = []
+        excluded_vms = {}
+        vm_type = exclude_vms.get("vm_type", {})
+        exclude_vm_in_bad_state = vm_type.get("vm_disconnected", False)
+        exclude_vm_fully_encrypted = vm_type.get("vm_fully_encrypted", False)
+        exclude_vm_names = exclude_vms.get("vm_name_match", [])
+        for vm_migrate_encryption_config in all_vm_migrate_encryption_configs:
+            vm_name = vm_migrate_encryption_config["vm_name"]
+            vm_state = vm_migrate_encryption_config["vm_state"]
+            migrate_policy = vm_migrate_encryption_config["migrate_encryption_policy"]
+            # check if vm in bad state
+            if vm_migrate_encryption_config["vm_state"] != "connected" and exclude_vm_in_bad_state:
+                logger.debug(
+                    f"Exclude this VM -  name: {vm_name}, state: {vm_state}, policy: {migrate_policy} - bad state"
+                )
+                excluded_vms.setdefault("disconnected", []).append(vm_name)
+                continue
+            # check if vm is fully encrypted
+            if vm_migrate_encryption_config["vm_encrypted"] and exclude_vm_fully_encrypted:
+                logger.debug(
+                    f"Exclude this VM -  name: {vm_name}, state: {vm_state}, policy: {migrate_policy} - encrypted"
+                )
+                excluded_vms.setdefault("encrypted", []).append(vm_name)
+                continue
+            # check if vm name matches the name in exclude list
+            if self._vm_name_check(vm_name, exclude_vm_names):
+                logger.debug(
+                    f"Exclude this VM -  name: {vm_name}, state: {vm_state}, policy: {migrate_policy} - name match"
+                )
+                excluded_vms.setdefault("name_match", []).append(vm_name)
+                continue
+            vm_config = {
+                "vm_name": vm_name,
+                "path": vm_migrate_encryption_config["path"],
+                "migrate_encryption_policy": migrate_policy,
+            }
+            all_vm_configs.append(vm_config)
+
+        logger.info(f"Excluded disconnected VMs: {','.join(excluded_vms.get('disconnected', []))}")
+        logger.info(f"Excluded fully encrypted VMs: {','.join(excluded_vms.get('encrypted', []))}")
+        logger.info(f"Excluded name match VMs: {','.join(excluded_vms.get('name_match', []))}")
+        logger.debug(f"All VM configs: {all_vm_configs}")
+        return all_vm_configs
+
     def __get_all_vm_migrate_encryption_policy(self, vc_vmomi_client: VcVmomiClient) -> List[Dict]:
         """
         Get all VM migrate Encryption policies.
@@ -168,10 +241,19 @@ class VmMigrateEncryptionPolicy(BaseController):
         all_vm_refs = vc_vmomi_client.get_objects_by_vimtype(vim.VirtualMachine)
 
         for vm_ref in all_vm_refs:
+            logger.debug(
+                f"VM name: {vm_ref.name}, conn state: {vm_ref.runtime.connectionState}, power state: {vm_ref.runtime.powerState}"
+            )
             vm_migrate_encryption_config = {
                 "vm_name": vm_ref.name,
                 "path": vc_vmomi_client.get_vm_path_in_datacenter(vm_ref),
-                "migrate_encryption_policy": vm_ref.config.migrateEncryption,
+                "migrate_encryption_policy": vm_ref.config.migrateEncryption
+                if vm_ref.config and hasattr(vm_ref.config, "migrateEncryption")
+                else "None",
+                "vm_state": vm_ref.runtime.connectionState,
+                "vm_encrypted": True
+                if vm_ref.config and hasattr(vm_ref.config, "keyId") and vm_ref.config.keyId is not None
+                else False,
             }
             all_vm_migrate_encryption_configs.append(vm_migrate_encryption_config)
         return all_vm_migrate_encryption_configs
@@ -225,8 +307,21 @@ class VmMigrateEncryptionPolicy(BaseController):
             errors.append(f"Resource pool for VM: {vm_ref.name} not found")
         return resource_pool, errors
 
+    def _is_in_non_compiliant_list(self, vm_name: str, non_compliant_configs: List) -> bool:
+        """
+        Check if a given vm name is in non compliant vm list.
+
+        :param vm_name: vm name.
+        :type vm_name: str
+        :param non_compliant_configs: non compliant vm config list.
+        :type non_compliant_configs: List
+        :return: True if vm_name matches any item in non compliant config list
+        :rtype: bool
+        """
+        return any(item.get("vm_name") == vm_name for item in non_compliant_configs)
+
     def __set_vm_migrate_encryption_policy_for_all_non_compliant_vms(
-        self, vc_vmomi_client: VcVmomiClient, desired_values: Dict
+        self, vc_vmomi_client: VcVmomiClient, desired_values: Dict, non_compliant_configs: List
     ) -> Tuple[List[dict], List[dict], List[str]]:
         """
         Set VM migrate Encryption policies for all non-compliant VMs.
@@ -269,8 +364,14 @@ class VmMigrateEncryptionPolicy(BaseController):
         remediated_desired = []
 
         for vm_ref in all_vm_refs:
+            if not self._is_in_non_compiliant_list(vm_ref.name, non_compliant_configs):
+                continue
             vm_path = vc_vmomi_client.get_vm_path_in_datacenter(vm_ref)
-            current_vm_migrate_encryption_policy = vm_ref.config.migrateEncryption
+            current_vm_migrate_encryption_policy = (
+                vm_ref.config.migrateEncryption
+                if vm_ref.config and hasattr(vm_ref.config, "migrateEncryption")
+                else "None"
+            )
             override_vm_migrate_encryption_policy, exclude_flag = next(
                 (
                     (override.get(DESIRED_KEY), override.get(EXCLUDE_THIS_VM))
@@ -302,7 +403,7 @@ class VmMigrateEncryptionPolicy(BaseController):
                     config_spec = vim.vm.ConfigSpec()
                     config_spec.migrateEncryption = desired_vm_migrate_policy
                     task = vm_ref.ReconfigVM_Task(config_spec)
-                    vc_vmomi_client.wait_for_task(task=task)
+                    vc_vmomi_client.wait_for_task(task=task, timeout=120)
 
                     if template:
                         # for VM template, convert it back to template after remediation
@@ -394,6 +495,11 @@ class VmMigrateEncryptionPolicy(BaseController):
         if errors:
             return {consts.STATUS: ComplianceStatus.FAILED, consts.ERRORS: errors}
 
+        # check if need to exclude any VMs.
+        exclude_vms = desired_values.get("exclude_vms", {})
+        logger.debug(f"User input VM patterns to be excluded from compliance check: {exclude_vms}")
+        all_vm_migrate_encryption_configs = self._filter_vm_configs(all_vm_migrate_encryption_configs, exclude_vms)
+
         non_compliant_configs, desired_configs = self.__get_non_compliant_configs(
             all_vm_migrate_encryption_configs, desired_values
         )
@@ -450,9 +556,10 @@ class VmMigrateEncryptionPolicy(BaseController):
             errors = result[consts.ERRORS]
             return {consts.STATUS: RemediateStatus.FAILED, consts.ERRORS: errors}
 
+        non_compliant_configs = result.get(consts.CURRENT, [])
         vc_vmomi_client = context.vc_vmomi_client()
         remediated, remediated_desired, errors = self.__set_vm_migrate_encryption_policy_for_all_non_compliant_vms(
-            vc_vmomi_client, desired_values
+            vc_vmomi_client, desired_values, non_compliant_configs
         )
 
         if not errors:
