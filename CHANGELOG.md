@@ -1,4 +1,13 @@
 # CURRENTLY-IN-DEVELOPMENT
+# `v0.16.0.1`
+### Controller enhancements
+- VCSA Controllers
+    - 1234 - Encryption must be enabled for vMotion on the virtual machine:
+        - Added flag to exclude VMs in disconnected states (orphaned VM, host disconnected VM, etc.).
+        - Added name match to exclude certain system generated VMs on VCF5.2 that the encryption policy could not be reconfigured.
+        - Added code to handle the VMs with None encryption policy attribute.
+        - Added flag to exclude fully encrypted VMs from compliance check and remediation.
+        - Set timeout value to 2 minutes for pyVmomi waiting task.
 # `v0.16.0.0`
 ### Framework enhancements
 - Removed salt extension as an individual dependent module
