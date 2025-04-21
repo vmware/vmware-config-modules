@@ -446,7 +446,6 @@ class TestVmMigrateEncryptionPolicy:
             consts.NEW: desired_configs,
         }
         # Mark VM as template
-        #datacenter = vim.Datacenter("group-d1")
         datacenter = MagicMock(spec=vim.Datacenter)
         datacenter.name = "group-d1"
         datacenter.parent = None
