@@ -26,8 +26,35 @@ class TestSSOTrustedAdminsAuthorizedMembersConfig:
                 "name": "devops",
                 "domain": "vsphere.local",
                 "member_type": "GROUP"
+            },
+            {
+                "name": "to_be_filtered",
+                "domain": "vsphere.local",
+                "member_type": "GROUP"
             }
         ]
+        self.compliant_desired_spec = {
+            "members": [
+                {
+                    "name": "user-1",
+                    "domain": "vmware.com",
+                    "member_type": "USER"
+                },
+                {
+                    "name": "user-2",
+                    "domain": "vmware.com",
+                    "member_type": "USER"
+                },
+                {
+                    "name": "devops",
+                    "domain": "vsphere.local",
+                    "member_type": "GROUP"
+                }
+            ],
+            "exclude_user_patterns": [
+                "to_be_filtered"
+            ]
+        }
         self.non_compliant_value = [
             {
                 "domain": "hellfire.net",
@@ -126,7 +153,7 @@ class TestSSOTrustedAdminsAuthorizedMembersConfig:
         mock_vc_vmomi_sso_client.find_groups_in_group.return_value = self.compliant_group_mock
         mock_vc_context.vc_vmomi_sso_client.return_value = mock_vc_vmomi_sso_client
 
-        result = self.controller.check_compliance(mock_vc_context, self.compliant_value)
+        result = self.controller.check_compliance(mock_vc_context, self.compliant_desired_spec)
         assert result == expected_result
 
     @patch("config_modules_vmware.framework.auth.contexts.vc_context.VcenterContext")
@@ -135,7 +162,7 @@ class TestSSOTrustedAdminsAuthorizedMembersConfig:
         expected_result = {
             consts.STATUS: ComplianceStatus.NON_COMPLIANT,
             consts.CURRENT: self.non_compliant_value,
-            consts.DESIRED: self.compliant_value,
+            consts.DESIRED: self.compliant_desired_spec.get("members"),
         }
 
         mock_vc_vmomi_sso_client.get_system_domain.return_value = self.system_domain
@@ -145,7 +172,7 @@ class TestSSOTrustedAdminsAuthorizedMembersConfig:
         mock_vc_vmomi_sso_client.find_groups_in_group.return_value = self.non_compliant_group_mock
         mock_vc_context.vc_vmomi_sso_client.return_value = mock_vc_vmomi_sso_client
 
-        result = self.controller.check_compliance(mock_vc_context, self.compliant_value)
+        result = self.controller.check_compliance(mock_vc_context, self.compliant_desired_spec)
         assert result == expected_result
 
     @patch("config_modules_vmware.framework.auth.contexts.vc_context.VcenterContext")
@@ -157,7 +184,7 @@ class TestSSOTrustedAdminsAuthorizedMembersConfig:
         mock_vc_vmomi_sso_client.get_system_domain.side_effect = expected_error
         mock_vc_context.vc_vmomi_sso_client.return_value = mock_vc_vmomi_sso_client
 
-        result = self.controller.check_compliance(mock_vc_context, self.compliant_value)
+        result = self.controller.check_compliance(mock_vc_context, self.compliant_desired_spec)
         assert result == expected_result
 
     @patch("config_modules_vmware.framework.auth.contexts.vc_context.VcenterContext")
@@ -172,7 +199,7 @@ class TestSSOTrustedAdminsAuthorizedMembersConfig:
         mock_vc_vmomi_sso_client.find_groups_in_group.return_value = self.compliant_group_mock
         mock_vc_context.vc_vmomi_sso_client.return_value = mock_vc_vmomi_sso_client
 
-        result = self.controller.remediate(mock_vc_context, self.compliant_value)
+        result = self.controller.remediate(mock_vc_context, self.compliant_desired_spec)
         assert result == expected_result
 
     @patch("config_modules_vmware.framework.auth.contexts.vc_context.VcenterContext")
@@ -181,7 +208,7 @@ class TestSSOTrustedAdminsAuthorizedMembersConfig:
         expected_result = {
             consts.STATUS: RemediateStatus.SKIPPED,
             consts.ERRORS: [consts.REMEDIATION_SKIPPED_MESSAGE],
-            consts.DESIRED: self.compliant_value,
+            consts.DESIRED: self.compliant_desired_spec.get("members"),
             consts.CURRENT: self.non_compliant_value
         }
 
@@ -191,5 +218,5 @@ class TestSSOTrustedAdminsAuthorizedMembersConfig:
         mock_vc_vmomi_sso_client.find_groups_in_group.return_value = self.non_compliant_group_mock
         mock_vc_context.vc_vmomi_sso_client.return_value = mock_vc_vmomi_sso_client
 
-        result = self.controller.remediate(mock_vc_context, self.compliant_value)
+        result = self.controller.remediate(mock_vc_context, self.compliant_desired_spec)
         assert result == expected_result

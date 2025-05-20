@@ -1,6 +1,7 @@
 from mock import MagicMock
 from mock import patch
 from pyVmomi import vim  # pylint: disable=E0401
+from pyVmomi import vmodl  # pylint: disable=E0401
 
 from config_modules_vmware.controllers.vcenter.dv_pg_mac_address_change_policy import DESIRED_KEY
 from config_modules_vmware.controllers.vcenter.dv_pg_mac_address_change_policy import DVPortGroupMacAddressChangePolicy
@@ -29,6 +30,12 @@ class TestDVPortGroupMacAddressChangePolicy:
             "__GLOBAL__": {
                 "allow_mac_address_change": False
             }
+        }
+        self.compliant_value2 = {
+            "__GLOBAL__": {
+                "allow_forged_transmits": False
+            },
+            "ignore_disconnected_hosts": True
         }
         self.compliant_value_with_override = {
             "__GLOBAL__": {
@@ -73,7 +80,12 @@ class TestDVPortGroupMacAddressChangePolicy:
             value=pg_spec.get("allow_mac_address_change")
         )
         dv_pg_mock.config.distributedVirtualSwitch.name = pg_spec.get("switch_name")
-        setattr(dv_pg_mock, "ReconfigureDVPortgroup_Task", MagicMock(return_value=True))
+        task = MagicMock()
+        task.info.error = MagicMock(spec=vim.fault.DvsOperationBulkFault)
+        hostfault = MagicMock()
+        hostfault.fault = MagicMock(spec=vmodl.fault.HostNotConnected)
+        task.info.error.hostFault = [hostfault]
+        setattr(dv_pg_mock, "ReconfigureDVPortgroup_Task", MagicMock(return_value=task))
         return dv_pg_mock
 
     @patch("config_modules_vmware.framework.auth.contexts.vc_context.VcenterContext")
@@ -131,7 +143,20 @@ class TestDVPortGroupMacAddressChangePolicy:
         result, errors = self.controller.set(mock_vc_context, self.compliant_value)
 
         assert result == RemediateStatus.FAILED
-        assert errors == [str(expected_error)]
+        assert errors == [str(expected_error), str(expected_error)]
+
+    @patch("config_modules_vmware.framework.auth.contexts.vc_context.VcenterContext")
+    @patch("config_modules_vmware.framework.clients.vcenter.vc_vmomi_client.VcVmomiClient")
+    def test_set_success_ignore_disconnected_hosts(self, mock_vc_vmomi_client, mock_vc_context):
+        expected_error = Exception("Failed to set MAC address change policy, disconnected hosts")
+        mock_vc_vmomi_client.get_objects_by_vimtype.return_value = self.non_compliant_dv_pg_pyvmomi_mocks
+        mock_vc_vmomi_client.wait_for_task.side_effect = expected_error
+        mock_vc_context.vc_vmomi_client.return_value = mock_vc_vmomi_client
+
+        result, errors = self.controller.set(mock_vc_context, self.compliant_value2)
+
+        assert result == RemediateStatus.SUCCESS
+        assert errors == []
 
     @patch("config_modules_vmware.framework.auth.contexts.vc_context.VcenterContext")
     @patch("config_modules_vmware.framework.clients.vcenter.vc_vmomi_client.VcVmomiClient")

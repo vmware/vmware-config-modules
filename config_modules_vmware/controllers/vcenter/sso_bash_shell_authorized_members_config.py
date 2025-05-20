@@ -6,13 +6,16 @@ from typing import List
 from typing import Tuple
 
 from config_modules_vmware.controllers.base_controller import BaseController
+from config_modules_vmware.controllers.vcenter.utils.sso_member_utils import filter_member_configs
 from config_modules_vmware.framework.auth.contexts.base_context import BaseContext
 from config_modules_vmware.framework.auth.contexts.vc_context import VcenterContext
 from config_modules_vmware.framework.clients.common import consts
 from config_modules_vmware.framework.clients.vcenter.vc_vmomi_sso_client import VcVmomiSSOClient
 from config_modules_vmware.framework.logging.logger_adapter import LoggerAdapter
 from config_modules_vmware.framework.models.controller_models.metadata import ControllerMetadata
+from config_modules_vmware.framework.models.output_models.compliance_response import ComplianceStatus
 from config_modules_vmware.framework.models.output_models.remediate_response import RemediateStatus
+from config_modules_vmware.framework.utils.comparator import Comparator
 
 logger = LoggerAdapter(logging.getLogger(__name__))
 
@@ -163,3 +166,40 @@ class SSOBashShellAuthorizedMembersConfig(BaseController):
         errors = [consts.REMEDIATION_SKIPPED_MESSAGE]
         status = RemediateStatus.SKIPPED
         return status, errors
+
+    def check_compliance(self, context: VcenterContext, desired_values: Dict) -> Dict:
+        """
+        Check compliance of authorized members.
+
+        :param context: Product context instance.
+        :type context: VcenterContext
+        :param desired_values: Desired values for authorized members.
+        :type desired_values: Dict
+        :return: Dict of status and current/desired value(for non_compliant) or errors (for failure).
+        :rtype: Dict
+        """
+        logger.info("Checking compliance for sso bash shell authorized member config")
+        all_member_configs, errors = self.get(context=context)
+
+        if errors:
+            return {consts.STATUS: ComplianceStatus.FAILED, consts.ERRORS: errors}
+
+        # check if need to exclude any members.
+        exclude_user_patterns = desired_values.get("exclude_user_patterns", [])
+        if exclude_user_patterns:
+            logger.debug(f"User input name patterns to be excluded from compliance check: {exclude_user_patterns}")
+            all_member_configs = filter_member_configs(all_member_configs, exclude_user_patterns)
+
+        non_compliant_configs, desired_configs = Comparator.get_non_compliant_configs(
+            all_member_configs, desired_values.get("members", [])
+        )
+
+        if non_compliant_configs:
+            result = {
+                consts.STATUS: ComplianceStatus.NON_COMPLIANT,
+                consts.CURRENT: non_compliant_configs,
+                consts.DESIRED: desired_configs,
+            }
+        else:
+            result = {consts.STATUS: ComplianceStatus.COMPLIANT}
+        return result

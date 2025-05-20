@@ -8,6 +8,7 @@ from typing import Tuple
 from pyVmomi import vim  # pylint: disable=E0401
 
 from config_modules_vmware.controllers.base_controller import BaseController
+from config_modules_vmware.controllers.vcenter.utils.vc_dvs_utils import is_host_disconnect_exception
 from config_modules_vmware.controllers.vcenter.utils.vc_port_group_utils import (
     get_all_non_uplink_non_nsx_port_group_and_security_configs,
 )
@@ -33,6 +34,7 @@ SWITCH_NAME = "switch_name"
 PORT_GROUP_NAME = "port_group_name"
 GLOBAL = "__GLOBAL__"
 OVERRIDES = "__OVERRIDES__"
+IGNORE_DISCONNECTED_HOSTS = "ignore_disconnected_hosts"
 
 
 class DVPortGroupMacAddressChangePolicy(BaseController):
@@ -119,7 +121,8 @@ class DVPortGroupMacAddressChangePolicy(BaseController):
                   "port_group_name": "dv_pg_PortGroup1",
                   "allow_mac_address_change": true
                 }
-              ]
+              ],
+              "ignore_disconnected_hosts": true
             }
 
         :param context: Product context instance.
@@ -133,7 +136,11 @@ class DVPortGroupMacAddressChangePolicy(BaseController):
         errors = []
         status = RemediateStatus.SUCCESS
         try:
-            self.__set_mac_address_change_policy_for_non_compliant_dv_port_groups(vc_vmomi_client, desired_values)
+            errors = self.__set_mac_address_change_policy_for_non_compliant_dv_port_groups(
+                vc_vmomi_client, desired_values
+            )
+            if errors:
+                status = RemediateStatus.FAILED
         except Exception as e:
             logger.exception(f"An error occurred: {e}")
             errors.append(str(e))
@@ -170,7 +177,7 @@ class DVPortGroupMacAddressChangePolicy(BaseController):
 
     def __set_mac_address_change_policy_for_non_compliant_dv_port_groups(
         self, vc_vmomi_client: VcVmomiClient, desired_values: Dict
-    ) -> None:
+    ) -> List:
         """
         Set MAC address change policy for all non-compliant DV port groups.
 
@@ -178,11 +185,13 @@ class DVPortGroupMacAddressChangePolicy(BaseController):
         :type vc_vmomi_client: VcVmomiClient
         :param desired_values: Desired values for MAC address change policy.
         :type desired_values: Dict
-        :return:
-        :rtype: None
+        :return errors in case of partial set
+        :rtype: List
         """
+        errors = []
         desired_global_mac_address_change_value = desired_values.get(GLOBAL, {}).get(DESIRED_KEY)
         overrides = desired_values.get(OVERRIDES, [])
+        ignore_disconnected_hosts = desired_values.get(IGNORE_DISCONNECTED_HOSTS, False)
         all_dv_port_groups = get_all_non_uplink_non_nsx_port_group_and_security_configs(
             vc_vmomi_client, PortGroupSecurityConfigEnum.MAC_CHANGES
         )
@@ -218,8 +227,18 @@ class DVPortGroupMacAddressChangePolicy(BaseController):
                     f"Setting MAC address change policy {desired_mac_address_change_policy}"
                     f" on port group {dv_pg.name}"
                 )
-                task = dv_pg.ReconfigureDVPortgroup_Task(spec=config_spec)
-                vc_vmomi_client.wait_for_task(task=task)
+                try:
+                    task = dv_pg.ReconfigureDVPortgroup_Task(spec=config_spec)
+                    vc_vmomi_client.wait_for_task(task=task)
+                except Exception as e:
+                    if hasattr(task.info, "error") and isinstance(task.info.error, vim.fault.DvsOperationBulkFault):
+                        logger.debug(f"DVS TASK ERROR: - {task.info.error}")
+                        if is_host_disconnect_exception(task.info.error) and ignore_disconnected_hosts:
+                            logger.info(f"Ignore disconnected hosts caused exception - {e}")
+                            continue
+                    logger.exception(f"An error occurred: {e}")
+                    errors.append(str(e))
+        return errors
 
     def check_compliance(self, context: VcenterContext, desired_values: Dict) -> Dict:
         """
@@ -270,7 +289,8 @@ class DVPortGroupMacAddressChangePolicy(BaseController):
                   "port_group_name": "dv_pg_PortGroup1",
                   "allow_mac_address_change": true
                 }
-              ]
+              ],
+              "ignore_disconnected_hosts": true
             }
 
         :param context: Product context instance.

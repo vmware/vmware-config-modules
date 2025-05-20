@@ -8,6 +8,7 @@ from typing import Tuple
 from pyVmomi import vim  # pylint: disable=E0401
 
 from config_modules_vmware.controllers.base_controller import BaseController
+from config_modules_vmware.controllers.vcenter.utils.vc_dvs_utils import is_host_disconnect_exception
 from config_modules_vmware.controllers.vcenter.utils.vc_port_group_utils import (
     get_all_non_uplink_non_nsx_port_group_and_security_configs,
 )
@@ -33,6 +34,7 @@ PORT_GROUP_NAME = "port_group_name"
 NSX_BACKING_TYPE = "nsx"
 GLOBAL = "__GLOBAL__"
 OVERRIDES = "__OVERRIDES__"
+IGNORE_DISCONNECTED_HOSTS = "ignore_disconnected_hosts"
 
 
 class DVPortGroupForgedTransmitsPolicy(BaseController):
@@ -118,7 +120,8 @@ class DVPortGroupForgedTransmitsPolicy(BaseController):
                   "port_group_name": "dv_pg_PortGroup1",
                   "allow_forged_transmits": true
                 }
-              ]
+              ],
+              "ignore_disconnected_hosts": true
             }
 
         :param context: Product context instance.
@@ -132,7 +135,9 @@ class DVPortGroupForgedTransmitsPolicy(BaseController):
         errors = []
         status = RemediateStatus.SUCCESS
         try:
-            self.__set_forged_transmit_policy_for_non_compliant_dv_port_groups(vc_vmomi_client, desired_values)
+            errors = self.__set_forged_transmit_policy_for_non_compliant_dv_port_groups(vc_vmomi_client, desired_values)
+            if errors:
+                status = RemediateStatus.FAILED
         except Exception as e:
             logger.exception(f"An error occurred: {e}")
             errors.append(str(e))
@@ -167,18 +172,20 @@ class DVPortGroupForgedTransmitsPolicy(BaseController):
 
     def __set_forged_transmit_policy_for_non_compliant_dv_port_groups(
         self, vc_vmomi_client: VcVmomiClient, desired_values: Dict
-    ) -> None:
+    ) -> List:
         """Set Forged Transmits policy for non-compliant DV port groups, skipping all uplink port groups.
 
         :param vc_vmomi_client: VC vmomi client instance.
         :type vc_vmomi_client: VcVmomiClient
         :param desired_values: Desired values for Forged Transmits policy.
         :type desired_values: Dict
-        :return:
-        :rtype: None
+        :return errors in case of partial set
+        :rtype: List
         """
+        errors = []
         desired_global_forged_transmit_policy_value = desired_values.get(GLOBAL, {}).get(DESIRED_KEY)
         overrides = desired_values.get(OVERRIDES, [])
+        ignore_disconnected_hosts = desired_values.get(IGNORE_DISCONNECTED_HOSTS, False)
         non_uplink_non_nsx_dv_pgs = get_all_non_uplink_non_nsx_port_group_and_security_configs(
             vc_vmomi_client, PortGroupSecurityConfigEnum.FORGED_TRANSMITS
         )
@@ -213,8 +220,18 @@ class DVPortGroupForgedTransmitsPolicy(BaseController):
                 logger.info(
                     f"Setting Forged transmits policy {desired_forged_transmit_policy}" f" on port group {dv_pg.name}"
                 )
-                task = dv_pg.ReconfigureDVPortgroup_Task(spec=config_spec)
-                vc_vmomi_client.wait_for_task(task=task)
+                try:
+                    task = dv_pg.ReconfigureDVPortgroup_Task(spec=config_spec)
+                    vc_vmomi_client.wait_for_task(task=task)
+                except Exception as e:
+                    if hasattr(task.info, "error") and isinstance(task.info.error, vim.fault.DvsOperationBulkFault):
+                        logger.debug(f"DVS TASK ERROR: - {task.info.error}")
+                        if is_host_disconnect_exception(task.info.error) and ignore_disconnected_hosts:
+                            logger.info(f"Ignore disconnected hosts caused exception - {e}")
+                            continue
+                    logger.exception(f"An error occurred: {e}")
+                    errors.append(str(e))
+        return errors
 
     def check_compliance(self, context: VcenterContext, desired_values: Dict) -> Dict:
         """Check compliance of all non-uplink dv port groups Forged Transmits policy.
@@ -263,7 +280,8 @@ class DVPortGroupForgedTransmitsPolicy(BaseController):
                   "port_group_name": "dv_pg_PortGroup1",
                   "allow_forged_transmits": true
                 }
-              ]
+              ],
+              "ignore_disconnected_hosts": true
             }
 
         :param context: Product context instance.

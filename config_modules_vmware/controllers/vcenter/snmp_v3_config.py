@@ -19,7 +19,7 @@ from config_modules_vmware.framework.utils.comparator import Comparator
 logger = LoggerAdapter(logging.getLogger(__name__))
 
 # Timeouts
-CMD_TIMEOUT = 10
+CMD_TIMEOUT = 30
 # Commands
 APPLIANCE_SHELL_CMD_PREFIX = "/bin/appliancesh --connect {}:'{}'@localhost -c "
 SNMP_GET_CMD = "snmp.get"
@@ -84,8 +84,9 @@ class SNMPv3SecurityPolicy(BaseController):
             if not result:
                 raise Exception("Unable to fetch SNMP config")
         except Exception as e:
-            logger.exception(f"An error occurred: {e}")
-            errors.append(str(e))
+            err_msg = self._sanitize_output(str(e))
+            logger.exception(f"An error occurred: {err_msg}")
+            errors.append(err_msg)
         return result, errors
 
     def set(self, context: VcenterContext, desired_values: Dict) -> Tuple[str, List[Any]]:
@@ -118,11 +119,25 @@ class SNMPv3SecurityPolicy(BaseController):
         try:
             self.__apply_snmp_config(context, desired_values)
         except Exception as e:
-            logger.exception(f"An error occurred: {e}")
-            errors.append(str(e))
+            err_msg = self._sanitize_output(str(e))
+            logger.exception(f"An error occurred: {err_msg}")
+            errors.append(err_msg)
             status = RemediateStatus.FAILED
 
         return status, errors
+
+    @staticmethod
+    def _sanitize_output(output: str) -> str:
+        """Remove sensitive information from content.
+
+        :param output: exception output content.
+        :type output: str
+        """
+
+        # watch username:password pattern
+        pattern = r'(?<=[\'"])([\w.\-]+(?:@[\w.\-]+)?:[^\s\'"]+)(?=[\'"])'
+        # replace sensitive info
+        return re.sub(pattern, "#####:#####", output)
 
     @staticmethod
     def __get_snmp_config(context: VcenterContext) -> Dict:

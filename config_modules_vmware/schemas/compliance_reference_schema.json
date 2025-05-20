@@ -435,28 +435,52 @@
                   "$ref": "#/definitions/metadata"
                 },
                 "value": {
-                  "type": "array",
-                  "description": "List of users and groups in SystemConfiguration.BashShellAdministrators SSO group.",
-                  "items": {
-                    "type": "object",
-                    "properties": {
-                      "name": {
-                        "type": "string",
-                        "description": "User or group name."
+                  "type": "object",
+                  "properties": {
+                    "members": {
+                      "type": "array",
+                      "description": "List of users and groups in SystemConfiguration.BashShellAdministrators SSO group.",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string",
+                            "description": "User or group name."
+                          },
+                          "domain": {
+                            "type": "string",
+                            "description": "Domain name."
+                          },
+                          "member_type": {
+                            "description": "Type to denote a user or a group",
+                            "enum": [
+                              "USER",
+                              "GROUP"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "name",
+                          "domain",
+                          "member_type"
+                        ],
+                        "additionalProperties": false
                       },
-                      "domain": {
+                      "minItems": 0
+                    },
+                    "exclude_user_patterns": {
+                      "type": "array",
+                      "items": {
                         "type": "string",
-                        "description": "Domain name."
+                        "description": "User defined patterns to exclude users from compliance check"
                       },
-                      "member_type": {
-                        "description": "Type to denote a user or a group",
-                        "enum": [
-                          "USER",
-                          "GROUP"
-                        ]
-                      }
+                      "minItems": 0
                     }
-                  }
+                  },
+                  "required": [
+                    "members"
+                  ],
+                  "additionalProperties": false
                 }
               },
               "required": [
@@ -472,28 +496,51 @@
                   "$ref": "#/definitions/metadata"
                 },
                 "value": {
-                  "type": "array",
-                  "description": "List of users and groups in TrustedAdmins SSO group.",
-                  "items": {
-                    "type": "object",
-                    "properties": {
-                      "name": {
-                        "type": "string",
-                        "description": "User or group name."
-                      },
-                      "domain": {
-                        "type": "string",
-                        "description": "Domain name."
-                      },
-                      "member_type": {
-                        "description": "Type to denote a user or a group",
-                        "enum": [
-                          "USER",
-                          "GROUP"
-                        ]
+                  "type": "object",
+                  "properties": {
+                    "members": {
+                      "type": "array",
+                      "description": "List of users and groups in TrustedAdmins SSO group.",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string",
+                            "description": "User or group name."
+                          },
+                          "domain": {
+                            "type": "string",
+                            "description": "Domain name."
+                          },
+                          "member_type": {
+                            "description": "Type to denote a user or a group",
+                            "enum": [
+                              "USER",
+                              "GROUP"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "name",
+                          "domain",
+                          "member_type"
+                        ],
+                        "additionalProperties": false
                       }
+                    },
+                    "exclude_user_patterns": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "description": "User defined patterns to exclude users from compliance check"
+                      },
+                      "minItems": 0
                     }
-                  }
+                  },
+                  "required": [
+                    "members"
+                  ],
+                  "additionalProperties": false
                 }
               },
               "required": [
@@ -898,6 +945,11 @@
                           "promiscuous_mode"
                         ]
                       }
+                    },
+                    "ignore_disconnected_hosts": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "ignore disconnected hosts caused exceptions."
                     }
                   },
                   "minProperties": 1,
@@ -956,6 +1008,11 @@
                           "allow_mac_address_change"
                         ]
                       }
+                    },
+                    "ignore_disconnected_hosts": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "ignore disconnected hosts caused exceptions."
                     }
                   },
                   "minProperties": 1,
@@ -1014,6 +1071,11 @@
                           "allow_forged_transmits"
                         ]
                       }
+                    },
+                    "ignore_disconnected_hosts": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "ignore disconnected hosts caused exceptions."
                     }
                   },
                   "minProperties": 1,
@@ -1865,6 +1927,63 @@
                     "additionalProperties": false
                   },
                   "minItems": 0
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "minProperties": 1,
+              "additionalProperties": false
+            },
+            "plugin_config": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "array",
+                  "description": "vCenter server client plugin  configuration",
+                  "items": {
+                    "type": "object",
+                    "description": "client plugin details",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "description": "client plugin id"
+                      },
+                      "vendor": {
+                        "type": "string",
+                        "description": "plugin vendor name"
+                      },
+                      "type": {
+                        "type": "string",
+                        "description": "client plugin type, local or remote",
+                        "enum": [
+                          "LOCAL",
+                          "REMOTE",
+                          "HYBRID"
+                        ]
+                      },
+                      "versions": {
+                        "type": "array",
+                        "description": "client plugin versions, at least one version should be provided",
+                        "items": {
+                          "type": "string",
+                          "description": "client plugin version"
+                        },
+                        "minItems": 1
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "vendor",
+                      "type",
+                      "versions"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "minItems": 1
                 }
               },
               "required": [
