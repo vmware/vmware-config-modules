@@ -108,6 +108,7 @@
     * [`LogonBannerConfig`](vcenter/vcenter.logon_banner_config.md)
     * [`ManagedObjectBrowser`](vcenter/vcenter.managed_object_browser.md)
     * [`NtpConfig`](vcenter/vcenter.ntp_config.md)
+    * [`PluginConfig`](vcenter/vcenter.plugin_config.md)
     * [`SNMPv3SecurityPolicy`](vcenter/vcenter.snmp_v3_config.md)
     * [`SSOActiveDirectoryAuthPolicy`](vcenter/vcenter.sso_active_directory_authentication_policy.md)
     * [`SSOActiveDirectoryLdapsEnabledPolicy`](vcenter/vcenter.sso_active_directory_ldaps_enabled_config.md)

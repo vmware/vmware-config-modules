@@ -1,4 +1,27 @@
 # CURRENTLY-IN-DEVELOPMENT
+# `v0.16.0.2`
+### New Controllers
+- VCSA Controllers
+    - 406 - plugin_config
+### Controller enhancements
+- VCSA Controllers
+    - Add exclude users to "sso_bash_shell_authorized_members" and "sso_trusted_admin_authorized_members";
+    - TLS version control considered compliant if more TLS versions are configured on system than in desired
+      spec if the extra versions configured on system are newer than the ones in desired spec;
+    - Add ignore disconnected hosts to dv_pg_forged_transmits_policy, dv_pg_mac_address_change_policy,
+      and dv_pg_promiscuous_mode_policy  controls for remediation;
+    - Fixed VCSA SNMP V3 control returns sensitive info when encountering timeout error,  also increased
+      timeout value from 10 seconds to 30 seconds;
+    - Handle race condition for VM migrate encryption policy control check compliance when VM has been deleted.
+# `v0.16.0.1`
+### Controller enhancements
+- VCSA Controllers
+    - 1234 - Encryption must be enabled for vMotion on the virtual machine:
+        - Added flag to exclude VMs in disconnected states (orphaned VM, host disconnected VM, etc.).
+        - Added name match to exclude certain system generated VMs on VCF5.2 that the encryption policy could not be reconfigured.
+        - Added code to handle the VMs with None encryption policy attribute.
+        - Added flag to exclude fully encrypted VMs from compliance check and remediation.
+        - Set timeout value to 2 minutes for pyVmomi waiting task.
 # `v0.16.0.1`
 ### Controller enhancements
 - VCSA Controllers

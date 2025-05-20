@@ -7,6 +7,7 @@ from typing import List
 from typing import Tuple
 
 from pyVmomi import vim  # pylint: disable=E0401
+from pyVmomi import vmodl  # pylint: disable=E0401
 
 from config_modules_vmware.controllers.base_controller import BaseController
 from config_modules_vmware.framework.auth.contexts.base_context import BaseContext
@@ -228,6 +229,22 @@ class VmMigrateEncryptionPolicy(BaseController):
         logger.debug(f"All VM configs: {all_vm_configs}")
         return all_vm_configs
 
+    def _is_vm_deleted_exception(self, cause) -> bool:
+        """
+        Check if exception received when get config is because VM been deleted.
+
+        :param cause: exception cause.
+        :type cause: Exception
+        :return: True if exception case is "vmodl.fault.ManagedObjectNotFound" otherwise False
+        :rtype: bool
+        """
+
+        while cause:
+            if isinstance(cause, vmodl.fault.ManagedObjectNotFound):
+                return True
+            cause = getattr(cause, "__cause__", None)
+        return False
+
     def __get_all_vm_migrate_encryption_policy(self, vc_vmomi_client: VcVmomiClient) -> List[Dict]:
         """
         Get all VM migrate Encryption policies.
@@ -241,21 +258,26 @@ class VmMigrateEncryptionPolicy(BaseController):
         all_vm_refs = vc_vmomi_client.get_objects_by_vimtype(vim.VirtualMachine)
 
         for vm_ref in all_vm_refs:
-            logger.debug(
-                f"VM name: {vm_ref.name}, conn state: {vm_ref.runtime.connectionState}, power state: {vm_ref.runtime.powerState}"
-            )
-            vm_migrate_encryption_config = {
-                "vm_name": vm_ref.name,
-                "path": vc_vmomi_client.get_vm_path_in_datacenter(vm_ref),
-                "migrate_encryption_policy": vm_ref.config.migrateEncryption
-                if vm_ref.config and hasattr(vm_ref.config, "migrateEncryption")
-                else "None",
-                "vm_state": vm_ref.runtime.connectionState,
-                "vm_encrypted": True
-                if vm_ref.config and hasattr(vm_ref.config, "keyId") and vm_ref.config.keyId is not None
-                else False,
-            }
-            all_vm_migrate_encryption_configs.append(vm_migrate_encryption_config)
+            try:
+                logger.debug(
+                    f"VM name: {vm_ref.name}, conn state: {vm_ref.runtime.connectionState}, power state: {vm_ref.runtime.powerState}"
+                )
+                vm_migrate_encryption_config = {
+                    "vm_name": vm_ref.name,
+                    "path": vc_vmomi_client.get_vm_path_in_datacenter(vm_ref),
+                    "migrate_encryption_policy": vm_ref.config.migrateEncryption
+                    if vm_ref.config and hasattr(vm_ref.config, "migrateEncryption")
+                    else "None",
+                    "vm_state": vm_ref.runtime.connectionState,
+                    "vm_encrypted": True
+                    if vm_ref.config and hasattr(vm_ref.config, "keyId") and vm_ref.config.keyId is not None
+                    else False,
+                }
+                all_vm_migrate_encryption_configs.append(vm_migrate_encryption_config)
+            except Exception as e:
+                logger.exception(f"Exception when get configs: {e}")
+                if not self._is_vm_deleted_exception(e):
+                    raise
         return all_vm_migrate_encryption_configs
 
     def _get_data_center(self, vm_ref):
@@ -364,66 +386,77 @@ class VmMigrateEncryptionPolicy(BaseController):
         remediated_desired = []
 
         for vm_ref in all_vm_refs:
-            if not self._is_in_non_compiliant_list(vm_ref.name, non_compliant_configs):
-                continue
-            vm_path = vc_vmomi_client.get_vm_path_in_datacenter(vm_ref)
-            current_vm_migrate_encryption_policy = (
-                vm_ref.config.migrateEncryption
-                if vm_ref.config and hasattr(vm_ref.config, "migrateEncryption")
-                else "None"
-            )
-            override_vm_migrate_encryption_policy, exclude_flag = next(
-                (
-                    (override.get(DESIRED_KEY), override.get(EXCLUDE_THIS_VM))
-                    for override in overrides
-                    if override[VM_NAME] == vm_ref.name and override[PATH] == vm_path
-                ),
-                (None, None),
-            )
-            desired_vm_migrate_policy = (
-                override_vm_migrate_encryption_policy
-                if override_vm_migrate_encryption_policy is not None
-                else desired_global_vm_migrate_encryption_policy
-            )
-            if current_vm_migrate_encryption_policy != desired_vm_migrate_policy and not exclude_flag:
-                logger.info(f"Setting VM migrate policy {desired_vm_migrate_policy} on VM {vm_ref.name}")
-                # continue to remediate next vm if hitting any errors
-                try:
-                    template = vm_ref.config.template
-                    if template:
-                        # for VM template, convert to VM during remediation
-                        resource_pool, errs = self._get_resource_pool(vm_ref)
-                        if errs:
-                            errors.append(errs)
-                            continue
-                        logger.debug(f"Resource pool for convert template to VM: {resource_pool}")
-                        vm_ref.MarkAsVirtualMachine(pool=resource_pool)
-                        logger.debug(f"Converted VM template to VM, template flag: {vm_ref.config.template}")
-
-                    config_spec = vim.vm.ConfigSpec()
-                    config_spec.migrateEncryption = desired_vm_migrate_policy
-                    task = vm_ref.ReconfigVM_Task(config_spec)
-                    vc_vmomi_client.wait_for_task(task=task, timeout=120)
-
-                    if template:
-                        # for VM template, convert it back to template after remediation
-                        vm_ref.MarkAsTemplate()
-                        logger.debug(f"Converted VM back to VM template, template flag: {vm_ref.config.template}")
-
-                    remediated.append(
-                        {VM_NAME: vm_ref.name, PATH: vm_path, DESIRED_KEY: current_vm_migrate_encryption_policy}
-                    )
-                    remediated_desired.append(
-                        {VM_NAME: vm_ref.name, PATH: vm_path, DESIRED_KEY: desired_vm_migrate_policy}
-                    )
-                except Exception as e:
-                    logger.exception(f"An error occurred: {e}")
-                    errors.append(f"Failed to remediate VM: {vm_ref.name} - {str(e)}")
-            else:
-                logger.info(
-                    f"VM {vm_ref.name} already has desired migrate policy {desired_vm_migrate_policy},"
-                    f" no remediation required. Or exclude flag present - {exclude_flag}"
+            try:
+                vm_name = vm_ref.name
+                if not self._is_in_non_compiliant_list(vm_name, non_compliant_configs):
+                    continue
+                vm_path = vc_vmomi_client.get_vm_path_in_datacenter(vm_ref)
+                current_vm_migrate_encryption_policy = (
+                    vm_ref.config.migrateEncryption
+                    if vm_ref.config and hasattr(vm_ref.config, "migrateEncryption")
+                    else "None"
                 )
+                override_vm_migrate_encryption_policy, exclude_flag = next(
+                    (
+                        (override.get(DESIRED_KEY), override.get(EXCLUDE_THIS_VM))
+                        for override in overrides
+                        if override[VM_NAME] == vm_name and override[PATH] == vm_path
+                    ),
+                    (None, None),
+                )
+                desired_vm_migrate_policy = (
+                    override_vm_migrate_encryption_policy
+                    if override_vm_migrate_encryption_policy is not None
+                    else desired_global_vm_migrate_encryption_policy
+                )
+                if current_vm_migrate_encryption_policy != desired_vm_migrate_policy and not exclude_flag:
+                    logger.info(f"Setting VM migrate policy {desired_vm_migrate_policy} on VM {vm_name}")
+                    # continue to remediate next vm if hitting any errors
+                    try:
+                        template = vm_ref.config.template
+                        if template:
+                            # for VM template, convert to VM during remediation
+                            resource_pool, errs = self._get_resource_pool(vm_ref)
+                            if errs:
+                                errors.append(errs)
+                                continue
+                            logger.debug(f"Resource pool for convert template to VM: {resource_pool}")
+                            vm_ref.MarkAsVirtualMachine(pool=resource_pool)
+                            logger.debug(f"Converted VM template to VM, template flag: {vm_ref.config.template}")
+
+                        config_spec = vim.vm.ConfigSpec()
+                        config_spec.migrateEncryption = desired_vm_migrate_policy
+                        task = vm_ref.ReconfigVM_Task(config_spec)
+                        vc_vmomi_client.wait_for_task(task=task, timeout=120)
+
+                        if template:
+                            # for VM template, convert it back to template after remediation
+                            vm_ref.MarkAsTemplate()
+                            logger.debug(f"Converted VM back to VM template, template flag: {vm_ref.config.template}")
+
+                        remediated.append(
+                            {VM_NAME: vm_name, PATH: vm_path, DESIRED_KEY: current_vm_migrate_encryption_policy}
+                        )
+                        remediated_desired.append(
+                            {VM_NAME: vm_name, PATH: vm_path, DESIRED_KEY: desired_vm_migrate_policy}
+                        )
+                    except Exception as e:
+                        logger.exception(f"An error occurred: {e}")
+                        if not self._is_vm_deleted_exception(e):
+                            errors.append(f"Failed to remediate VM: {vm_name} - {str(e)}")
+                else:
+                    if exclude_flag:
+                        logger.info(
+                            f"VM {vm_name} is excluded from remediation,  exclude flag present - {exclude_flag}"
+                        )
+                    else:
+                        logger.info(
+                            f"VM {vm_name} already has desired migrate policy {desired_vm_migrate_policy}, no remediation required."
+                        )
+            except Exception as e:
+                logger.exception(f"An error occurred: {e}")
+                if not self._is_vm_deleted_exception(e):
+                    errors.append(f"Failed to remediate VM: {vm_name} - {str(e)}")
 
         return remediated, remediated_desired, errors
 
