@@ -85,7 +85,7 @@ class SNMPv3SecurityPolicy(BaseController):
                 raise Exception("Unable to fetch SNMP config")
         except Exception as e:
             err_msg = self._sanitize_output(str(e))
-            logger.exception(f"An error occurred: {err_msg}")
+            logger.error(f"An error occurred: {err_msg}")
             errors.append(err_msg)
         return result, errors
 
@@ -120,7 +120,7 @@ class SNMPv3SecurityPolicy(BaseController):
             self.__apply_snmp_config(context, desired_values)
         except Exception as e:
             err_msg = self._sanitize_output(str(e))
-            logger.exception(f"An error occurred: {err_msg}")
+            logger.error(f"An error occurred: {err_msg}")
             errors.append(err_msg)
             status = RemediateStatus.FAILED
 

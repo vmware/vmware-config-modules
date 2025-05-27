@@ -1,4 +1,11 @@
 # CURRENTLY-IN-DEVELOPMENT
+# `v0.16.0.3`
+### Controller enhancements
+- VCSA Controllers
+    - Remove sensitive info that accidentally logged into minion log when exception generated at shell command run;
+    - Handle dcli command error at get plugin details;
+    - Add exclude to desired spec to exclude specific plugins;
+    - Add version checks to plugin config control, return skipped when running on the platform with vsphere version lower than "8.0.2"
 # `v0.16.0.2`
 ### New Controllers
 - VCSA Controllers

@@ -15,6 +15,8 @@ class TestPluginConfig:
         self.mock_member3 = { "id": "com.vmware.test3.client", "vendor": "VMware, Inc.", "type": "LOCAL", "versions": [ "8.0.3.100", "8.0.3.101" ] }
         self.mock_member4 = { "id": "com.vmware.test4.client", "vendor": "VMware, Inc.", "type": "REMOTE", "versions": [ "8.0.3.100", "8.0.3.24091160" ] }
         self.mock_member5 = { "id": "com.vmware.test5.client", "vendor": "VMware, Inc.", "type": "LOCAL", "versions": [ "8.0.3.100" ] }
+        self.mock_member_exclude_1 = { "id": "com.vmware.exclude1.client", "vendor": "VMware, Inc.", "type": "LOCAL", "versions": [ "8.0.3.100" ] }
+        self.mock_member_exclude_2 = { "id": "com.vmware.exclude2.client", "vendor": "VMware, Inc.", "type": "LOCAL", "versions": [ "8.0.3.100" ] }
 
         get_plugin_id_list = {
                                  "plugins": [
@@ -26,6 +28,12 @@ class TestPluginConfig:
                                      },
                                      {
                                          "id": "com.vmware.test3.client"
+                                     },
+                                     {
+                                         "id": "com.vmware.exclude1.client"
+                                     },
+                                     {
+                                         "id": "com.vmware.exclude2.client"
                                      }
                                  ]
                              }
@@ -43,6 +51,12 @@ class TestPluginConfig:
                                                    },
                                                    {
                                                        "id": "com.vmware.test4.client"
+                                                   },
+                                                   {
+                                                       "id": "com.vmware.exclude1.client"
+                                                   },
+                                                   {
+                                                       "id": "com.vmware.exclude2.client"
                                                    }
                                                ]
                                            }
@@ -153,19 +167,51 @@ class TestPluginConfig:
                                             }
                                         ]
                                     }
+        self.mock_plugin_exclude_1_detail = {
+                                                "vendor": "VMware, Inc.",
+                                                "name": "VMware Exclude 1 Plugin",
+                                                "description": "VMware Exclude 1 Plugin",
+                                                "id": "com.vmware.exclude1.client",
+                                                "type": "LOCAL",
+                                                "instance_registrations": [
+                                                    {
+                                                        "deployment_status": "DEPLOYED",
+                                                        "certification_status": "CERTIFIED",
+                                                        "version": "8.0.3.100"
+                                                    }
+                                                ]
+                                            }
+        self.mock_plugin_exclude_2_detail = {
+                                                "vendor": "VMware, Inc.",
+                                                "name": "VMware Exclude 2 Plugin",
+                                                "description": "VMware Exclude 1 Plugin",
+                                                "id": "com.vmware.exclude2.client",
+                                                "type": "LOCAL",
+                                                "instance_registrations": [
+                                                    {
+                                                        "deployment_status": "DEPLOYED",
+                                                        "certification_status": "CERTIFIED",
+                                                        "version": "8.0.3.100"
+                                                    }
+                                                ]
+                                            }
 
         self.compliant_shell_cmd_side_effect = [
                                                    (plugin_id_list_str, "", 0),
                                                    (yaml.dump(self.mock_plugin_detail_1), "", 0),
                                                    (yaml.dump(self.mock_plugin_detail_2), "", 0),
-                                                   (yaml.dump(self.mock_plugin_detail_3), "", 0)
+                                                   (yaml.dump(self.mock_plugin_detail_3), "", 0),
+                                                   (yaml.dump(self.mock_plugin_exclude_1_detail), "", 0),
+                                                   (yaml.dump(self.mock_plugin_exclude_2_detail), "", 0)
                                                ]
         self.non_compliant_shell_cmd_side_effect = [
                                                        (non_compliant_plugin_id_list_str, "", 0),
                                                        (yaml.dump(self.mock_plugin_detail_1), "", 0),
                                                        (yaml.dump(self.mock_plugin_detail_2), "", 0),
                                                        (yaml.dump(self.mock_plugin_detail_3), "", 0),
-                                                       (yaml.dump(self.mock_plugin_detail_4), "", 0)
+                                                       (yaml.dump(self.mock_plugin_detail_4), "", 0),
+                                                       (yaml.dump(self.mock_plugin_exclude_1_detail), "", 0),
+                                                       (yaml.dump(self.mock_plugin_exclude_2_detail), "", 0)
                                                    ]
         self.non_compliant_shell_cmd_side_effect2 = [
                                                        (non_compliant_plugin_id_list_str2, "", 0),
@@ -176,13 +222,25 @@ class TestPluginConfig:
                                                        (yaml.dump(self.mock_plugin_detail_5), "", 0)
                                                    ]
 
-        self.desired_values = [
-            self.mock_member1, self.mock_member2, self.mock_member3,
-        ]
-        self.desired_values2 = [
-            self.mock_member1, self.mock_member2, self.mock_member3,
-            self.mock_member4, self.mock_member5
-        ]
+        self.desired_values = {
+            "plugins": [
+                self.mock_member1, self.mock_member2, self.mock_member3,
+            ],
+            "exclude_plugins": [
+                self.mock_member_exclude_1.get("id", None),
+                self.mock_member_exclude_2.get("id", None)
+            ]
+        }
+        self.desired_values2 = {
+            "plugins": [
+                self.mock_member1, self.mock_member2, self.mock_member3,
+                self.mock_member4, self.mock_member5
+            ],
+            "exclude_plugins": [
+                self.mock_member_exclude_1.get("id", None),
+                self.mock_member_exclude_2.get("id", None)
+            ]
+        }
         self.non_compliant_values = [
             self.mock_member1, self.mock_member2, self.mock_member3,
             self.mock_member4
@@ -191,13 +249,17 @@ class TestPluginConfig:
             self.mock_member1, self.mock_member2, self.mock_member3,
             self.mock_member4, self.mock_member5
         ]
+        self.compliant_with_exclude_get = [
+            self.mock_member1, self.mock_member2, self.mock_member3,
+            self.mock_member_exclude_1, self.mock_member_exclude_2
+        ]
 
     @patch("config_modules_vmware.framework.auth.contexts.vc_context.VcenterContext")
     @patch("config_modules_vmware.framework.utils.utils.run_shell_cmd")
     def test_get_success(self, mock_run_shell_cmd, mock_vc_context):
         mock_run_shell_cmd.side_effect = self.compliant_shell_cmd_side_effect
         result, errors = self.controller.get(mock_vc_context)
-        assert result == self.desired_values
+        assert result == self.compliant_with_exclude_get
         assert errors == []
 
     @patch("config_modules_vmware.framework.auth.contexts.vc_context.VcenterContext")
@@ -212,7 +274,7 @@ class TestPluginConfig:
     @patch("config_modules_vmware.framework.utils.utils.run_shell_cmd")
     def test_set_success(self, mock_run_shell_cmd, mock_vc_context):
         mock_run_shell_cmd.side_effect = self.non_compliant_shell_cmd_side_effect
-        remediate_configs = self.controller._find_drifts(self.non_compliant_values, self.desired_values)
+        remediate_configs = self.controller._find_drifts(self.non_compliant_values, self.desired_values.get("plugins"))
         status, errors = self.controller.set(mock_vc_context, remediate_configs)
 
         # Assert expected results.
@@ -225,7 +287,7 @@ class TestPluginConfig:
     def test_set_failed(self, mock_apply_plugin_config, mock_run_shell_cmd, mock_vc_context):
         mock_run_shell_cmd.side_effect = self.non_compliant_shell_cmd_side_effect
         mock_apply_plugin_config.side_effect = Exception("set exception")
-        remediate_configs = self.controller._find_drifts(self.non_compliant_values, self.desired_values)
+        remediate_configs = self.controller._find_drifts(self.non_compliant_values, self.desired_values.get("plugins"))
         status, errors = self.controller.set(mock_vc_context, remediate_configs)
 
         # Assert expected results.
@@ -251,7 +313,7 @@ class TestPluginConfig:
         result = self.controller.check_compliance(mock_vc_context, self.desired_values)
 
         assert result[consts.STATUS] == ComplianceStatus.NON_COMPLIANT
-        assert result[consts.DESIRED] == self.desired_values
+        assert result[consts.DESIRED] == self.desired_values.get("plugins")
         assert result[consts.CURRENT] == self.non_compliant_values
 
     @patch("config_modules_vmware.framework.auth.contexts.vc_context.VcenterContext")
@@ -272,7 +334,7 @@ class TestPluginConfig:
 
         # Assert expected results.
         assert result[consts.STATUS] == RemediateStatus.SUCCESS
-        assert result[consts.NEW] == self.desired_values
+        assert result[consts.NEW] == self.desired_values.get("plugins")
         assert result[consts.OLD] == self.non_compliant_values
 
     @patch("config_modules_vmware.framework.auth.contexts.vc_context.VcenterContext")

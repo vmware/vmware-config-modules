@@ -112,10 +112,14 @@ class PluginConfig(BaseController):
         result = []
         errors = []
         try:
+            # this control only supported on VCF 5.2 or newer version.
+            if not utils.is_newer_or_same_version(context.product_version, "8.0.2"):
+                return [], [consts.SKIPPED]
+
             result = self._get_plugin_config(context)
         except Exception as e:
             err_msg = self._sanitize_output(str(e))
-            logger.exception(f"An error occurred: {err_msg}")
+            logger.error(f"An error occurred: {err_msg}")
             errors.append(err_msg)
         return result, errors
 
@@ -134,12 +138,16 @@ class PluginConfig(BaseController):
         status = RemediateStatus.SUCCESS
 
         try:
+            # this control only supported on VCF 5.2 or newer version.
+            if not utils.is_newer_or_same_version(context.product_version, "8.0.2"):
+                return RemediateStatus.SKIPPED, [consts.CONTROL_NOT_AUTOMATED]
+
             errors = self._apply_plugin_config(context, desired_values)
             if errors:
                 status = RemediateStatus.FAILED
         except Exception as e:
             err_msg = self._sanitize_output(str(e))
-            logger.exception(f"An error occurred: {err_msg}")
+            logger.error(f"An error occurred: {err_msg}")
             errors.append(err_msg)
             status = RemediateStatus.FAILED
 
@@ -202,13 +210,15 @@ class PluginConfig(BaseController):
         :return: A list of plugin configs
         :rtype: List
         """
+
+        # get environment variables.
+        env = self._get_environment_variables()
+
         plugin_cmd_base = PLUGIN_CMD_BASE.format(context._username, context._password)
         plugin_list_cmd = plugin_cmd_base + PLUGIN_LIST_CMD
 
         # retrieve a list of plugins identified by id
-        out, _, _ = utils.run_shell_cmd(
-            command=plugin_list_cmd, timeout=CMD_TIMEOUT, env=self._get_environment_variables()
-        )
+        out, _, _ = utils.run_shell_cmd(command=plugin_list_cmd, timeout=CMD_TIMEOUT, env=env)
         logger.debug(f"Retrieved plugins: {out}")
 
         plugin_configs = []
@@ -218,29 +228,38 @@ class PluginConfig(BaseController):
 
         # retrieve detailed plugin information
         for plugin_id in plugin_id_list:
-            plugin_get_cmd = plugin_cmd_base + PLUGIN_GET_CMD + PLUGIN_ID + plugin_id
-            out, _, _ = utils.run_shell_cmd(
-                command=plugin_get_cmd, timeout=CMD_TIMEOUT, env=self._get_environment_variables()
-            )
-            logger.debug(f"Retrieved plugin - {plugin_id} details: {out}")
-            plugin_info = yaml.safe_load(out)
-            instances = plugin_info.get("instance_registrations", [])
-            versions = []
-            for instance in instances:
-                # skip plugin instance that is not deployed
-                if instance.get("deployment_status", None) == "DEPLOYED":
-                    versions.append(instance.get("version"))
-            # need at least one instance deployed
-            if versions:
+            try:
+                plugin_get_cmd = plugin_cmd_base + PLUGIN_GET_CMD + PLUGIN_ID + plugin_id
+                out, _, _ = utils.run_shell_cmd(command=plugin_get_cmd, timeout=CMD_TIMEOUT, env=env)
+                logger.debug(f"Retrieved plugin - {plugin_id} details: {out}")
+                plugin_info = yaml.safe_load(out)
+                instances = plugin_info.get("instance_registrations", [])
+                versions = []
+                for instance in instances:
+                    # skip plugin instance that is not deployed
+                    if instance.get("deployment_status", None) == "DEPLOYED":
+                        versions.append(instance.get("version"))
+                # need at least one instance deployed
+                if versions:
+                    plugin_item = {
+                        "id": plugin_id,
+                        "type": plugin_info.get("type", None),
+                        "vendor": plugin_info.get("vendor", None),
+                        "versions": versions,
+                    }
+                    plugin_configs.append(plugin_item)
+            except Exception as e:
+                err_msg = self._sanitize_output(str(e))
+                logger.debug(f"Got exception when retrieve the detail of {plugin_id} with message {err_msg}")
                 plugin_item = {
                     "id": plugin_id,
-                    "type": plugin_info.get("type", None),
-                    "vendor": plugin_info.get("vendor", None),
-                    "versions": versions,
+                    "type": None,
+                    "vendor": None,
+                    "versions": None,
                 }
                 plugin_configs.append(plugin_item)
 
-        logger.info(f"vCenter server plugin configs: {plugin_configs}")
+        logger.debug(f"vCenter server plugin configs: {plugin_configs}")
         return plugin_configs
 
     def _find_drifts(self, current: List, desired: List) -> List:
@@ -309,6 +328,13 @@ class PluginConfig(BaseController):
                         extension_manager.UnregisterExtension(plugin_id)
         return errors
 
+    def _exclude_plugins(self, plugins, exclude_plugins):
+        filtered_plugins = []
+        for plugin in plugins:
+            if plugin.get("id", None) not in exclude_plugins:
+                filtered_plugins.append(plugin)
+        return filtered_plugins
+
     def check_compliance(self, context: VcenterContext, desired_values: Dict) -> Dict:
         """Check compliance of current plugin configuration in vCenter.
 
@@ -320,18 +346,28 @@ class PluginConfig(BaseController):
         :rtype: dict
         """
         logger.debug("Checking compliance for plugin config.")
-        current_value, errors = self.get(context=context)
+        current_values, errors = self.get(context=context)
 
         if errors:
+            if len(errors) == 1 and errors[0] == consts.SKIPPED:
+                return {
+                    consts.STATUS: ComplianceStatus.SKIPPED,
+                    consts.ERRORS: [consts.CONTROL_NOT_APPLICABLE],
+                }
             # If errors are seen during get, return "FAILED" status with errors.
             return {consts.STATUS: ComplianceStatus.FAILED, consts.ERRORS: errors}
 
         # If no errors seen, compare the current and desired value. If not same, return "NON_COMPLIANT" with values.
         # Otherwise, return "COMPLIANT".
         filtered_desired_values = [
-            utils.filter_dict_keys(dict_item, DESIRED_KEYS_FOR_AUDIT) for dict_item in desired_values
+            utils.filter_dict_keys(dict_item, DESIRED_KEYS_FOR_AUDIT) for dict_item in desired_values.get("plugins", [])
         ]
-        current_configs, desired_configs = Comparator.get_non_compliant_configs(current_value, filtered_desired_values)
+        # Check if we need to exclude specific plugins.
+        exclude_plugins = desired_values.get("exclude_plugins", [])
+        logger.debug(f"User input plugins or plugin id pattern to be excluded from compliance check: {exclude_plugins}")
+        current_values = self._exclude_plugins(current_values, exclude_plugins)
+
+        current_configs, desired_configs = Comparator.get_non_compliant_configs(current_values, filtered_desired_values)
         if current_configs or desired_configs:
             result = {
                 consts.STATUS: ComplianceStatus.NON_COMPLIANT,
@@ -370,10 +406,21 @@ class PluginConfig(BaseController):
         current_values, errors = self.get(context=context)
 
         if errors:
+            if len(errors) == 1 and errors[0] == consts.SKIPPED:
+                return {
+                    consts.STATUS: RemediateStatus.SKIPPED,
+                    consts.ERRORS: [consts.CONTROL_NOT_APPLICABLE],
+                }
             return {consts.STATUS: RemediateStatus.FAILED, consts.ERRORS: errors}
 
-        remediate_configs = self._find_drifts(current_values, desired_values)
-        logger.debug(f"Current configs: {current_values}, Desired configs: {desired_values}")
+        # Check if we need to exclude specific plugins.
+        exclude_plugins = desired_values.get("exclude_plugins", [])
+        logger.debug(f"User input plugins or plugin id pattern to be excluded from compliance check: {exclude_plugins}")
+        current_values = self._exclude_plugins(current_values, exclude_plugins)
+        # find drift for remediation
+        desired_plugin_values = desired_values.get("plugins", [])
+        remediate_configs = self._find_drifts(current_values, desired_plugin_values)
+        logger.debug(f"Current configs: {current_values}, Desired configs: {desired_plugin_values}")
         logger.debug(f"Drift for remediation: {remediate_configs}")
         if not remediate_configs:
             return {consts.STATUS: RemediateStatus.SKIPPED, consts.ERRORS: [consts.CONTROL_ALREADY_COMPLIANT]}
@@ -382,5 +429,5 @@ class PluginConfig(BaseController):
 
         status, errors = self.set(context, remediate_configs)
         if not errors:
-            return {consts.STATUS: status, consts.OLD: current_values, consts.NEW: desired_values}
+            return {consts.STATUS: status, consts.OLD: current_values, consts.NEW: desired_plugin_values}
         return {consts.STATUS: status, consts.ERRORS: errors}

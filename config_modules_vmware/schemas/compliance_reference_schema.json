@@ -1942,48 +1942,61 @@
                   "$ref": "#/definitions/metadata"
                 },
                 "value": {
-                  "type": "array",
-                  "description": "vCenter server client plugin  configuration",
-                  "items": {
-                    "type": "object",
-                    "description": "client plugin details",
-                    "properties": {
-                      "id": {
-                        "type": "string",
-                        "description": "client plugin id"
-                      },
-                      "vendor": {
-                        "type": "string",
-                        "description": "plugin vendor name"
-                      },
-                      "type": {
-                        "type": "string",
-                        "description": "client plugin type, local or remote",
-                        "enum": [
-                          "LOCAL",
-                          "REMOTE",
-                          "HYBRID"
-                        ]
-                      },
-                      "versions": {
-                        "type": "array",
-                        "description": "client plugin versions, at least one version should be provided",
-                        "items": {
-                          "type": "string",
-                          "description": "client plugin version"
+                  "type": "object",
+                  "properties": {
+                    "plugins": {
+                      "type": "array",
+                      "description": "vCenter server client plugin configuration",
+                      "items": {
+                        "type": "object",
+                        "description": "client plugin details",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "description": "client plugin id"
+                          },
+                          "vendor": {
+                            "type": "string",
+                            "description": "plugin vendor name"
+                          },
+                          "type": {
+                            "type": "string",
+                            "description": "client plugin type, local or remote",
+                            "enum": [
+                              "LOCAL",
+                              "REMOTE",
+                              "HYBRID"
+                            ]
+                          },
+                          "versions": {
+                            "type": "array",
+                            "description": "client plugin versions, at least one version should be provided",
+                            "items": {
+                              "type": "string",
+                              "description": "client plugin version"
+                            },
+                            "minItems": 1
+                          }
                         },
-                        "minItems": 1
-                      }
+                        "required": [
+                          "id",
+                          "vendor",
+                          "type",
+                          "versions"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "minItems": 1
                     },
-                    "required": [
-                      "id",
-                      "vendor",
-                      "type",
-                      "versions"
-                    ],
-                    "additionalProperties": false
-                  },
-                  "minItems": 1
+                    "exclude_plugins": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "description": "A list of plugin ids to exclude plugins from compliance check and remediation"
+                      },
+                      "minItems": 0
+                    }
+                  }
                 }
               },
               "required": [
