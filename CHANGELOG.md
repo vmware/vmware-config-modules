@@ -1,4 +1,8 @@
 # CURRENTLY-IN-DEVELOPMENT
+# `v0.16.0.4`
+### Controller enhancements
+- VCSA Controllers
+    - Remove version as key in compliance check for plugin config control;
 # `v0.16.0.3`
 ### Controller enhancements
 - VCSA Controllers

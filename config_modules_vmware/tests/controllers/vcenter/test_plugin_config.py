@@ -10,13 +10,13 @@ from config_modules_vmware.framework.models.output_models.remediate_response imp
 class TestPluginConfig:
     def setup_method(self):
         self.controller = PluginConfig()
-        self.mock_member1 = { "id": "com.vmware.test1.client", "vendor": "VMware, Inc.", "type": "REMOTE", "versions": [ "8.0.3.100","8.0.3.24091160" ] }
-        self.mock_member2 = { "id": "com.vmware.test2.client", "vendor": "VMware, Inc.", "type": "REMOTE", "versions": [ "8.0.3.100" ] }
-        self.mock_member3 = { "id": "com.vmware.test3.client", "vendor": "VMware, Inc.", "type": "LOCAL", "versions": [ "8.0.3.100", "8.0.3.101" ] }
-        self.mock_member4 = { "id": "com.vmware.test4.client", "vendor": "VMware, Inc.", "type": "REMOTE", "versions": [ "8.0.3.100", "8.0.3.24091160" ] }
-        self.mock_member5 = { "id": "com.vmware.test5.client", "vendor": "VMware, Inc.", "type": "LOCAL", "versions": [ "8.0.3.100" ] }
-        self.mock_member_exclude_1 = { "id": "com.vmware.exclude1.client", "vendor": "VMware, Inc.", "type": "LOCAL", "versions": [ "8.0.3.100" ] }
-        self.mock_member_exclude_2 = { "id": "com.vmware.exclude2.client", "vendor": "VMware, Inc.", "type": "LOCAL", "versions": [ "8.0.3.100" ] }
+        self.mock_member1 = { "id": "com.vmware.test1.client", "vendor": "VMware, Inc.", "type": "REMOTE" }
+        self.mock_member2 = { "id": "com.vmware.test2.client", "vendor": "VMware, Inc.", "type": "REMOTE" }
+        self.mock_member3 = { "id": "com.vmware.test3.client", "vendor": "VMware, Inc.", "type": "LOCAL" }
+        self.mock_member4 = { "id": "com.vmware.test4.client", "vendor": "VMware, Inc.", "type": "REMOTE" }
+        self.mock_member5 = { "id": "com.vmware.test5.client", "vendor": "VMware, Inc.", "type": "LOCAL" }
+        self.mock_member_exclude_1 = { "id": "com.vmware.exclude1.client", "vendor": "VMware, Inc.", "type": "LOCAL" }
+        self.mock_member_exclude_2 = { "id": "com.vmware.exclude2.client", "vendor": "VMware, Inc.", "type": "LOCAL" }
 
         get_plugin_id_list = {
                                  "plugins": [
@@ -356,7 +356,7 @@ class TestPluginConfig:
         mock_run_shell_cmd.side_effect = self.non_compliant_shell_cmd_side_effect2
         expected_error = [
                              "Can't unregister local  plugin {'id': 'com.vmware.test5.client', 'type': "
-                             "'LOCAL', 'vendor': 'VMware, Inc.', 'versions': ['8.0.3.100']}."
+                             "'LOCAL', 'vendor': 'VMware, Inc.'}."
                          ]
         result = self.controller.remediate(mock_vc_context, self.desired_values)
 

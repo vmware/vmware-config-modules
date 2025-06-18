@@ -45,26 +45,16 @@ Sample get call output:
     "id": "com.vmware.lcm.client",
     "vendor": ""VMware, Inc.",
     "type": "REMOTE",
-    "versions": [
-      "8.0.3.100"
-    ]
   },
   {
     "id": "com.vmware.vlcm.client",
     "vendor": ""VMware, Inc.",
     "type": "REMOTE",
-    "versions": [
-      "8.0.3.100",
-      "8.0.3.24091160"
-    ]
   },
   {
     "id": "com.vmware.vum.client",
     "vendor": ""VMware, Inc.",
     "type": "LOCAL",
-    "versions": [
-      "8.0.3.100"
-    ]
   }
 ]
 ```
