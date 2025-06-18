@@ -1981,8 +1981,7 @@
                         "required": [
                           "id",
                           "vendor",
-                          "type",
-                          "versions"
+                          "type"
                         ],
                         "additionalProperties": false
                       },

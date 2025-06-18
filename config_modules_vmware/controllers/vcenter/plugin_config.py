@@ -38,7 +38,6 @@ TYPE = "type"
 
 DESIRED_KEYS_FOR_AUDIT = [
     "id",
-    "versions",
     "type",
     "vendor",
 ]
@@ -80,26 +79,16 @@ class PluginConfig(BaseController):
                 "id": "com.vmware.lcm.client",
                 "vendor": ""VMware, Inc.",
                 "type": "REMOTE",
-                "versions": [
-                  "8.0.3.100"
-                ]
               },
               {
                 "id": "com.vmware.vlcm.client",
                 "vendor": ""VMware, Inc.",
                 "type": "REMOTE",
-                "versions": [
-                  "8.0.3.100",
-                  "8.0.3.24091160"
-                ]
               },
               {
                 "id": "com.vmware.vum.client",
                 "vendor": ""VMware, Inc.",
                 "type": "LOCAL",
-                "versions": [
-                  "8.0.3.100"
-                ]
               }
             ]
 
@@ -233,21 +222,12 @@ class PluginConfig(BaseController):
                 out, _, _ = utils.run_shell_cmd(command=plugin_get_cmd, timeout=CMD_TIMEOUT, env=env)
                 logger.debug(f"Retrieved plugin - {plugin_id} details: {out}")
                 plugin_info = yaml.safe_load(out)
-                instances = plugin_info.get("instance_registrations", [])
-                versions = []
-                for instance in instances:
-                    # skip plugin instance that is not deployed
-                    if instance.get("deployment_status", None) == "DEPLOYED":
-                        versions.append(instance.get("version"))
-                # need at least one instance deployed
-                if versions:
-                    plugin_item = {
-                        "id": plugin_id,
-                        "type": plugin_info.get("type", None),
-                        "vendor": plugin_info.get("vendor", None),
-                        "versions": versions,
-                    }
-                    plugin_configs.append(plugin_item)
+                plugin_item = {
+                    "id": plugin_id,
+                    "type": plugin_info.get("type", None),
+                    "vendor": plugin_info.get("vendor", None),
+                }
+                plugin_configs.append(plugin_item)
             except Exception as e:
                 err_msg = self._sanitize_output(str(e))
                 logger.debug(f"Got exception when retrieve the detail of {plugin_id} with message {err_msg}")
@@ -255,12 +235,29 @@ class PluginConfig(BaseController):
                     "id": plugin_id,
                     "type": None,
                     "vendor": None,
-                    "versions": None,
                 }
                 plugin_configs.append(plugin_item)
 
         logger.debug(f"vCenter server plugin configs: {plugin_configs}")
         return plugin_configs
+
+    def _is_entry_diff(self, current_entry: Dict, desired_entry: Dict) -> bool:
+        """Check if two entries are different.
+
+        :param current_entry: Current entry of plugins.
+        :type current_entry: Dict
+        :param desired_entry: Desired entry of plugins.
+        :type desired_entry: Dict
+        :return: True if two entries differ.
+        :rtype: bool
+        """
+
+        # only compare keys for audit.
+        keys_to_compare = DESIRED_KEYS_FOR_AUDIT
+        for key in keys_to_compare:
+            if current_entry.get(key) != desired_entry.get(key):
+                return True
+        return False
 
     def _find_drifts(self, current: List, desired: List) -> List:
         """From current and desired, figure out which to add/delete/update..
@@ -277,8 +274,8 @@ class PluginConfig(BaseController):
         current_dict = {(entry[ID], entry[TYPE]): entry for entry in (current or [])}
         desired_dict = {(entry[ID], entry[TYPE]): entry for entry in (desired or [])}
         config_drift = []
-        all_keys = set(current_dict.keys()).union(set(desired_dict.keys()))
 
+        all_keys = set(current_dict.keys()).union(set(desired_dict.keys()))
         for key in all_keys:
             current_entry = current_dict.get(key)
             desired_entry = desired_dict.get(key)
@@ -286,7 +283,7 @@ class PluginConfig(BaseController):
 
             if current_entry and desired_entry:
                 # Both exist: check for mismatches
-                if current_entry != desired_entry:
+                if self._is_entry_diff(current_entry, desired_entry):
                     # to modify an entry, use desired values and update method.
                     config_drift.append((TO_UPDATE, desired_entry))
             elif current_entry:
