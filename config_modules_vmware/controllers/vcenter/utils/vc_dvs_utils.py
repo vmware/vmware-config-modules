@@ -17,3 +17,10 @@ def is_host_disconnect_exception(e):
             if not isinstance(hostfault.fault, vmodl.fault.HostNotConnected):
                 return False
     return True
+
+
+def is_host_exception(e):
+    # For any host issue caused exception, return True
+    if e.hostFault:
+        return True
+    return False

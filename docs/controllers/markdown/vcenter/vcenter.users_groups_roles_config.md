@@ -21,7 +21,7 @@ Controller Metadata
   ],
   "components": [],
   "status": "ENABLED",
-  "impact": "REMEDIATION_SKIPPED",
+  "impact": null,
   "scope": "",
   "type": "COMPLIANCE",
   "functional_test_targets": []

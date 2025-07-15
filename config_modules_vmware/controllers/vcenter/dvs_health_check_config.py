@@ -9,6 +9,7 @@ from pyVmomi import vim  # pylint: disable=E0401
 
 from config_modules_vmware.controllers.base_controller import BaseController
 from config_modules_vmware.controllers.vcenter.utils.vc_dvs_utils import is_host_disconnect_exception
+from config_modules_vmware.controllers.vcenter.utils.vc_dvs_utils import is_host_exception
 from config_modules_vmware.framework.auth.contexts.base_context import BaseContext
 from config_modules_vmware.framework.auth.contexts.vc_context import VcenterContext
 from config_modules_vmware.framework.clients.common import consts
@@ -26,6 +27,7 @@ SWITCH_NAME = "switch_name"
 GLOBAL = "__GLOBAL__"
 OVERRIDES = "__OVERRIDES__"
 IGNORE_DISCONNECTED_HOSTS = "ignore_disconnected_hosts"
+IGNORE_HOST_EXCEPTION = "ignore_host_exception"
 
 
 class DVSHealthCheckConfig(BaseController):
@@ -170,6 +172,7 @@ class DVSHealthCheckConfig(BaseController):
         desired_global_health_check_value = desired_values.get(GLOBAL, {}).get(DESIRED_KEY)
         overrides = desired_values.get(OVERRIDES, [])
         ignore_disconnected_hosts = desired_values.get(IGNORE_DISCONNECTED_HOSTS, False)
+        ignore_host_exception = desired_values.get(IGNORE_HOST_EXCEPTION, False)
         all_dv_switch_refs = vc_vmomi_client.get_objects_by_vimtype(vim.DistributedVirtualSwitch)
 
         for dvs_ref in all_dv_switch_refs:
@@ -205,6 +208,9 @@ class DVSHealthCheckConfig(BaseController):
                     logger.debug(f"DVS TASK ERROR: - {dvs_health_config_task.info.error}")
                     if is_host_disconnect_exception(dvs_health_config_task.info.error) and ignore_disconnected_hosts:
                         logger.info(f"Ignore disconnected hosts caused exception - {e}")
+                        continue
+                    if is_host_exception(dvs_health_config_task.info.error) and ignore_host_exception:
+                        logger.info(f"Ignore all host caused exception - {e}")
                         continue
                 logger.exception(f"An error occurred: {e}")
                 errors.append(str(e))

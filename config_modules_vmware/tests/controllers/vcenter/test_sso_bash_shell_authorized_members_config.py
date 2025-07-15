@@ -132,11 +132,14 @@ class TestSSOBashShellAuthorizedMembersConfig:
         assert errors == [str(expected_error)]
 
     @patch("config_modules_vmware.framework.auth.contexts.vc_context.VcenterContext")
-    def test_set_success(self, mock_vc_context):
-        expected_error = [consts.REMEDIATION_SKIPPED_MESSAGE]
-        expected_status = RemediateStatus.SKIPPED
+    @patch("config_modules_vmware.framework.clients.vcenter.vc_vmomi_sso_client.VcVmomiSSOClient")
+    def test_set_success(self, mock_vc_vmomi_sso_client, mock_vc_context):
+        expected_error = []
+        expected_status = RemediateStatus.SUCCESS
+        mock_vc_context.vc_vmomi_sso_client.return_value = mock_vc_vmomi_sso_client
 
-        status, errors = self.controller.set(mock_vc_context, self.compliant_value)
+        remediate_configs = self.controller._gen_remediate_configs(self.non_compliant_value, self.compliant_value)
+        status, errors = self.controller.set(mock_vc_context, remediate_configs)
         assert status == expected_status
         assert errors == expected_error
 
@@ -205,10 +208,9 @@ class TestSSOBashShellAuthorizedMembersConfig:
     @patch("config_modules_vmware.framework.clients.vcenter.vc_vmomi_sso_client.VcVmomiSSOClient")
     def test_remediate_success(self, mock_vc_vmomi_sso_client, mock_vc_context):
         expected_result = {
-            consts.STATUS: RemediateStatus.SKIPPED,
-            consts.ERRORS: [consts.REMEDIATION_SKIPPED_MESSAGE],
-            consts.DESIRED: self.compliant_desired_spec.get("members"),
-            consts.CURRENT: self.non_compliant_value
+            consts.STATUS: RemediateStatus.SUCCESS,
+            consts.NEW: self.compliant_desired_spec.get("members"),
+            consts.OLD: self.non_compliant_value
         }
 
         mock_vc_vmomi_sso_client.get_system_domain.return_value = self.system_domain
@@ -219,3 +221,282 @@ class TestSSOBashShellAuthorizedMembersConfig:
 
         result = self.controller.remediate(mock_vc_context, self.compliant_desired_spec)
         assert result == expected_result
+
+    @patch("config_modules_vmware.framework.auth.contexts.vc_context.VcenterContext")
+    @patch("config_modules_vmware.framework.clients.vcenter.vc_vmomi_sso_client.VcVmomiSSOClient")
+    def test_remediate_failed(self, mock_vc_vmomi_sso_client, mock_vc_context):
+        expected_error = "user not exist"
+        expected_result = {
+            consts.STATUS: RemediateStatus.FAILED,
+            consts.ERRORS: [expected_error],
+        }
+
+        mock_vc_vmomi_sso_client.get_system_domain.return_value = self.system_domain
+        mock_vc_vmomi_sso_client._get_group.return_value = self.group_mock
+        mock_vc_vmomi_sso_client.find_users_in_group.return_value = self.non_compliant_user_mock
+        mock_vc_vmomi_sso_client.find_groups_in_group.return_value = self.non_compliant_group_mock
+        mock_vc_vmomi_sso_client.remove_from_group.side_effect = Exception(expected_error)
+        mock_vc_context.vc_vmomi_sso_client.return_value = mock_vc_vmomi_sso_client
+
+        result = self.controller.remediate(mock_vc_context, self.compliant_desired_spec)
+        assert result == expected_result
+
+    def _normalize_result(self, result):
+        if isinstance(result, dict):
+            return {k: self._normalize_result(result[k]) for k in sorted(result)}
+        elif isinstance(result, list):
+            return sorted((self._normalize_result(v) for v in result), key=lambda x: repr(x))
+        else:
+            return result
+
+    def test_gen_remediate_configs(self):
+        # case 1 - no remediation
+        current = [
+            {
+                "name": "user-1",
+                "domain": "vmware.com",
+                "member_type": "USER"
+            },
+            {
+                "name": "user-2",
+                "domain": "vmware.com",
+                "member_type": "USER"
+            },
+            {
+                "name": "devops",
+                "domain": "vsphere.local",
+                "member_type": "GROUP"
+            }
+        ]
+        desired = [
+            {
+                "name": "user-1",
+                "domain": "vmware.com",
+                "member_type": "USER"
+            },
+            {
+                "name": "user-2",
+                "domain": "vmware.com",
+                "member_type": "USER"
+            },
+            {
+                "name": "devops",
+                "domain": "vsphere.local",
+                "member_type": "GROUP"
+            }
+        ]
+
+        result = self.controller._gen_remediate_configs(current, desired)
+        assert result == {}
+
+        # case 2 - nothing in desired spec, remove all
+        current = [
+            {
+                "name": "user-1",
+                "domain": "vmware.com",
+                "member_type": "USER"
+            },
+            {
+                "name": "user-2",
+                "domain": "vmware.com",
+                "member_type": "USER"
+            },
+            {
+                "name": "devops",
+                "domain": "vsphere.local",
+                "member_type": "GROUP"
+            }
+        ]
+        desired = [
+        ]
+        expected_result = {
+            "GROUP": {
+                "+": [],
+                "-": [
+                    {
+                        "domain": "vsphere.local",
+                        "member_type": "GROUP",
+                        "name": "devops",
+                    },
+                ],
+            },
+            "USER": {
+                "+": [],
+                "-": [
+                    {
+                        "domain": "vmware.com",
+                        "member_type": "USER",
+                        "name": "user-1",
+                    },
+                    {
+                        "domain": "vmware.com",
+                        "member_type": "USER",
+                        "name": "user-2",
+                    },
+                ],
+            },
+        }
+        result = self.controller._gen_remediate_configs(current, desired)
+        assert self._normalize_result(result) == self._normalize_result(expected_result)
+        # case 3 - add/remove user and/remove remove group
+        current = [
+            {
+                "name": "user-1",
+                "domain": "vmware.com",
+                "member_type": "USER"
+            },
+            {
+                "name": "user-2",
+                "domain": "vmware.com",
+                "member_type": "USER"
+            },
+            {
+                "name": "devops2",
+                "domain": "vsphere.local",
+                "member_type": "GROUP"
+            }
+        ]
+        desired = [
+            {
+                "name": "user-2",
+                "domain": "vmware.com",
+                "member_type": "USER"
+            },
+            {
+                "name": "devops",
+                "domain": "vsphere.local",
+                "member_type": "GROUP"
+            },
+            {
+                "name": "user-3",
+                "domain": "vmware.com",
+                "member_type": "USER"
+            },
+        ]
+        expected_result = {
+            "GROUP": {
+                "+": [
+                    {
+                        "domain": "vsphere.local",
+                        "member_type": "GROUP",
+                        "name": "devops",
+                    },
+                ],
+                "-": [
+                    {
+                        "domain": "vsphere.local",
+                        "member_type": "GROUP",
+                        "name": "devops2",
+                    },
+                ],
+            },
+            "USER": {
+                "+": [
+                    {
+                        "domain": "vmware.com",
+                        "member_type": "USER",
+                        "name": "user-3",
+                    },
+                ],
+                "-": [
+                    {
+                        "domain": "vmware.com",
+                        "member_type": "USER",
+                        "name": "user-1",
+                    },
+                ],
+            },
+        }
+        result = self.controller._gen_remediate_configs(current, desired)
+        assert self._normalize_result(result) == self._normalize_result(expected_result)
+        # case 4 - same name but different domain, same name but different member type
+        current = [
+            {
+                "name": "user-1",
+                "domain": "vmware.com",
+                "member_type": "USER"
+            },
+            {
+                "name": "user-2",
+                "domain": "vmware.com",
+                "member_type": "USER"
+            },
+            {
+                "name": "devops",
+                "domain": "vsphere.local",
+                "member_type": "USER"
+            },
+            {
+                "name": "devops2",
+                "domain": "vsphere.local",
+                "member_type": "GROUP"
+            }
+        ]
+        desired = [
+            {
+                "name": "user-1",
+                "domain": "external.com",
+                "member_type": "USER"
+            },
+            {
+                "name": "user-2",
+                "domain": "vmware.com",
+                "member_type": "USER"
+            },
+            {
+                "name": "devops",
+                "domain": "vsphere.local",
+                "member_type": "GROUP"
+            },
+            {
+                "name": "devops2",
+                "domain": "vsphere.local",
+                "member_type": "USER"
+            }
+        ]
+        expected_result = {
+            "GROUP": {
+                "+": [
+                    {
+                        "domain": "vsphere.local",
+                        "member_type": "GROUP",
+                        "name": "devops",
+                    },
+                ],
+                "-": [
+                    {
+                        "domain": "vsphere.local",
+                        "member_type": "GROUP",
+                        "name": "devops2",
+                    },
+                ],
+            },
+            "USER": {
+                "+": [
+                    {
+                        "domain": "vsphere.local",
+                        "member_type": "USER",
+                        "name": "devops2",
+                    },
+                    {
+                        "domain": "external.com",
+                        "member_type": "USER",
+                        "name": "user-1",
+                    },
+                ],
+                "-": [
+                    {
+                        "domain": "vsphere.local",
+                        "member_type": "USER",
+                        "name": "devops",
+                    },
+                    {
+                        "domain": "vmware.com",
+                        "member_type": "USER",
+                        "name": "user-1",
+                    },
+                ],
+            },
+        }
+        result = self.controller._gen_remediate_configs(current, desired)
+        assert self._normalize_result(result) == self._normalize_result(expected_result)

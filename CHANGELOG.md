@@ -1,4 +1,10 @@
 # CURRENTLY-IN-DEVELOPMENT
+# `v0.16.0.5`
+### Controller enhancements
+- VCSA Controllers
+    - Add remediation to VCSA control 1216  (vCenter must limit membership to the SystemConfiguration.BashShellAdministrators SSO group.);
+    - Add ignore host exception flag to DVPG controls (dvs_health_check, dvs_network_io_control, dvs_pg_netflow_config,
+      dvpg_promiscuous_mode_policy, dvpg_mac_address_change_policy, dvpg_forged_transmits_policy).
 # `v0.16.0.4`
 ### Controller enhancements
 - VCSA Controllers
