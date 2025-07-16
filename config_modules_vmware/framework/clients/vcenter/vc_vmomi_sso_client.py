@@ -179,6 +179,60 @@ class VcVmomiSSOClient(object):
         group_info = self.content.principalDiscoveryService.FindGroup(pid)
         return group_info
 
+    def remove_from_group(self, groupname, name, domain) -> None:
+        """
+        Remove a member with name and domain from  the named group.
+
+        :type groupname: 'str'
+        :param groupname: Name of group
+        :type name: 'str'
+        :param name: member (user or group) name
+        :type domain: 'str'
+        :param domain: Domain name
+        :return: None.
+        """
+        logger.debug(f"Remove from group - {groupname}")
+        pid = sso.PrincipalId(name=name, domain=domain)
+        logger.debug(f"Name - {name}, domain - {domain}, principal id - {pid}")
+        self.content.principalManagementService.RemoveFromLocalGroup(pid, groupname)
+        return
+
+    def add_user_to_group(self, groupname, name, domain) -> None:
+        """
+        Add a member with name and domain to  the named group.
+
+        :type groupname: 'str'
+        :param groupname: Name of group
+        :type name: 'str'
+        :param name: member (user or group) name
+        :type domain: 'str'
+        :param domain: Domain name
+        :return: None.
+        """
+        logger.debug(f"Add to group - {groupname}")
+        pid = sso.PrincipalId(name=name, domain=domain)
+        logger.debug(f"Name - {name}, domain - {domain}, principal id - {pid}")
+        self.content.principalManagementService.AddUserToLocalGroup(pid, groupname)
+        return
+
+    def add_group_to_group(self, groupname, name, domain) -> None:
+        """
+        Add a member with name and domain to  the named group.
+
+        :type groupname: 'str'
+        :param groupname: Name of group
+        :type name: 'str'
+        :param name: member (user or group) name
+        :type domain: 'str'
+        :param domain: Domain name
+        :return: None.
+        """
+        logger.debug(f"Add to group - {groupname}")
+        pid = sso.PrincipalId(name=name, domain=domain)
+        logger.debug(f"Name - {name}, domain - {domain}, principal id - {pid}")
+        self.content.principalManagementService.AddGroupToLocalGroup(pid, groupname)
+        return
+
     def get_a_group_id(self, name, domain):
         """
         Creates a user group.

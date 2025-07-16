@@ -9,6 +9,7 @@ from pyVmomi import vim  # pylint: disable=E0401
 
 from config_modules_vmware.controllers.base_controller import BaseController
 from config_modules_vmware.controllers.vcenter.utils.vc_dvs_utils import is_host_disconnect_exception
+from config_modules_vmware.controllers.vcenter.utils.vc_dvs_utils import is_host_exception
 from config_modules_vmware.controllers.vcenter.utils.vc_port_group_utils import (
     get_all_non_uplink_non_nsx_port_group_and_security_configs,
 )
@@ -35,6 +36,7 @@ NSX_BACKING_TYPE = "nsx"
 GLOBAL = "__GLOBAL__"
 OVERRIDES = "__OVERRIDES__"
 IGNORE_DISCONNECTED_HOSTS = "ignore_disconnected_hosts"
+IGNORE_HOST_EXCEPTION = "ignore_host_exception"
 
 
 class DVPortGroupForgedTransmitsPolicy(BaseController):
@@ -186,6 +188,7 @@ class DVPortGroupForgedTransmitsPolicy(BaseController):
         desired_global_forged_transmit_policy_value = desired_values.get(GLOBAL, {}).get(DESIRED_KEY)
         overrides = desired_values.get(OVERRIDES, [])
         ignore_disconnected_hosts = desired_values.get(IGNORE_DISCONNECTED_HOSTS, False)
+        ignore_host_exception = desired_values.get(IGNORE_HOST_EXCEPTION, False)
         non_uplink_non_nsx_dv_pgs = get_all_non_uplink_non_nsx_port_group_and_security_configs(
             vc_vmomi_client, PortGroupSecurityConfigEnum.FORGED_TRANSMITS
         )
@@ -228,6 +231,9 @@ class DVPortGroupForgedTransmitsPolicy(BaseController):
                         logger.debug(f"DVS TASK ERROR: - {task.info.error}")
                         if is_host_disconnect_exception(task.info.error) and ignore_disconnected_hosts:
                             logger.info(f"Ignore disconnected hosts caused exception - {e}")
+                            continue
+                        if is_host_exception(task.info.error) and ignore_host_exception:
+                            logger.info(f"Ignore all host caused exception - {e}")
                             continue
                     logger.exception(f"An error occurred: {e}")
                     errors.append(str(e))

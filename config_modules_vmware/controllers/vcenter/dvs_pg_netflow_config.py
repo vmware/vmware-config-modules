@@ -9,6 +9,7 @@ from pyVmomi import vim  # pylint: disable=E0401
 
 from config_modules_vmware.controllers.base_controller import BaseController
 from config_modules_vmware.controllers.vcenter.utils.vc_dvs_utils import is_host_disconnect_exception
+from config_modules_vmware.controllers.vcenter.utils.vc_dvs_utils import is_host_exception
 from config_modules_vmware.framework.auth.contexts.base_context import BaseContext
 from config_modules_vmware.framework.auth.contexts.vc_context import VcenterContext
 from config_modules_vmware.framework.clients.common import consts
@@ -31,6 +32,7 @@ SWITCH_OVERRIDE_CONFIG = "switch_override_config"
 PORTGROUP_OVERRIDE_CONFIG = "portgroup_override_config"
 NSX_BACKING_TYPE = "nsx"
 IGNORE_DISCONNECTED_HOSTS = "ignore_disconnected_hosts"
+IGNORE_HOST_EXCEPTION = "ignore_host_exception"
 
 
 class DvsPortGroupNetflowConfig(BaseController):
@@ -133,7 +135,7 @@ class DvsPortGroupNetflowConfig(BaseController):
 
         return all_ipfix_configs, errors
 
-    def _handle_exception(self, e, task, ignore_disconnected_hosts):
+    def _handle_exception(self, e, task, ignore_disconnected_hosts, ignore_host_exception):
         errors = []
         if (
             hasattr(task.info, "error")
@@ -143,6 +145,14 @@ class DvsPortGroupNetflowConfig(BaseController):
         ):
             logger.debug(f"TASK ERROR: - {task.info.error}")
             logger.info(f"Ignoring exception caused by disconnected host - {e}")
+        elif (
+            hasattr(task.info, "error")
+            and isinstance(task.info.error, vim.fault.DvsOperationBulkFault)
+            and is_host_exception(task.info.error)
+            and ignore_host_exception
+        ):
+            logger.debug(f"TASK ERROR: - {task.info.error}")
+            logger.info(f"Ignoring all host caused exception - {e}")
         else:
             logger.exception(f"An error occurred: {e}")
             errors.append(str(e))
@@ -163,6 +173,7 @@ class DvsPortGroupNetflowConfig(BaseController):
         status = RemediateStatus.SUCCESS
         vc_vmomi_client = context.vc_vmomi_client()
         ignore_disconnected_hosts = desired_values.get(IGNORE_DISCONNECTED_HOSTS, False)
+        ignore_host_exception = desired_values.get(IGNORE_HOST_EXCEPTION, False)
 
         try:
             all_dv_switches = vc_vmomi_client.get_objects_by_vimtype(vim.DistributedVirtualSwitch)
@@ -191,7 +202,7 @@ class DvsPortGroupNetflowConfig(BaseController):
                     task = dvs.ReconfigureDvs_Task(spec=config_spec)
                     vc_vmomi_client.wait_for_task(task=task)
                 except Exception as e:
-                    errors = self._handle_exception(e, task, ignore_disconnected_hosts)
+                    errors = self._handle_exception(e, task, ignore_disconnected_hosts, ignore_host_exception)
                     if errors:
                         status = RemediateStatus.FAILED
                         return status, errors
@@ -215,7 +226,7 @@ class DvsPortGroupNetflowConfig(BaseController):
                             task = port_group_obj.ReconfigureDVPortgroup_Task(spec=config_spec)
                             vc_vmomi_client.wait_for_task(task=task)
                         except Exception as e:
-                            errors = self._handle_exception(e, task, ignore_disconnected_hosts)
+                            errors = self._handle_exception(e, task, ignore_disconnected_hosts, ignore_host_exception)
                             if errors:
                                 status = RemediateStatus.FAILED
                                 return status, errors

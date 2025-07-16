@@ -57,7 +57,7 @@ class UsersGroupsRolesConfig(BaseController):
         products=[BaseContext.ProductEnum.VCENTER],  # product from enum in BaseContext.
         components=[],  # subcomponent within the product if applicable.
         status=ControllerMetadata.ControllerStatus.ENABLED,  # used to enable/disable a controller
-        impact=ControllerMetadata.RemediationImpact.REMEDIATION_SKIPPED,  # from enum in ControllerMetadata.RemediationImpact.
+        impact=None,  # from enum in ControllerMetadata.RemediationImpact.
         scope="",  # any information or limitations about how the controller operates. i.e. runs as a CLI on VCSA.
     )
 

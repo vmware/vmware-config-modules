@@ -472,7 +472,7 @@
                       "type": "array",
                       "items": {
                         "type": "string",
-                        "description": "User defined patterns to exclude users from compliance check"
+                        "description": "User defined patterns to exclude users (by user or group name) from compliance check"
                       },
                       "minItems": 0
                     }
@@ -735,6 +735,11 @@
                       "type": "boolean",
                       "default": false,
                       "description": "ignore disconnected hosts caused exceptions."
+                    },
+                    "ignore_host_exception": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "ignore all host caused exceptions."
                     }
                   },
                   "minProperties": 1,
@@ -797,6 +802,11 @@
                       "type": "boolean",
                       "default": false,
                       "description": "ignore disconnected hosts caused exceptions."
+                    },
+                    "ignore_host_exception": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "ignore all host caused exceptions."
                     }
                   },
                   "minProperties": 1,
@@ -889,6 +899,11 @@
                       "type": "boolean",
                       "default": false,
                       "description": "ignore disconnected hosts caused exceptions."
+                    },
+                    "ignore_host_exception": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "ignore all host caused exceptions."
                     }
                   },
                   "minProperties": 1,
@@ -950,6 +965,11 @@
                       "type": "boolean",
                       "default": false,
                       "description": "ignore disconnected hosts caused exceptions."
+                    },
+                    "ignore_host_exception": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "ignore all host caused exceptions."
                     }
                   },
                   "minProperties": 1,
@@ -1013,6 +1033,11 @@
                       "type": "boolean",
                       "default": false,
                       "description": "ignore disconnected hosts caused exceptions."
+                    },
+                    "ignore_host_exception": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "ignore all host caused exceptions."
                     }
                   },
                   "minProperties": 1,
@@ -1076,6 +1101,11 @@
                       "type": "boolean",
                       "default": false,
                       "description": "ignore disconnected hosts caused exceptions."
+                    },
+                    "ignore_host_exception": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "ignore all host caused exceptions."
                     }
                   },
                   "minProperties": 1,

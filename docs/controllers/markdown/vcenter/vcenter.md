@@ -121,6 +121,7 @@
   * [`SSOBashShellAuthorizedMembersConfig.get()`](vcenter.sso_bash_shell_authorized_members_config.md#vcenter.sso_bash_shell_authorized_members_config.SSOBashShellAuthorizedMembersConfig.get)
   * [`SSOBashShellAuthorizedMembersConfig.set()`](vcenter.sso_bash_shell_authorized_members_config.md#vcenter.sso_bash_shell_authorized_members_config.SSOBashShellAuthorizedMembersConfig.set)
   * [`SSOBashShellAuthorizedMembersConfig.check_compliance()`](vcenter.sso_bash_shell_authorized_members_config.md#vcenter.sso_bash_shell_authorized_members_config.SSOBashShellAuthorizedMembersConfig.check_compliance)
+  * [`SSOBashShellAuthorizedMembersConfig.remediate()`](vcenter.sso_bash_shell_authorized_members_config.md#vcenter.sso_bash_shell_authorized_members_config.SSOBashShellAuthorizedMembersConfig.remediate)
 * [`SSOFailedLoginAttemptInterval`](vcenter.sso_failed_login_attempt_interval.md)
   * [`SSOFailedLoginAttemptInterval.get()`](vcenter.sso_failed_login_attempt_interval.md#vcenter.sso_failed_login_attempt_interval.SSOFailedLoginAttemptInterval.get)
   * [`SSOFailedLoginAttemptInterval.set()`](vcenter.sso_failed_login_attempt_interval.md#vcenter.sso_failed_login_attempt_interval.SSOFailedLoginAttemptInterval.set)

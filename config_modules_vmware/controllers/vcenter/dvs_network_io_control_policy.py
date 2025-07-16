@@ -9,6 +9,7 @@ from pyVmomi import vim  # pylint: disable=E0401
 
 from config_modules_vmware.controllers.base_controller import BaseController
 from config_modules_vmware.controllers.vcenter.utils.vc_dvs_utils import is_host_disconnect_exception
+from config_modules_vmware.controllers.vcenter.utils.vc_dvs_utils import is_host_exception
 from config_modules_vmware.framework.auth.contexts.base_context import BaseContext
 from config_modules_vmware.framework.auth.contexts.vc_context import VcenterContext
 from config_modules_vmware.framework.clients.common import consts
@@ -27,6 +28,7 @@ GLOBAL = "__GLOBAL__"
 OVERRIDES = "__OVERRIDES__"
 OFFLOAD_NONE = "None"
 IGNORE_DISCONNECTED_HOSTS = "ignore_disconnected_hosts"
+IGNORE_HOST_EXCEPTION = "ignore_host_exception"
 
 
 class DVSNetworkIOControlPolicy(BaseController):
@@ -180,6 +182,7 @@ class DVSNetworkIOControlPolicy(BaseController):
         desired_global_network_io_control_value = desired_values.get(GLOBAL, {}).get(DESIRED_KEY)
         overrides = desired_values.get(OVERRIDES, [])
         ignore_disconnected_hosts = desired_values.get(IGNORE_DISCONNECTED_HOSTS, False)
+        ignore_host_exception = desired_values.get(IGNORE_HOST_EXCEPTION, False)
         # desired_network_io_control_value = desired_values.get(DESIRED_KEY)
         try:
             all_switch_refs = vc_vmomi_client.get_objects_by_vimtype(vim.DistributedVirtualSwitch)
@@ -230,6 +233,10 @@ class DVSNetworkIOControlPolicy(BaseController):
                             previous.append({SWITCH_NAME: dvs_ref.name, DESIRED_KEY: current_network_io_control_value})
                             current.append({SWITCH_NAME: dvs_ref.name, DESIRED_KEY: desired_network_io_control_value})
                             logger.info(f"Ignore disconnected hosts caused exception - {e}")
+                        elif is_host_exception(e) and ignore_host_exception:
+                            logger.info(f"Ignore all host caused exception - {e}")
+                            previous.append({SWITCH_NAME: dvs_ref.name, DESIRED_KEY: current_network_io_control_value})
+                            current.append({SWITCH_NAME: dvs_ref.name, DESIRED_KEY: desired_network_io_control_value})
                         else:
                             logger.exception(f"An error occurred: {e}")
                             errors.append(str(e))
