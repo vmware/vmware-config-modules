@@ -1,18 +1,22 @@
 # Copyright 2024 Broadcom. All Rights Reserved.
 import logging
+from collections import defaultdict
 from typing import Any
 from typing import Dict
 from typing import List
 from typing import Tuple
 
 from config_modules_vmware.controllers.base_controller import BaseController
+from config_modules_vmware.controllers.vcenter.utils.sso_member_utils import filter_member_configs
 from config_modules_vmware.framework.auth.contexts.base_context import BaseContext
 from config_modules_vmware.framework.auth.contexts.vc_context import VcenterContext
 from config_modules_vmware.framework.clients.common import consts
 from config_modules_vmware.framework.clients.vcenter.vc_vmomi_sso_client import VcVmomiSSOClient
 from config_modules_vmware.framework.logging.logger_adapter import LoggerAdapter
 from config_modules_vmware.framework.models.controller_models.metadata import ControllerMetadata
+from config_modules_vmware.framework.models.output_models.compliance_response import ComplianceStatus
 from config_modules_vmware.framework.models.output_models.remediate_response import RemediateStatus
+from config_modules_vmware.framework.utils.comparator import Comparator
 
 logger = LoggerAdapter(logging.getLogger(__name__))
 
@@ -23,6 +27,8 @@ NAME_KEY = "name"
 MEMBER_TYPE_KEY = "member_type"
 MEMBER_TYPE_USER = "USER"
 MEMBER_TYPE_GROUP = "GROUP"
+TO_ADD = "+"
+TO_REMOVE = "-"
 
 
 class SSOBashShellAuthorizedMembersConfig(BaseController):
@@ -46,8 +52,7 @@ class SSOBashShellAuthorizedMembersConfig(BaseController):
         products=[BaseContext.ProductEnum.VCENTER],  # product from enum in BaseContext.
         components=[],  # subcomponent within the product if applicable.
         status=ControllerMetadata.ControllerStatus.ENABLED,  # used to enable/disable a controller
-        impact=ControllerMetadata.RemediationImpact.REMEDIATION_SKIPPED,
-        # from enum in ControllerMetadata.RemediationImpact.
+        impact=None,  # from enum in ControllerMetadata.RemediationImpact.
         scope="",  # any information or limitations about how the controller operates. i.e. runs as a CLI on VCSA.
     )
 
@@ -148,18 +153,212 @@ class SSOBashShellAuthorizedMembersConfig(BaseController):
         )
         return members_in_bash_shell_administrators_group
 
-    def set(self, context: VcenterContext, desired_values: List) -> Tuple[str, List[Any]]:
+    def _normalize(self, item: Dict) -> Dict:
+        """Name and domain are case insensitive, ignore case when do comparison.
+        :param item: dict item of a bash shell authorized member.
+        :type item: Dict
+        :return: dict of normalized item.
+        :rtype: Dict
+        """
+        return {
+            NAME_KEY: item[NAME_KEY].lower(),
+            MEMBER_TYPE_KEY: item[MEMBER_TYPE_KEY],
+            DOMAIN_KEY: item[DOMAIN_KEY].lower(),
+        }
+
+    def _gen_remediate_configs(self, current: List, desired: List) -> Dict:
+        """Compare current and desired bash shell authorized members to generate remediate configs.
+
+        :param current: Current list of bash shell authorized members.
+        :type current: List
+        :param desired: Desired list of bash shell authorized members.
+        :type desired: list
+        :return: Dict of "+"/"-" items for remediation, {} if nothing to add or remove
+        :rtype: Dict
+        """
+
+        logger.debug(f"Current members - {current}, desired members: {desired}")
+        current_set = {tuple(self._normalize(item).values()): item for item in current}
+        desired_set = {tuple(self._normalize(item).values()): item for item in desired}
+        current_keys = set(current_set.keys())
+        desired_keys = set(desired_set.keys())
+        # if item in current but not in desired, to remove.
+        to_remove = [current_set[key] for key in current_keys - desired_keys]
+        # if item in desired but not in current, to add.
+        to_add = [desired_set[key] for key in desired_keys - current_keys]
+        # group operations based on type (user or group).
+        operations = defaultdict(lambda: {TO_ADD: [], TO_REMOVE: []})
+        for item in to_remove:
+            operations[item[MEMBER_TYPE_KEY]][TO_REMOVE].append(item)
+        for item in to_add:
+            operations[item[MEMBER_TYPE_KEY]][TO_ADD].append(item)
+        # return empty if no operation needed.
+        result = {k: v for k, v in operations.items() if v[TO_ADD] or v[TO_REMOVE]}
+        logger.debug(f"Remediate configs - {result}")
+
+        return result
+
+    def set(self, context: VcenterContext, desired_values: Dict) -> Tuple[str, List[Any]]:
         """Remediation has not been implemented for this control. It's possible that a customer may legitimately add
          a new user and forget to update the control accordingly. Remediating the control could lead to the removal
          of these users, with potential unknown implications.
 
         :param context: Product context instance.
         :type context: VcenterContext
-        :param desired_values: List of objects containing users and groups details with name, domain and member_type.
-        :type desired_values: List
+        :param desired_values: Dict of objects containing users and groups details with name, domain and member_type
+                               and operaions to "add" or "remove".
+        :type desired_values: Dict
         :return: Tuple of "status" and list of error messages.
         :rtype: Tuple
         """
-        errors = [consts.REMEDIATION_SKIPPED_MESSAGE]
-        status = RemediateStatus.SKIPPED
+
+        status = RemediateStatus.SUCCESS
+        errors = []
+
+        try:
+            logger.debug(f"Remediation - {desired_values}")
+            vc_vmomi_sso_client = context.vc_vmomi_sso_client()
+
+            # Remediate group members.
+            group_opers = desired_values.get("GROUP", [])
+            if group_opers:
+                logger.debug(f"Group operations - {group_opers}")
+                # Handle remove
+                groups_to_remove = group_opers.get(TO_REMOVE, [])
+                for group_to_remove in groups_to_remove:
+                    logger.debug(f"Removing user - {group_to_remove}")
+                    vc_vmomi_sso_client.remove_from_group(
+                        BASH_SHELL_ADMINISTRATOR_GROUP_KEY, group_to_remove[NAME_KEY], group_to_remove[DOMAIN_KEY]
+                    )
+                # Handle add
+                groups_to_add = group_opers.get(TO_ADD, [])
+                for group_to_add in groups_to_add:
+                    logger.debug(f"Adding group - {group_to_add}")
+                    vc_vmomi_sso_client.add_group_to_group(
+                        BASH_SHELL_ADMINISTRATOR_GROUP_KEY, group_to_add[NAME_KEY], group_to_add[DOMAIN_KEY]
+                    )
+            # Remediate user members.
+            user_opers = desired_values.get("USER", [])
+            if user_opers:
+                logger.debug(f"User operations - {user_opers}")
+                # Handle remove
+                users_to_remove = user_opers.get(TO_REMOVE, [])
+                for user_to_remove in users_to_remove:
+                    logger.debug(f"Removing user - {user_to_remove}")
+                    vc_vmomi_sso_client.remove_from_group(
+                        BASH_SHELL_ADMINISTRATOR_GROUP_KEY, user_to_remove[NAME_KEY], user_to_remove[DOMAIN_KEY]
+                    )
+                # Handle add
+                users_to_add = user_opers.get(TO_ADD, [])
+                for user_to_add in users_to_add:
+                    logger.debug(f"Adding user - {user_to_add}")
+                    vc_vmomi_sso_client.add_user_to_group(
+                        BASH_SHELL_ADMINISTRATOR_GROUP_KEY, user_to_add[NAME_KEY], user_to_add[DOMAIN_KEY]
+                    )
+        except Exception as e:
+            logger.exception(f"An error occurred: {e}")
+            errors.append(str(e))
+            status = RemediateStatus.FAILED
+
         return status, errors
+
+    def check_compliance(self, context: VcenterContext, desired_values: Dict) -> Dict:
+        """
+        Check compliance of authorized members.
+
+        :param context: Product context instance.
+        :type context: VcenterContext
+        :param desired_values: Desired values for authorized members.
+        :type desired_values: Dict
+        :return: Dict of status and current/desired value(for non_compliant) or errors (for failure).
+        :rtype: Dict
+        """
+        logger.info("Checking compliance for sso bash shell authorized member config")
+        all_member_configs, errors = self.get(context=context)
+
+        if errors:
+            return {consts.STATUS: ComplianceStatus.FAILED, consts.ERRORS: errors}
+
+        # check if need to exclude any members.
+        exclude_user_patterns = desired_values.get("exclude_user_patterns", [])
+        if exclude_user_patterns:
+            logger.debug(f"User input name patterns to be excluded from compliance check: {exclude_user_patterns}")
+            all_member_configs = filter_member_configs(all_member_configs, exclude_user_patterns)
+
+        desired_members = desired_values.get("members", [])
+        non_compliant_configs, _ = Comparator.get_non_compliant_configs(
+            [self._normalize(item) for item in all_member_configs], [self._normalize(item) for item in desired_members]
+        )
+
+        if non_compliant_configs:
+            result = {
+                consts.STATUS: ComplianceStatus.NON_COMPLIANT,
+                consts.CURRENT: all_member_configs,
+                consts.DESIRED: desired_members,
+            }
+        else:
+            result = {consts.STATUS: ComplianceStatus.COMPLIANT}
+        return result
+
+    def remediate(self, context: VcenterContext, desired_values: Dict) -> Dict:
+        """
+        Remediate configuration drifts by applying desired values.
+
+        | Sample desired state
+
+        .. code-block:: json
+
+            {
+              "members": [
+                {
+                  "name": "test-group",
+                  "domain": "vsphere.local",
+                  "member_type": "GROUP",
+                },
+                {
+                  "name": "test-user",
+                  "domain": "vsphere.local",
+                  "member_type": "USER",
+                },
+                {
+                  "name": "ad-ldap-user",
+                  "domain": "adldap.com",
+                  "member_type": "USER",
+                }
+              ],
+              "exclude_user_patterns": [
+                "vmware-applmgmtservice-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
+              ]
+            }
+
+        :param context: Product context instance.
+        :type context: VcenterContext
+        :param desired_values: Desired values for sso bash shell authorized members
+        :type desired_values: Dict
+        :return: Dict of status and current/desired value(for non_compliant) or errors (for failure).
+        :rtype: Dict
+        """
+        logger.info("Running remediation for SSO bash shell authorized members")
+        all_member_configs, errors = self.get(context=context)
+
+        if errors:
+            return {consts.STATUS: RemediateStatus.FAILED, consts.ERRORS: errors}
+
+        # check if need to exclude any members.
+        exclude_user_patterns = desired_values.get("exclude_user_patterns", [])
+        if exclude_user_patterns:
+            logger.debug(f"User input name patterns to be excluded from remediation: {exclude_user_patterns}")
+            all_member_configs = filter_member_configs(all_member_configs, exclude_user_patterns)
+
+        remediate_configs = self._gen_remediate_configs(all_member_configs, desired_values.get("members", []))
+        if not remediate_configs:
+            return {consts.STATUS: RemediateStatus.SKIPPED, consts.ERRORS: [consts.CONTROL_ALREADY_COMPLIANT]}
+
+        status, errors = self.set(context, remediate_configs)
+        if not errors:
+            return {
+                consts.STATUS: status,
+                consts.OLD: all_member_configs,
+                consts.NEW: desired_values.get("members", []),
+            }
+        return {consts.STATUS: status, consts.ERRORS: errors}

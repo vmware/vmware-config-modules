@@ -45,6 +45,7 @@
       "vpx_log_level_config": "config_modules_vmware.controllers.vcenter.vpx_log_level_config.VpxLogLevelConfig",
       "vpx_sddc_deployed_compliance_kit_config": "config_modules_vmware.controllers.vcenter.vpx_sddc_deployed_compliance_kit_config.VpxSDDCDeployedComplianceKitConfig",
       "vm_migrate_encryption": "config_modules_vmware.controllers.vcenter.vm_migrate_encryption_policy.VmMigrateEncryptionPolicy",
+      "plugin_config": "config_modules_vmware.controllers.vcenter.plugin_config.PluginConfig",
       "users_groups_roles": "config_modules_vmware.controllers.vcenter.users_groups_roles_config.UsersGroupsRolesConfig",
       "cert_config": "config_modules_vmware.controllers.vcenter.cert_config.CertConfig",
       "logon_banner_config": "config_modules_vmware.controllers.vcenter.logon_banner_config.LogonBannerConfig",

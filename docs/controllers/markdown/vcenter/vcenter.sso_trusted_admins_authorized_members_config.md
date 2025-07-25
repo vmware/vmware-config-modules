@@ -85,3 +85,15 @@ Remediation has not been implemented for this control. It’s possible that a cu
   Tuple of “status” and list of error messages.
 * **Return type:**
   Tuple
+
+#### check_compliance(context, desired_values)
+
+Check compliance of trusted admin authorized members.
+
+* **Parameters:**
+  * **context** (*VcenterContext*) – Product context instance.
+  * **desired_values** (*Dict*) – Desired values for authorized members.
+* **Returns:**
+  Dict of status and current/desired value(for non_compliant) or errors (for failure).
+* **Return type:**
+  Dict

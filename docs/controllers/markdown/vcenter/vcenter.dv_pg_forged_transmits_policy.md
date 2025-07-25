@@ -83,7 +83,8 @@ Sample desired state
       "port_group_name": "dv_pg_PortGroup1",
       "allow_forged_transmits": true
     }
-  ]
+  ],
+  "ignore_disconnected_hosts": true
 }
 ```
 
@@ -124,7 +125,8 @@ Sample desired state for remediation.
       "port_group_name": "dv_pg_PortGroup1",
       "allow_forged_transmits": true
     }
-  ]
+  ],
+  "ignore_disconnected_hosts": true
 }
 ```
 

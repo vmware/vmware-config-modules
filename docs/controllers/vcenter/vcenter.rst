@@ -34,6 +34,7 @@ Submodules
    vcenter.logon_banner_config
    vcenter.managed_object_browser
    vcenter.ntp_config
+   vcenter.plugin_config
    vcenter.snmp_v3_config
    vcenter.sso_active_directory_authentication_policy
    vcenter.sso_active_directory_ldaps_enabled_config

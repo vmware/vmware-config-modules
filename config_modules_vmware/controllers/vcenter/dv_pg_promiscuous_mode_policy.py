@@ -8,6 +8,8 @@ from typing import Tuple
 from pyVmomi import vim  # pylint: disable=E0401
 
 from config_modules_vmware.controllers.base_controller import BaseController
+from config_modules_vmware.controllers.vcenter.utils.vc_dvs_utils import is_host_disconnect_exception
+from config_modules_vmware.controllers.vcenter.utils.vc_dvs_utils import is_host_exception
 from config_modules_vmware.controllers.vcenter.utils.vc_port_group_utils import (
     get_all_non_uplink_non_nsx_port_group_and_security_configs,
 )
@@ -33,6 +35,8 @@ PORT_GROUP_NAME = "port_group_name"
 NSX_BACKING_TYPE = "nsx"
 GLOBAL = "__GLOBAL__"
 OVERRIDES = "__OVERRIDES__"
+IGNORE_DISCONNECTED_HOSTS = "ignore_disconnected_hosts"
+IGNORE_HOST_EXCEPTION = "ignore_host_exception"
 
 
 class DVPortGroupPromiscuousModePolicy(BaseController):
@@ -118,7 +122,8 @@ class DVPortGroupPromiscuousModePolicy(BaseController):
                   "port_group_name": "dv_pg_PortGroup1",
                   "promiscuous_mode": true
                 }
-              ]
+              ],
+              "ignore_disconnected_hosts": true
             }
 
         :param context: Product context instance.
@@ -132,7 +137,11 @@ class DVPortGroupPromiscuousModePolicy(BaseController):
         errors = []
         status = RemediateStatus.SUCCESS
         try:
-            self.__set_promiscuous_mode_policy_for_non_compliant_dv_port_groups(vc_vmomi_client, desired_values)
+            errors = self.__set_promiscuous_mode_policy_for_non_compliant_dv_port_groups(
+                vc_vmomi_client, desired_values
+            )
+            if errors:
+                status = RemediateStatus.FAILED
         except Exception as e:
             logger.exception(f"An error occurred: {e}")
             errors.append(str(e))
@@ -167,7 +176,7 @@ class DVPortGroupPromiscuousModePolicy(BaseController):
 
     def __set_promiscuous_mode_policy_for_non_compliant_dv_port_groups(
         self, vc_vmomi_client: VcVmomiClient, desired_values: Dict
-    ) -> None:
+    ) -> List:
         """
         Set promiscuous mode policy for all DV port groups.
 
@@ -177,11 +186,14 @@ class DVPortGroupPromiscuousModePolicy(BaseController):
         :type vc_vmomi_client: VcVmomiClient
         :param desired_values: Desired values for Promiscuous mode policy.
         :type desired_values: Dict
-        :return:
-        :rtype: None
+        :return errors in case of partial set
+        :rtype: List
         """
+        errors = []
         desired_global_promiscuous_mode_value = desired_values.get(GLOBAL, {}).get(DESIRED_KEY)
         overrides = desired_values.get(OVERRIDES, [])
+        ignore_disconnected_hosts = desired_values.get(IGNORE_DISCONNECTED_HOSTS, False)
+        ignore_host_exception = desired_values.get(IGNORE_HOST_EXCEPTION, False)
         non_uplink_non_nsx_dv_pgs = get_all_non_uplink_non_nsx_port_group_and_security_configs(
             vc_vmomi_client, PortGroupSecurityConfigEnum.ALLOW_PROMISCUOUS
         )
@@ -216,8 +228,21 @@ class DVPortGroupPromiscuousModePolicy(BaseController):
                 logger.info(
                     f"Setting Promiscuous mode policy {desired_promiscuous_mode_policy}" f" on port group {dv_pg.name}"
                 )
-                task = dv_pg.ReconfigureDVPortgroup_Task(spec=config_spec)
-                vc_vmomi_client.wait_for_task(task=task)
+                try:
+                    task = dv_pg.ReconfigureDVPortgroup_Task(spec=config_spec)
+                    vc_vmomi_client.wait_for_task(task=task)
+                except Exception as e:
+                    if hasattr(task.info, "error") and isinstance(task.info.error, vim.fault.DvsOperationBulkFault):
+                        logger.debug(f"DVS TASK ERROR: - {task.info.error}")
+                        if is_host_disconnect_exception(task.info.error) and ignore_disconnected_hosts:
+                            logger.info(f"Ignore disconnected hosts caused exception - {e}")
+                            continue
+                        if is_host_exception(task.info.error) and ignore_host_exception:
+                            logger.info(f"Ignore all host caused exception - {e}")
+                            continue
+                    logger.exception(f"An error occurred: {e}")
+                    errors.append(str(e))
+        return errors
 
     def check_compliance(self, context: VcenterContext, desired_values: Dict) -> Dict:
         """
@@ -269,7 +294,8 @@ class DVPortGroupPromiscuousModePolicy(BaseController):
                   "port_group_name": "dv_pg_PortGroup1",
                   "promiscuous_mode": true
                 }
-              ]
+              ],
+              "ignore_disconnected_hosts": true
             }
 
         :param context: Product context instance.
