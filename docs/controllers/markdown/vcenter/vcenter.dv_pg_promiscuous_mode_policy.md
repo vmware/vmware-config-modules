@@ -81,7 +81,8 @@ Sample desired state
       "port_group_name": "dv_pg_PortGroup1",
       "promiscuous_mode": true
     }
-  ]
+  ],
+  "ignore_disconnected_hosts": true
 }
 ```
 
@@ -124,7 +125,8 @@ Sample desired state for remdiation.
       "port_group_name": "dv_pg_PortGroup1",
       "promiscuous_mode": true
     }
-  ]
+  ],
+  "ignore_disconnected_hosts": true
 }
 ```
 

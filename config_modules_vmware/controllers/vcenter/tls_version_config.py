@@ -16,8 +16,6 @@ from config_modules_vmware.framework.models.controller_models.metadata import Co
 from config_modules_vmware.framework.models.output_models.compliance_response import ComplianceStatus
 from config_modules_vmware.framework.models.output_models.remediate_response import RemediateStatus
 from config_modules_vmware.framework.utils import utils
-from config_modules_vmware.framework.utils.comparator import Comparator
-from config_modules_vmware.framework.utils.comparator import ComparatorOptionForList
 
 logger = LoggerAdapter(logging.getLogger(__name__))
 
@@ -141,6 +139,69 @@ class TlsVersion(BaseController):
             else:
                 tls_versions[service_name] = [tls_version]
         return tls_versions
+
+    def _extract_version_number(self, version: str) -> List:
+        """Get version number for version comparison.
+           After normalization, all TLS versions in both current configs and desired spec have
+           "TLSvx.x" format. Convert version number to int array for comparison, and make sure
+           "TLSv1.10" is newer version than "TLSv1.9"
+
+        :param version: TLS versions
+        :type version: str
+        :return: A list of numeric version numbers.
+        :rtype: List
+        """
+        version_number = version[4:]
+        return tuple(map(int, version_number.split(".")))
+
+    def _get_non_compliant_configs(self, current: Dict, desired: Dict) -> Tuple[Dict, Dict]:
+        """Get non compliant configs for current and desired if any.
+           Compare each savice ("global" also considered as a service) in current configs and desired
+           spec, if any version defined in desired spec that is not in current configs, or any version
+           in current configs is not same or newer version then the low version in desired spec, put
+           the item in non compliant configs.
+
+        :param current: system current TLS versions.
+        :type current: dict
+        :param desired: desired TLS versions.
+        :type current: dict
+        :return: A tuple containing dicts of non compliant current and desired configs.
+        :rtype: Tuple
+        """
+
+        non_compliant_current = {}
+        non_compliant_desired = {}
+
+        for service in desired:
+            desired_versions = desired[service]
+            current_versions = current[service]
+            # check service that is not running.
+            if desired_versions == [NOT_RUNNING] and current_versions == [NOT_RUNNING]:
+                continue
+            elif current_versions == [NOT_RUNNING]:
+                # non compliant
+                non_compliant_desired.setdefault(service, []).extend(desired.get(service, []))
+                non_compliant_current.setdefault(service, []).extend(current.get(service, []))
+                continue
+            # versions present in desired should be configured in current.
+            if not all(version in current_versions for version in desired_versions):
+                # non compliant
+                non_compliant_desired.setdefault(service, []).extend(desired.get(service, []))
+                non_compliant_current.setdefault(service, []).extend(current.get(service, []))
+                continue
+            # the TLS versions configured on system should be same or newer than in desired.
+            min_desired_version_tuple = min((self._extract_version_number(v) for v in desired_versions))
+            for v in current_versions:
+                if self._extract_version_number(v) < min_desired_version_tuple:
+                    # non compliant
+                    non_compliant_desired.setdefault(service, []).extend(desired.get(service, []))
+                    non_compliant_current.setdefault(service, []).extend(current.get(service, []))
+                    continue
+        # compliant
+        logger.debug(
+            f"Non compliant current configs: {non_compliant_current}, Non compliant desired configs: {non_compliant_desired}"
+        )
+        return non_compliant_current, non_compliant_desired
 
     def get(self, context: VcenterContext) -> Tuple[Dict[str, List[str]], List[str]]:
         """Get TLS versions for the services on vCenter.
@@ -271,11 +332,9 @@ class TlsVersion(BaseController):
             else:
                 desired[service] = global_versions if consts.GLOBAL in desired_values else versions
 
-        # If no errors seen, compare the current and desired value. If not same, return "NON_COMPLIANT" with values.
-        # Otherwise, return "COMPLIANT".
-        current_non_compliant_configs, desired_configs = Comparator.get_non_compliant_configs(
-            current, desired, comparator_option=ComparatorOptionForList.COMPARE_AFTER_SORT
-        )
+        # If no errors seen, compare the current and desired value. If non compliant, return with values.
+        # Otherwise, return empty configs.
+        current_non_compliant_configs, desired_configs = self._get_non_compliant_configs(current, desired)
         if current_non_compliant_configs or desired_configs:
             result = {
                 consts.STATUS: ComplianceStatus.NON_COMPLIANT,

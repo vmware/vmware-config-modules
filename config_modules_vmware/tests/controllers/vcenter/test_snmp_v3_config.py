@@ -77,6 +77,9 @@ class TestSNMPv3SecurityPolicy:
         self.non_compliant_shell_cmd_return_val = (self.non_compliant_snmp_std_out, "", 0)
         self.get_failure_msg = "Unable to fetch SNMP config"
         self.failed_get_shell_cmd_ret_val = ("", self.get_failure_msg, 2)
+        self.get_set_failure_msg2 = "Error running SNMP get or set: 'username:password'"
+        self.get_set_failure_msg3 = "Error running SNMP get or set: 'username@vsphere.local:password'"
+        self.get_set_failure_msg_sanitized = "Error running SNMP get or set: '#####:#####'"
 
     @patch("config_modules_vmware.framework.auth.contexts.vc_context.VcenterContext")
     @patch("config_modules_vmware.framework.utils.utils.run_shell_cmd")
@@ -96,6 +99,24 @@ class TestSNMPv3SecurityPolicy:
         result, errors = self.controller.get(mock_vc_context)
         assert result == self.failed_result
         assert errors == [str(Exception(self.get_failure_msg))]
+
+    @patch("config_modules_vmware.framework.auth.contexts.vc_context.VcenterContext")
+    @patch("config_modules_vmware.framework.utils.utils.run_shell_cmd")
+    def test_get_failed2(self, mock_execute_shell_cmd, mock_vc_context):
+        mock_execute_shell_cmd.side_effect = Exception(self.get_set_failure_msg2)
+
+        result, errors = self.controller.get(mock_vc_context)
+        assert result == None
+        assert errors == [str(Exception(self.get_set_failure_msg_sanitized))]
+
+    @patch("config_modules_vmware.framework.auth.contexts.vc_context.VcenterContext")
+    @patch("config_modules_vmware.framework.utils.utils.run_shell_cmd")
+    def test_get_failed3(self, mock_execute_shell_cmd, mock_vc_context):
+        mock_execute_shell_cmd.side_effect = Exception(self.get_set_failure_msg3)
+
+        result, errors = self.controller.get(mock_vc_context)
+        assert result == None
+        assert errors == [str(Exception(self.get_set_failure_msg_sanitized))]
 
     @patch("config_modules_vmware.framework.auth.contexts.vc_context.VcenterContext")
     @patch("config_modules_vmware.framework.utils.utils.run_shell_cmd")
@@ -122,9 +143,9 @@ class TestSNMPv3SecurityPolicy:
                 appliancesh_cmd_prefix + f'"{SNMP_SET_CMD.format(PRIVACY,self.compliant_snmp_value.get(PRIVACY))}"'
         )
         expected_set_snmp_calls = [
-            call(command=set_snmp_cmd, timeout=10),
-            call(command=authentication_cmd, timeout=10),
-            call(command=privacy_cmd, timeout=10),
+            call(command=set_snmp_cmd, timeout=30),
+            call(command=authentication_cmd, timeout=30),
+            call(command=privacy_cmd, timeout=30),
         ]
 
         mock_execute_shell_cmd.assert_has_calls(expected_set_snmp_calls, any_order=False)
@@ -144,7 +165,7 @@ class TestSNMPv3SecurityPolicy:
         set_snmp_cmd = appliancesh_cmd_prefix + f'"{DISABLE_SNMP_CMD}"'
 
         expected_set_snmp_calls = [
-            call(command=set_snmp_cmd, timeout=10)
+            call(command=set_snmp_cmd, timeout=30)
         ]
 
         mock_execute_shell_cmd.assert_has_calls(expected_set_snmp_calls, any_order=False)
@@ -164,6 +185,26 @@ class TestSNMPv3SecurityPolicy:
 
         assert result == RemediateStatus.FAILED
         assert errors == expected_errors
+
+    @patch("config_modules_vmware.framework.auth.contexts.vc_context.VcenterContext")
+    @patch("config_modules_vmware.framework.utils.utils.run_shell_cmd")
+    def test_set_failed2(self, mock_execute_shell_cmd, mock_vc_context):
+
+        mock_execute_shell_cmd.side_effect = Exception(self.get_set_failure_msg2)
+        result, errors = self.controller.set(mock_vc_context, self.compliant_snmp_value)
+
+        assert result == RemediateStatus.FAILED
+        assert errors == [str(Exception(self.get_set_failure_msg_sanitized))]
+
+    @patch("config_modules_vmware.framework.auth.contexts.vc_context.VcenterContext")
+    @patch("config_modules_vmware.framework.utils.utils.run_shell_cmd")
+    def test_set_failed3(self, mock_execute_shell_cmd, mock_vc_context):
+
+        mock_execute_shell_cmd.side_effect = Exception(self.get_set_failure_msg3)
+        result, errors = self.controller.set(mock_vc_context, self.compliant_snmp_value)
+
+        assert result == RemediateStatus.FAILED
+        assert errors == [str(Exception(self.get_set_failure_msg_sanitized))]
 
     @patch("config_modules_vmware.framework.auth.contexts.vc_context.VcenterContext")
     @patch("config_modules_vmware.framework.utils.utils.run_shell_cmd")

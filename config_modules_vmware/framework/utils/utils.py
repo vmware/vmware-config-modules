@@ -99,7 +99,6 @@ def run_shell_cmd(
 
         return output, error, ret_code
     except Exception as e:
-        logger.error(f"Exception running shell command - {e}")
         raise e
 
 

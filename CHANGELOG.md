@@ -1,4 +1,44 @@
 # CURRENTLY-IN-DEVELOPMENT
+# `v0.16.0.5`
+### Controller enhancements
+- VCSA Controllers
+    - Add remediation to VCSA control 1216  (vCenter must limit membership to the SystemConfiguration.BashShellAdministrators SSO group.);
+    - Add ignore host exception flag to DVPG controls (dvs_health_check, dvs_network_io_control, dvs_pg_netflow_config,
+      dvpg_promiscuous_mode_policy, dvpg_mac_address_change_policy, dvpg_forged_transmits_policy).
+# `v0.16.0.4`
+### Controller enhancements
+- VCSA Controllers
+    - Remove version as key in compliance check for plugin config control;
+# `v0.16.0.3`
+### Controller enhancements
+- VCSA Controllers
+    - Remove sensitive info that accidentally logged into minion log when exception generated at shell command run;
+    - Handle dcli command error at get plugin details;
+    - Add exclude to desired spec to exclude specific plugins;
+    - Add version checks to plugin config control, return skipped when running on the platform with vsphere version lower than "8.0.2"
+# `v0.16.0.2`
+### New Controllers
+- VCSA Controllers
+    - 406 - plugin_config
+### Controller enhancements
+- VCSA Controllers
+    - Add exclude users to "sso_bash_shell_authorized_members" and "sso_trusted_admin_authorized_members";
+    - TLS version control considered compliant if more TLS versions are configured on system than in desired
+      spec if the extra versions configured on system are newer than the ones in desired spec;
+    - Add ignore disconnected hosts to dv_pg_forged_transmits_policy, dv_pg_mac_address_change_policy,
+      and dv_pg_promiscuous_mode_policy  controls for remediation;
+    - Fixed VCSA SNMP V3 control returns sensitive info when encountering timeout error,  also increased
+      timeout value from 10 seconds to 30 seconds;
+    - Handle race condition for VM migrate encryption policy control check compliance when VM has been deleted.
+# `v0.16.0.1`
+### Controller enhancements
+- VCSA Controllers
+    - 1234 - Encryption must be enabled for vMotion on the virtual machine:
+        - Added flag to exclude VMs in disconnected states (orphaned VM, host disconnected VM, etc.).
+        - Added name match to exclude certain system generated VMs on VCF5.2 that the encryption policy could not be reconfigured.
+        - Added code to handle the VMs with None encryption policy attribute.
+        - Added flag to exclude fully encrypted VMs from compliance check and remediation.
+        - Set timeout value to 2 minutes for pyVmomi waiting task.
 # `v0.16.0.0`
 ### Framework enhancements
 - Removed salt extension as an individual dependent module

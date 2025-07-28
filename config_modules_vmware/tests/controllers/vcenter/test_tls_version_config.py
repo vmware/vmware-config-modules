@@ -48,6 +48,26 @@ class TestTlsVersion:
         """
 
         self.compliant_shell_cmd_return_val = ("", self.compliant_scan_std_err, 0)
+
+        self.compliant_higher_version_scan_std_err = """
+            vCenter Transport Layer Security reconfigurator, version=7.0.3, build=9775800
+            For more information refer to the following article: https://kb.vmware.com/kb/2147469
+            Log file: "/var/log/vmware/vSphere-TlsReconfigurator/VcTlsReconfigurator.log".
+            ==================== Scanning vCenter Server TLS endpoints =====================
+            +---------------------+-------------------+----------------+
+            | Service Name        | TLS Endpoint Port | TLS Version(s) |
+            +---------------------+-------------------+----------------+
+            | service1            | 1514              | TLSv1.2 TLSv1.3|
+            | service2            | 1514              | TLSv1.2        |
+            | service3            | 443               | TLSv1.2        |
+            | service4            | 1                 | NOT RUNNING    |
+            | service5            | 12                | TLSv1.2        |
+            | service6            | 15                | TLSv1.2        |
+            +---------------------+-------------------+----------------+
+        """
+
+        self.compliant_higher_current_version_shell_cmd_return_val = ("", self.compliant_higher_version_scan_std_err, 0)
+
         self.failed_result = None
         command = "{} {}".format(RECONFIGURE_VC_TLS_SCRIPT_PATH, SCAN_COMMAND)
         self.cmd_failure_msg = f"Exception running shell command {command}"
@@ -246,6 +266,17 @@ class TestTlsVersion:
     def test_check_compliance_compliant(self, mock_execute_shell_cmd, mock_vc_context):
         mock_vc_context.product_version = "7.0.0.00100"
         mock_execute_shell_cmd.return_value = self.compliant_shell_cmd_return_val
+        result = self.controller.check_compliance(mock_vc_context, self.desired_values_only_global)
+        expected_result = {
+            consts.STATUS: ComplianceStatus.COMPLIANT
+        }
+        assert result == expected_result
+
+    @patch("config_modules_vmware.framework.auth.contexts.vc_context.VcenterContext")
+    @patch("config_modules_vmware.framework.utils.utils.run_shell_cmd")
+    def test_check_compliance_compliant_higher_current_version(self, mock_execute_shell_cmd, mock_vc_context):
+        mock_vc_context.product_version = "7.0.0.00100"
+        mock_execute_shell_cmd.return_value = self.compliant_higher_current_version_shell_cmd_return_val
         result = self.controller.check_compliance(mock_vc_context, self.desired_values_only_global)
         expected_result = {
             consts.STATUS: ComplianceStatus.COMPLIANT

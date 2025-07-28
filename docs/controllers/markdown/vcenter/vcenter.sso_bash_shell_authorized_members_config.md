@@ -24,7 +24,7 @@ Controller Metadata
   ],
   "components": [],
   "status": "ENABLED",
-  "impact": "REMEDIATION_SKIPPED",
+  "impact": null,
   "scope": "",
   "type": "COMPLIANCE",
   "functional_test_targets": []
@@ -80,8 +80,60 @@ Remediation has not been implemented for this control. It’s possible that a cu
 
 * **Parameters:**
   * **context** (*VcenterContext*) – Product context instance.
-  * **desired_values** (*List*) – List of objects containing users and groups details with name, domain and member_type.
+  * **desired_values** (*Dict*) – Dict of objects containing users and groups details with name, domain and member_type
+    and operaions to “add” or “remove”.
 * **Returns:**
   Tuple of “status” and list of error messages.
 * **Return type:**
   Tuple
+
+#### check_compliance(context, desired_values)
+
+Check compliance of authorized members.
+
+* **Parameters:**
+  * **context** (*VcenterContext*) – Product context instance.
+  * **desired_values** (*Dict*) – Desired values for authorized members.
+* **Returns:**
+  Dict of status and current/desired value(for non_compliant) or errors (for failure).
+* **Return type:**
+  Dict
+
+#### remediate(context, desired_values)
+
+Remediate configuration drifts by applying desired values.
+
+Sample desired state
+<br/>
+```json
+{
+  "members": [
+    {
+      "name": "test-group",
+      "domain": "vsphere.local",
+      "member_type": "GROUP",
+    },
+    {
+      "name": "test-user",
+      "domain": "vsphere.local",
+      "member_type": "USER",
+    },
+    {
+      "name": "ad-ldap-user",
+      "domain": "adldap.com",
+      "member_type": "USER",
+    }
+  ],
+  "exclude_user_patterns": [
+    "vmware-applmgmtservice-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
+  ]
+}
+```
+
+* **Parameters:**
+  * **context** (*VcenterContext*) – Product context instance.
+  * **desired_values** (*Dict*) – Desired values for sso bash shell authorized members
+* **Returns:**
+  Dict of status and current/desired value(for non_compliant) or errors (for failure).
+* **Return type:**
+  Dict
