@@ -2558,12 +2558,101 @@
               "required": [
                 "value"
               ]
+            },
+            "syslog": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "object",
+                  "properties": {
+                    "servers": {
+                      "type": "array",
+                      "description": "A valid list of syslog servers",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "hostname": {
+                            "type": "string"
+                          },
+                          "port": {
+                            "type": "number"
+                          },
+                          "protocol": {
+                            "enum": [
+                              "TLS",
+                              "UDP",
+                              "TCP",
+                              "CFAPI",                            
+                              "LI"
+                            ]
+                          },
+                          "facility": {
+                            "type":"array",
+                            "items":{
+                              "type":"string",
+                              "enum": [
+                                "KERN",
+                                "USER",
+                                "MAIL",
+                                "DAEMON",
+                                "AUTH",
+                                "SYSLOG",
+                                "LPR",
+                                "NEWS",
+                                "UUCP",
+                                "AUTHPRIV",
+                                "FTP",
+                                "LOGALERT",
+                                "CRON",
+                                "LOCAL0",
+                                "LOCAL1",
+                                "LOCAL2",
+                                "LOCAL3",
+                                "LOCAL4",
+                                "LOCAL5",
+                                "LOCAL6",
+                                "LOCAL7"
+                              ]
+                            }
+                          },
+                          "level": {
+                            "type": "string",
+                            "enum": [
+                              "DEBUG",
+                              "INFO",
+                              "WARNING"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "hostname",
+                          "port",
+                          "protocol"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "minItems": 1
+                    }
+                  },
+                  "required": [
+                    "servers"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
             }
           },
           "minProperties": 1,
           "additionalProperties": false
         },
-        "esxi": {
+       "esxi": {
           "type": "object",
           "description": "Compliance controls related to ESXi",
           "properties":{
@@ -3992,6 +4081,48 @@
           "type": "object",
           "title": "Compliance controls related to vrslcm",
           "properties": {
+            "ntp": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "object",
+                  "properties": {
+                    "servers": {
+                      "type": "array",
+                      "description": "A valid list of reachable NTP servers",
+                      "items": {
+                        "type": "string"
+                      },
+                      "uniqueItems": true
+                    },
+                    "mode": {
+                      "description": "NTP mode",
+                      "enum": [
+                        "DISABLED",
+                        "NTP",
+                        "HOST"
+                      ]
+                    },
+                    "child_product": {
+                      "description": "VRSLCM product",
+                      "enum": [
+                        "VRLI",
+                        "VRA",
+                        "VRSLCM"
+                      ]
+                    }                   
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
             "dns": {
               "type": "object",
               "properties": {
@@ -4006,6 +4137,743 @@
                       "description": "A valid list of reachable DNS servers",
                       "items": {
                         "type": "string"
+                      },
+                      "minItems": 1
+                    }
+                  },
+                  "required": [
+                    "servers"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "syslog": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "object",
+                  "properties": {
+                    "servers": {
+                      "type": "array",
+                      "description": "A valid list of syslog servers",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "hostname": {
+                            "type": "string"
+                          },
+                          "port": {
+                            "type": "number"
+                          },
+                          "protocol": {
+                            "enum": [
+                              "TLS",
+                              "UDP",
+                              "TCP",
+                              "CFAPI",                            
+                              "LI"
+                            ]
+                          },
+                          "facility": {
+                            "type":"array",
+                            "items":{
+                              "type":"string",
+                              "enum": [
+                                "KERN",
+                                "USER",
+                                "MAIL",
+                                "DAEMON",
+                                "AUTH",
+                                "SYSLOG",
+                                "LPR",
+                                "NEWS",
+                                "UUCP",
+                                "AUTHPRIV",
+                                "FTP",
+                                "LOGALERT",
+                                "CRON",
+                                "LOCAL0",
+                                "LOCAL1",
+                                "LOCAL2",
+                                "LOCAL3",
+                                "LOCAL4",
+                                "LOCAL5",
+                                "LOCAL6",
+                                "LOCAL7"
+                              ]
+                            }
+                          },
+                          "level": {
+                            "type": "string",
+                            "enum": [
+                              "DEBUG",
+                              "INFO",
+                              "WARNING"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "hostname",
+                          "port",
+                          "protocol"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "minItems": 1
+                    }
+                  },
+                  "required": [
+                    "servers"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            }            
+          },
+          "minProperties": 1,
+          "additionalProperties": false
+        },
+        "vrli": {
+          "type": "object",
+          "title": "Compliance controls related to vrslcm",
+          "properties": {
+            "ntp": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "object",
+                  "properties": {
+                    "servers": {
+                      "type": "array",
+                      "description": "A valid list of reachable NTP servers",
+                      "items": {
+                        "type": "string"
+                      },
+                      "uniqueItems": true
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "dns": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "object",
+                  "properties": {
+                    "servers": {
+                      "type": "array",
+                      "description": "A valid list of reachable DNS servers",
+                      "items": {
+                        "type": "string"
+                      },
+                      "minItems": 1
+                    }
+                  },
+                  "required": [
+                    "servers"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "syslog": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "object",
+                  "properties": {
+                    "servers": {
+                      "type": "array",
+                      "description": "A valid list of syslog servers",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "hostname": {
+                            "type": "string"
+                          },
+                          "port": {
+                            "type": "number"
+                          },
+                          "protocol": {
+                            "enum": [
+                              "TLS",
+                              "UDP",
+                              "TCP",
+                              "CFAPI",                            
+                              "LI"
+                            ]
+                          },
+                          "facility": {
+                            "type":"array",
+                            "items":{
+                              "type":"string",
+                              "enum": [
+                                "KERN",
+                                "USER",
+                                "MAIL",
+                                "DAEMON",
+                                "AUTH",
+                                "SYSLOG",
+                                "LPR",
+                                "NEWS",
+                                "UUCP",
+                                "AUTHPRIV",
+                                "FTP",
+                                "LOGALERT",
+                                "CRON",
+                                "LOCAL0",
+                                "LOCAL1",
+                                "LOCAL2",
+                                "LOCAL3",
+                                "LOCAL4",
+                                "LOCAL5",
+                                "LOCAL6",
+                                "LOCAL7"
+                              ]
+                            }
+                          },
+                          "level": {
+                            "type": "string",
+                            "enum": [
+                              "DEBUG",
+                              "INFO",
+                              "WARNING"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "hostname",
+                          "port",
+                          "protocol"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "minItems": 1
+                    }
+                  },
+                  "required": [
+                    "servers"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "minProperties": 1,
+          "additionalProperties": false
+        },
+        "vidm": {
+          "type": "object",
+          "title": "Compliance controls related to vrslcm",
+          "properties": {
+            "ntp": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "object",
+                  "properties": {
+                    "servers": {
+                      "type": "array",
+                      "description": "A valid list of reachable NTP servers",
+                      "items": {
+                        "type": "string"
+                      },
+                      "uniqueItems": true
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "dns": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "object",
+                  "properties": {
+                    "servers": {
+                      "type": "array",
+                      "description": "A valid list of reachable DNS servers",
+                      "items": {
+                        "type": "string"
+                      },
+                      "minItems": 1
+                    }
+                  },
+                  "required": [
+                    "servers"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "syslog": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "object",
+                  "properties": {
+                    "servers": {
+                      "type": "array",
+                      "description": "A valid list of syslog servers",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "hostname": {
+                            "type": "string"
+                          },
+                          "port": {
+                            "type": "number"
+                          },
+                          "protocol": {
+                            "enum": [
+                              "TLS",
+                              "UDP",
+                              "TCP",
+                              "CFAPI",                            
+                              "LI"
+                            ]
+                          },
+                          "facility": {
+                            "type":"array",
+                            "items":{
+                              "type":"string",
+                              "enum": [
+                                "KERN",
+                                "USER",
+                                "MAIL",
+                                "DAEMON",
+                                "AUTH",
+                                "SYSLOG",
+                                "LPR",
+                                "NEWS",
+                                "UUCP",
+                                "AUTHPRIV",
+                                "FTP",
+                                "LOGALERT",
+                                "CRON",
+                                "LOCAL0",
+                                "LOCAL1",
+                                "LOCAL2",
+                                "LOCAL3",
+                                "LOCAL4",
+                                "LOCAL5",
+                                "LOCAL6",
+                                "LOCAL7"
+                              ]
+                            }
+                          },
+                          "level": {
+                            "type": "string",
+                            "enum": [
+                              "DEBUG",
+                              "INFO",
+                              "WARNING"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "hostname",
+                          "port",
+                          "protocol"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "minItems": 1
+                    }
+                  },
+                  "required": [
+                    "servers"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "users_groups_roles": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "object",
+                  "properties": {
+                    "users_groups_roles_info": {
+                      "type": "array",
+                      "description": "A valid list of users groups and roles",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string"
+                          },
+                          "type": {
+                            "type": "string"
+                          },
+                          "role": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "name",
+                          "type",
+                          "role"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "minItems": 0
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "minProperties": 1,
+          "additionalProperties": false
+        },
+        "vro": {
+          "type": "object",
+          "title": "Compliance controls related to vrslcm",
+          "properties": {
+            "ntp": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "object",
+                  "properties": {
+                    "servers": {
+                      "type": "array",
+                      "description": "A valid list of reachable NTP servers",
+                      "items": {
+                        "type": "string"
+                      },
+                      "uniqueItems": true
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "dns": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "object",
+                  "properties": {
+                    "servers": {
+                      "type": "array",
+                      "description": "A valid list of reachable DNS servers",
+                      "items": {
+                        "type": "string"
+                      },
+                      "minItems": 1
+                    }
+                  },
+                  "required": [
+                    "servers"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "syslog": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "object",
+                  "properties": {
+                    "servers": {
+                      "type": "array",
+                      "description": "A valid list of syslog servers",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "hostname": {
+                            "type": "string"
+                          },
+                          "port": {
+                            "type": "number"
+                          },
+                          "protocol": {
+                            "enum": [
+                              "TLS",
+                              "UDP",
+                              "TCP",
+                              "CFAPI",                            
+                              "LI"
+                            ]
+                          },
+                          "facility": {
+                            "type":"array",
+                            "items":{
+                              "type":"string",
+                              "enum": [
+                                "KERN",
+                                "USER",
+                                "MAIL",
+                                "DAEMON",
+                                "AUTH",
+                                "SYSLOG",
+                                "LPR",
+                                "NEWS",
+                                "UUCP",
+                                "AUTHPRIV",
+                                "FTP",
+                                "LOGALERT",
+                                "CRON",
+                                "LOCAL0",
+                                "LOCAL1",
+                                "LOCAL2",
+                                "LOCAL3",
+                                "LOCAL4",
+                                "LOCAL5",
+                                "LOCAL6",
+                                "LOCAL7"
+                              ]
+                            }
+                          },
+                          "level": {
+                            "type": "string",
+                            "enum": [
+                              "DEBUG",
+                              "INFO",
+                              "WARNING"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "hostname",
+                          "port",
+                          "protocol"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "minItems": 1
+                    }
+                  },
+                  "required": [
+                    "servers"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "minProperties": 1,
+          "additionalProperties": false
+        },
+        "vra": {
+          "type": "object",
+          "title": "Compliance controls related to vrslcm",
+          "properties": {
+            "ntp": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "object",
+                  "properties": {
+                    "servers": {
+                      "type": "array",
+                      "description": "A valid list of reachable NTP servers",
+                      "items": {
+                        "type": "string"
+                      },
+                      "uniqueItems": true
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "dns": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "object",
+                  "properties": {
+                    "servers": {
+                      "type": "array",
+                      "description": "A valid list of reachable DNS servers",
+                      "items": {
+                        "type": "string"
+                      },
+                      "minItems": 1
+                    }
+                  },
+                  "required": [
+                    "servers"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "syslog": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "object",
+                  "properties": {
+                    "servers": {
+                      "type": "array",
+                      "description": "A valid list of syslog servers",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "hostname": {
+                            "type": "string"
+                          },
+                          "port": {
+                            "type": "number"
+                          },
+                          "protocol": {
+                            "enum": [
+                              "TLS",
+                              "UDP",
+                              "TCP",
+                              "CFAPI",                            
+                              "LI"
+                            ]
+                          },
+                          "facility": {
+                            "type":"array",
+                            "items":{
+                              "type":"string",
+                              "enum": [
+                                "KERN",
+                                "USER",
+                                "MAIL",
+                                "DAEMON",
+                                "AUTH",
+                                "SYSLOG",
+                                "LPR",
+                                "NEWS",
+                                "UUCP",
+                                "AUTHPRIV",
+                                "FTP",
+                                "LOGALERT",
+                                "CRON",
+                                "LOCAL0",
+                                "LOCAL1",
+                                "LOCAL2",
+                                "LOCAL3",
+                                "LOCAL4",
+                                "LOCAL5",
+                                "LOCAL6",
+                                "LOCAL7"
+                              ]
+                            }
+                          },
+                          "level": {
+                            "type": "string",
+                            "enum": [
+                              "DEBUG",
+                              "INFO",
+                              "WARNING"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "hostname",
+                          "port",
+                          "protocol"
+                        ],
+                        "additionalProperties": false
                       },
                       "minItems": 1
                     }
@@ -4054,6 +4922,637 @@
                 "value"
               ],
               "additionalProperties": false
+            },
+            "dns": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "object",
+                  "properties": {
+                    "mode": {
+                      "description": "DNS mode",
+                      "enum": [
+                        "dhcp",
+                        "is_static"
+                      ]
+                    },
+                    "servers": {
+                      "type": "array",
+                      "description": "A valid list of reachable DNS servers",
+                      "items": {
+                        "type": "string"
+                      },
+                      "minItems": 1,
+                      "maxItems": 2,
+                      "uniqueItems": true
+                    }
+                  },
+                  "required": [
+                    "servers"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "value",
+                "metadata"
+              ],
+              "additionalProperties": false
+            },
+            "syslog": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "object",
+                  "properties": {
+                    "servers": {
+                      "type": "array",
+                      "description": "A valid list of syslog servers",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "hostname": {
+                            "type": "string"
+                          },
+                          "port": {
+                            "type": "number"
+                          },
+                          "protocol": {
+                            "enum": [
+                              "TLS",
+                              "UDP",
+                              "TCP",                            
+                              "LI"
+                            ]
+                          },
+                          "facility": {
+                            "type":"array",
+                            "items":{
+                              "type":"string",
+                              "enum": [
+                                "KERN",
+                                "USER",
+                                "MAIL",
+                                "DAEMON",
+                                "AUTH",
+                                "SYSLOG",
+                                "LPR",
+                                "NEWS",
+                                "UUCP",
+                                "AUTHPRIV",
+                                "FTP",
+                                "LOGALERT",
+                                "CRON",
+                                "LOCAL0",
+                                "LOCAL1",
+                                "LOCAL2",
+                                "LOCAL3",
+                                "LOCAL4",
+                                "LOCAL5",
+                                "LOCAL6",
+                                "LOCAL7"
+                              ]
+                            }
+                          },
+                          "level": {
+                            "type": "string",
+                            "enum": [
+                              "DEBUG",
+                              "INFO",
+                              "WARNING"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "hostname",
+                          "port",
+                          "protocol"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "minItems": 1
+                    }
+                  },
+                  "required": [
+                    "servers"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "dos_protection_dns_forwarder": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "object",
+                  "properties": {
+                    "dns_forwarder": {
+                      "description": "DNS Forwarder configuration",
+                      "enum": [
+                        "enabled",
+                        "disabled"
+                      ]
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "secure_ssh": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "object",
+                  "properties": {
+                    "ssh_key_length": {
+                      "type": "integer",
+                      "description": "SSH key minimum length"
+                    },
+                    "ssh_version": {
+                      "type": "string",
+                      "description": "SSH protocol version",
+                      "enum": [
+                        "2.0"
+                      ]
+                    }
+                  }
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "secure_web_access": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "object",
+                  "properties": {
+                    "protocol_versions": {
+                      "type": "array",
+                      "description": "secure protocol versions",
+                      "items": {
+                        "type": "string",
+                        "enum": [                          
+                          "TLSv1.2"
+                        ]
+                      }
+                    }
+                  }
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "secure_vidm": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "object",
+                  "properties": {
+                    "protocol_versions": {
+                      "type": "array",
+                      "description": "secure protocol versions",
+                      "items": {
+                        "type": "string",
+                        "enum": [                        
+                          "TLSv1.2"
+                        ]
+                      }
+                    },
+                    "enabled":{
+                      "type": "boolean",
+                      "description":"vIDM enabled"
+                    }
+                  }
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "remote_authentication": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "object",
+                  "properties": {
+                    "enabled":{
+                      "type": "boolean",
+                      "description":"vIDM enabled"
+                    },
+                    "vidm_hostname":{
+                      "type": "string",
+                       "description": "vIDM hostname"
+                    }
+                  }
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "validate_certificate": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "description": "certificate status",
+                      "enum":[
+                        "OK"
+                      ]
+                    }
+                  }
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "roles_mapping": {
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "object",
+                  "properties": {
+                    "required": {
+                      "type": "array",
+                      "description": "A valid list of dictionary with three keys - users, groups and roles",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string",
+                            "description": "User or group name"
+                          },
+                          "type": {
+                            "enum": [
+                              "USER",
+                              "GROUP"
+                            ],
+                            "description": "Type to denote its a user or a group"
+                          },
+                          "roles": {
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "description": "Role name"
+                            }
+                          },
+                          "source": {
+                            "enum": [
+                              "VIDM",
+                              "LDAP"
+                            ]
+                          }
+                        }
+                      },
+                      "required": [
+                        "name",
+                        "type",
+                        "roles",
+                        "source"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "required"
+                  ],
+                  "optional": {
+                    "type": "array",
+                    "description": "A valid list of dictionary with three keys - users, groups and roles",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "name": {
+                          "type": "string",
+                          "description": "User or group name"
+                        },
+                        "type": {
+                          "enum": [
+                            "USER",
+                            "GROUP"
+                          ],
+                          "description": "Type to denote its a user or a group"
+                        },
+                        "roles": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "description": "Role name"
+                          }
+                        },
+                        "source": {
+                          "enum": [
+                            "VIDM",
+                            "LDAP"
+                          ]
+                        }
+                      }
+                    },
+                    "required": [
+                        "name",
+                        "type",
+                        "roles",
+                        "source"
+                      ]
+                  }
+                }
+              }
+            },
+            "local_accounts": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "object",
+                  "properties": {
+                    "allowed_accounts": {
+                      "type": "array",
+                      "description": "list of allowed users",
+                      "items" :{
+                        "type": "string",
+                        "description": "user name"
+                      }
+                    }
+                  }
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "allowed_ports": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "object",
+                  "properties": {
+                    "tcp": {
+                      "type": "array",
+                      "description": "list of allowed TCP ports",
+                      "items" :{
+                        "type": "integer",
+                        "description": "port"
+                      }
+                    },
+                    "udp": {
+                      "type": "array",
+                      "description": "list of allowed UDP ports",
+                      "items" :{
+                        "type": "integer",
+                        "description": "port"
+                      }
+                     }
+                  }
+                }
+              },
+              "required": ["value"],
+              "additionalProperties": false
+            },
+            "allow_only_default": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "object",
+                  "properties": {
+                    "route_maps": {
+                      "type": "array",
+                      "description": "list of route maps",
+                      "items":{
+                      "type": "object",
+                      "properties": {
+                        "name": {
+                          "type": "string",
+                          "description": "route map name"
+                        },
+                        "action": {
+                          "type": "string",
+                          "description": "allowed actions",
+                          "enum": ["PERMIT", "DENY"]
+                        },                        
+                          "prefix_lists" : {
+                            "type": "array",
+                            "description": "prefix lists for route map",
+                            "items": {
+                              "type": "object",
+                              "properties" : {
+                                "name": {
+                                 "type" : "string",
+                                  "description": "prefix list name"
+                                },
+                                "prefixes" : {
+                                  "type" : "array",
+                                  "description" : "IP prefix",
+                                  "items": {
+                                    "type": "object",
+                                  "properties": {
+                                    "network": {
+                                      "type" : "string",
+                                     "description" : "prefix network"
+                                    },
+                                    "action" : {
+                                      "type": "string",
+                                      "description": "action for prefix",
+                                      "enum": ["PERMIT", "DENY"]
+                                  }
+                                }
+                              }
+                              }
+
+                            }        
+                          }                    
+
+                          }
+                        }
+                      }
+                      }
+                      
+                    }
+                  }
+                },
+                
+              "required": ["value"],
+              "additionalProperties": false
+            },
+            "anti_prefix_flood_protection": {
+                "type": "object",
+                "properties": {
+                  "metadata": {
+                    "$ref": "#/definitions/metadata"
+                  },
+                  "value": {
+                    "type": "object",
+                    "properties": {
+                      "disallowed_prefixes": {
+                        "type": "array",
+                        "description": "list of disallowed prefixes",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "action": {
+                              "type": "string",
+                              "enum": [
+                                "PERMIT",
+                                "DENY"
+                              ],
+                              "description": "route map name"
+                            },
+                            "network": {
+                              "type": "string",
+                              "description": "network"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "required": [
+                  "value"
+                ],
+                "additionalProperties": false
+            }, 
+            "secure_dynamic_routing": {
+                "type": "object",
+                "properties": {
+                  "metadata": {
+                    "$ref": "#/definitions/metadata"
+                  },
+                  "value": {
+                    "type": "object",
+                    "properties": {
+                      "password_required": {
+                        "type": "boolean"
+                      }
+                    }
+                  }
+                },
+                "required": [
+                  "value"
+                ],
+                "additionalProperties": false
+            },
+            "inactive_timeout_webui": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "object",
+                  "properties": {
+                    "timeout": {
+                      "type": "number",
+                      "description": "Timout value",
+                      "minimum": 0
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "protocol_for_backup_and_restoration": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "object",
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean",
+                      "description": "backup enabled flag"
+                    }
+                  }
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false 
+            },
+            "legitimate_source_address": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "object",
+                  "properties": {
+                    "urpf_mode": {
+                      "type": "string",
+                      "enum":[
+                        "STRICT",
+                        "NONE"
+                      ],
+                      "description": "uRPF mode"
+                    }
+                  }
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false 
             }
           },
           "minProperties": 1,
@@ -4082,6 +5581,187 @@
                     }
                   },
                   "additionalProperties": false
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "dns": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "object",
+                  "properties": {
+                    "mode": {
+                      "description": "DNS mode",
+                      "enum": [
+                        "dhcp",
+                        "is_static"
+                      ]
+                    },
+                    "servers": {
+                      "type": "array",
+                      "description": "A valid list of reachable DNS servers",
+                      "items": {
+                        "type": "string"
+                      },
+                      "minItems": 1,
+                      "maxItems": 2,
+                      "uniqueItems": true
+
+                    }
+                  },
+                  "required": [
+                    "servers"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "value",
+                "metadata"
+              ],
+              "additionalProperties": false
+            },
+            "syslog": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "object",
+                  "properties": {
+                    "servers": {
+                      "type": "array",
+                      "description": "A valid list of syslog servers",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "hostname": {
+                            "type": "string"
+                          },
+                          "port": {
+                            "type": "number"
+                          },
+                          "protocol": {
+                            "enum": [
+                              "TLS",
+                              "UDP",
+                              "TCP",                            
+                              "LI"
+                            ]
+                          },
+                          "facility": {
+                            "type":"array",
+                            "items":{
+                              "type":"string",
+                              "enum": [
+                                "KERN",
+                                "USER",
+                                "MAIL",
+                                "DAEMON",
+                                "AUTH",
+                                "SYSLOG",
+                                "LPR",
+                                "NEWS",
+                                "UUCP",
+                                "AUTHPRIV",
+                                "FTP",
+                                "LOGALERT",
+                                "CRON",
+                                "LOCAL0",
+                                "LOCAL1",
+                                "LOCAL2",
+                                "LOCAL3",
+                                "LOCAL4",
+                                "LOCAL5",
+                                "LOCAL6",
+                                "LOCAL7"
+                              ]
+                            }
+                          },
+                          "level": {
+                            "type": "string",
+                            "enum": [
+                              "DEBUG",
+                              "INFO",
+                              "WARNING"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "hostname",
+                          "port",
+                          "protocol"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "minItems": 1
+                    }
+                  },
+                  "required": [
+                    "servers"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "local_accounts": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "object",
+                  "properties": {
+                    "allowed_accounts": {
+                      "type": "array",
+                      "description": "list of allowed users",
+                      "items" :{
+                        "type": "string",
+                        "description": "user name"
+                      }
+                    }
+                  }
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            },
+            "secure_ssh": {
+              "type": "object",
+              "properties": {
+                "metadata": {
+                  "$ref": "#/definitions/metadata"
+                },
+                "value": {
+                  "type": "object",
+                  "properties": {
+                    "ssh_key_length": {
+                      "type": "integer",
+                      "description": "SSH key minimum length"
+                    },
+                    "ssh_version": {
+                      "type": "string",
+                      "description": "SSH protocol version",
+                      "enum": [
+                        "2.0"
+                      ]
+                    }
+                  }
                 }
               },
               "required": [

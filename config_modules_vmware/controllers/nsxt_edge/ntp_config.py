@@ -5,6 +5,7 @@ from typing import Dict
 from typing import List
 from typing import Tuple
 
+from config_modules_vmware.framework.auth.contexts.nsxt_edge_context import NSXTEdgeContext
 from config_modules_vmware.controllers.base_controller import BaseController
 from config_modules_vmware.controllers.nsxt_manager.ntp_config import NsxtNtpCommon
 from config_modules_vmware.framework.auth.contexts.base_context import BaseContext
@@ -13,6 +14,8 @@ from config_modules_vmware.framework.logging.logger_adapter import LoggerAdapter
 from config_modules_vmware.framework.models.controller_models.metadata import ControllerMetadata
 from config_modules_vmware.framework.models.output_models.compliance_response import ComplianceStatus
 from config_modules_vmware.framework.models.output_models.remediate_response import RemediateStatus
+from config_modules_vmware.framework.utils import utils
+
 
 logger = LoggerAdapter(logging.getLogger(__name__))
 
@@ -43,7 +46,17 @@ class NtpConfig(BaseController):
         functional_test_targets=["nsxt_edge"],  # location where functional tests are run.
     )
 
-    def get(self, context: BaseContext) -> Tuple[Dict, List[Any]]:
+    def _validate_input(self,desired_values) -> bool:
+        to_validate = desired_values.get("servers", [])
+        #check for duplicates
+        if len(to_validate) != len(set(to_validate)):
+            raise ValueError(f"Found duplicate input entries for DNS servers. {desired_values}")
+        
+        for item in to_validate:
+            if not (utils.isValidIp(item) or utils.isValidFqdn(item)):
+                raise ValueError(f"{item} is not a valid IP or FQDN.")
+            
+    def get(self, context: NSXTEdgeContext) -> Tuple[Dict, List[Any]]:
         """
         Get NTP config from NSXT edge.
 
@@ -61,8 +74,25 @@ class NtpConfig(BaseController):
         :rtype: Tuple
         """
         return NsxtNtpCommon.get_ntp(context=context)
+    
+    def check_compliance(self, context: NSXTEdgeContext, desired_values: Any) -> Dict:
+        """Check compliance of current configuration against provided desired values.
+        [Note: This needs to be moved as part of framework input validation once available.]
 
-    def set(self, context: BaseContext, desired_values: Dict) -> Tuple[str, List[Any]]:
+        :param context: Product context instance.
+        :type context: NSXTEdgeContext
+        :param desired_values: Desired values for the specified configuration.
+        :type desired_values: Any
+        :return: Dict of status and current/desired value(for non_compliant) or errors (for failure).
+        :rtype: dict
+        """
+        # NSX only needs servers for NTP control
+        desired_values = {"servers": desired_values.get("servers", [])}
+        self._validate_input(desired_values)
+        return super().check_compliance(context, desired_values)
+
+
+    def set(self, context: NSXTEdgeContext, desired_values: Dict) -> Tuple[str, List[Any]]:
         """
         Set NTP config in NSXT edge.
         Also post set, check_compliance is run again to validate that the values are set.
