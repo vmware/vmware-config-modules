@@ -5,6 +5,7 @@ from typing import Dict
 from typing import List
 from typing import Tuple
 
+from config_modules_vmware.framework.auth.contexts.nsxt_manager_context import NSXTManagerContext
 from config_modules_vmware.controllers.base_controller import BaseController
 from config_modules_vmware.framework.auth.contexts.base_context import BaseContext
 from config_modules_vmware.framework.clients.common.consts import STATUS
@@ -13,12 +14,15 @@ from config_modules_vmware.framework.models.controller_models.metadata import Co
 from config_modules_vmware.framework.models.output_models.compliance_response import ComplianceStatus
 from config_modules_vmware.framework.models.output_models.remediate_response import RemediateStatus
 from config_modules_vmware.framework.utils import utils
+from config_modules_vmware.controllers.nsxt_manager.utils import nsx_utils
 
 logger = LoggerAdapter(logging.getLogger(__name__))
 
 
 class NsxtNtpCommon:
     """Manage Ntp config with get and set methods."""
+
+            
 
     @staticmethod
     def add_ntp(server: str) -> bool:
@@ -88,13 +92,13 @@ class NsxtNtpCommon:
         logger.info(f"Getting NTP servers for {context.product_category.value}")
         errors = []
         try:
-            command_output = utils.run_shell_cmd("su -c 'get ntp-servers' admin")[0]
-            ntp_servers = list(command_output.strip().split("\n"))
+            command_output = utils.run_shell_cmd("su -c 'get ntp-servers | json' admin")[0]
+            logger.debug(f"cmd output: {command_output}")
+            result = nsx_utils.strip_nsxcli_json_output(context,command_output)
         except Exception as e:
-            logger.exception(f"Exception retrieving ntp value - {e}")
-            errors.append(str(e))
-            ntp_servers = []
-        return {"servers": ntp_servers}, errors
+           raise Exception(f"Exception retrieving dns value from NSXCLI: {str(e)}")
+            
+        return {"servers": result["servers"]}, errors
 
 
 class NtpConfig(BaseController):
@@ -123,6 +127,15 @@ class NtpConfig(BaseController):
         functional_test_targets=["nsxt_manager"],  # location where functional tests are run.
     )
 
+    def _validate_input(self,desired_values) -> bool:
+        to_validate = desired_values.get("servers", [])
+        #check for duplicates
+        if len(to_validate) != len(set(to_validate)):
+            raise ValueError(f"Found duplicate input entries for DNS servers. {desired_values}")
+        
+        for item in to_validate:
+            if not (utils.isValidIp(item) or utils.isValidFqdn(item)):
+                raise ValueError(f"{item} is not a valid IP or FQDN.")
     def get(self, context: BaseContext) -> Tuple[Dict, List[Any]]:
         """
         Get NTP config from NSXT manager.
@@ -141,6 +154,22 @@ class NtpConfig(BaseController):
         :rtype: Tuple
         """
         return NsxtNtpCommon.get_ntp(context)
+    
+    def check_compliance(self, context: NSXTManagerContext, desired_values: Any) -> Dict:
+        """Check compliance of current configuration against provided desired values.
+        [Note: This needs to be moved as part of framework input validation once available.]
+
+        :param context: Product context instance.
+        :type context: NSXTManagerContext
+        :param desired_values: Desired values for the specified configuration.
+        :type desired_values: Any
+        :return: Dict of status and current/desired value(for non_compliant) or errors (for failure).
+        :rtype: dict
+        """
+        # NSX only needs servers for NTP control
+        desired_values = {"servers": desired_values.get("servers", [])}
+        self._validate_input(desired_values)
+        return super().check_compliance(context, desired_values)
 
     def set(self, context: BaseContext, desired_values: Dict) -> Tuple[str, List[Any]]:
         """
