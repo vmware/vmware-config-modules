@@ -62,16 +62,59 @@
       "credential_auto_rotate_policy": "config_modules_vmware.controllers.sddc_manager.auto_rotate_schedule.AutoRotateScheduleConfig",
       "backup": "config_modules_vmware.controllers.sddc_manager.backup.BackupConfig",
       "users_groups_roles": "config_modules_vmware.controllers.sddc_manager.users_groups_roles_config.UsersGroupsRolesConfig",
-      "proxy_config": "config_modules_vmware.controllers.sddc_manager.proxy_config.ProxyConfig"
+      "proxy_config": "config_modules_vmware.controllers.sddc_manager.proxy_config.ProxyConfig",
+      "syslog": "config_modules_vmware.controllers.sddc_manager.syslog_config.SyslogConfig"
     },
     "nsxt_manager": {
-      "ntp": "config_modules_vmware.controllers.nsxt_manager.ntp_config.NtpConfig"
+      "ntp": "config_modules_vmware.controllers.nsxt_manager.ntp_config.NtpConfig",
+      "dns": "config_modules_vmware.controllers.nsxt_manager.dns_config.DnsConfig",
+      "syslog": "config_modules_vmware.controllers.nsxt_manager.syslog_config.SyslogConfig",
+      "dos_protection_dns_forwarder":"config_modules_vmware.controllers.nsxt_manager.dos_protection_dns_forwarder.DnsForwarder",
+      "secure_ssh": "config_modules_vmware.controllers.nsxt_manager.secure_ssh.SecureSSH",      
+      "secure_web_access":  "config_modules_vmware.controllers.nsxt_manager.secure_web_access.SecureWebAccess",      
+      "validate_certificate":  "config_modules_vmware.controllers.nsxt_manager.validate_certificate.ValidateCertificate",      
+      "secure_vidm":  "config_modules_vmware.controllers.nsxt_manager.secure_vidm.SecureVidm",      
+      "roles_mapping":  "config_modules_vmware.controllers.nsxt_manager.roles_mapping.RolesMapping",      
+      "local_accounts":  "config_modules_vmware.controllers.nsxt_manager.local_accounts.LocalAccounts",      
+      "allowed_ports": "config_modules_vmware.controllers.nsxt_manager.allowed_ports.AllowedPorts",         
+      "allow_only_default": "config_modules_vmware.controllers.nsxt_manager.allow_only_default.AllowOnlyDefaultRoute",      
+      "anti_prefix_flood_protection": "config_modules_vmware.controllers.nsxt_manager.anti_prefix_flood_protection.AntiPrefixFloodProtection",
+      "secure_dynamic_routing": "config_modules_vmware.controllers.nsxt_manager.secure_dynamic_routing.SecureDynamicRouting",      
+      "inactive_timeout_webui": "config_modules_vmware.controllers.nsxt_manager.inactive_timeout_webui.InactiveTimeoutWebuiConfig",
+      "remote_authentication": "config_modules_vmware.controllers.nsxt_manager.remote_authentication.RemoteAuthentication",
+      "protocol_for_backup_and_restoration" : "config_modules_vmware.controllers.nsxt_manager.protocol_for_backup_and_restoration.ProtocolForBackupAndRestoration",
+      "legitimate_source_address" : "config_modules_vmware.controllers.nsxt_manager.legitimate_source_address.LegitimateSourceAddress"  
     },
     "nsxt_edge": {
-      "ntp": "config_modules_vmware.controllers.nsxt_edge.ntp_config.NtpConfig"
+      "ntp": "config_modules_vmware.controllers.nsxt_edge.ntp_config.NtpConfig",
+      "dns": "config_modules_vmware.controllers.nsxt_edge.dns_config.DnsConfig",
+      "syslog": "config_modules_vmware.controllers.nsxt_edge.syslog_config.SyslogConfig",
+      "local_accounts":  "config_modules_vmware.controllers.nsxt_edge.local_accounts.LocalAccounts",
+      "secure_ssh": "config_modules_vmware.controllers.nsxt_edge.secure_ssh.SecureSSH"   
+    },
+    "vrli":{
+      "dns": "config_modules_vmware.controllers.vrli.dns_config.DnsConfig",
+      "syslog": "config_modules_vmware.controllers.vrli.syslog_config.SyslogConfig"
+    },
+    "vidm":{
+      "ntp": "config_modules_vmware.controllers.vidm.ntp_config.NtpConfig",
+      "dns": "config_modules_vmware.controllers.vidm.dns_config.DnsConfig",
+      "syslog": "config_modules_vmware.controllers.vidm.syslog_config.SyslogConfig",
+      "users_groups_roles": "config_modules_vmware.controllers.vidm.users_groups_roles_config.UsersGroupsRolesConfig"
+    },
+    "vro": {
+      "ntp": "config_modules_vmware.controllers.vro.ntp_config.NtpConfig",
+      "dns": "config_modules_vmware.controllers.vro.dns_config.DnsConfig",
+      "syslog": "config_modules_vmware.controllers.vro.syslog_config.SyslogConfig"
+    },
+    "vra": {
+      "dns": "config_modules_vmware.controllers.vra.dns_config.DnsConfig",
+      "syslog": "config_modules_vmware.controllers.vra.syslog_config.SyslogConfig"
     },
     "vrslcm": {
-      "dns": "config_modules_vmware.controllers.vrslcm.dns_config.DnsConfig"
+      "ntp": "config_modules_vmware.controllers.vrslcm.ntp_config.NtpConfig",
+      "dns": "config_modules_vmware.controllers.vrslcm.dns_config.DnsConfig",
+      "syslog": "config_modules_vmware.controllers.vrslcm.syslog_config.SyslogConfig"
     },
     "esxi": {
       "firewall_rulesets": "config_modules_vmware.controllers.esxi.firewall_rulesets_config.FirewallRulesetsConfig",
