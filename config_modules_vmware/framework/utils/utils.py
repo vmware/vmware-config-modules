@@ -4,6 +4,8 @@ import logging
 import os
 import shlex  # nosec CWE-78
 import subprocess  # nosec CWE-78
+import ipaddress
+import re
 from datetime import datetime
 from typing import Tuple
 from typing import Union
@@ -153,3 +155,24 @@ def get_product_major_version(product_version: str) -> Union[int, None]:
         except ValueError:
             return None
     return None
+
+
+
+def isValidIp(ip : str) -> bool:
+    try:
+        ipaddress.ip_address(ip)
+        return True
+    except Exception as e:
+        return False
+
+def isValidFqdn(fqdn: str) -> bool:
+    # Define a regular expression for a valid FQDN
+    pattern = re.compile(
+        r'^([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$'
+    )
+
+    # Check if the input matches the FQDN pattern
+    if pattern.match(fqdn):
+        return True
+    else:
+        return False
