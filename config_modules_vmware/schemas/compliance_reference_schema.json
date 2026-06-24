@@ -763,28 +763,28 @@
                   "type": "object",
                   "description": "DV switch Network I/O control status",
                   "properties": {
-                    "__GLOBAL__": {
-                      "type": "object",
-                      "description": "Global configuration for enabling/disabling Network I/O control for DV switches.",
-                      "properties": {
-                        "network_io_control_status": {
-                          "type": "boolean",
-                          "description": "Enable/Disable Network I/O control."
-                        }
-                      },
-                      "required": [
-                        "network_io_control_status"
-                      ]
-                    },
-                    "__OVERRIDES__": {
+                    "network_io_control_status": {
                       "type": "array",
-                      "description": "Overrides for enabling/disabling Network I/O control on one or more switches.",
+                      "description": "desired NIOC status based on tags",
                       "items": {
                         "type": "object",
                         "properties": {
-                          "switch_name": {
+                          "cluster_tag": {
                             "type": "string",
-                            "description": "Switch name to update health check config."
+                            "description": "Tag category",
+                            "enum" [
+                              "cluster_type"
+                            ]
+                          },
+                          "tag_value": {
+                            "type": "string",
+                            "description": "Tag value",
+                            "enum": [
+                              "edge",
+                              "management",
+                              "tenant",
+                              "micro"
+                            ]
                           },
                           "network_io_control_status": {
                             "type": "boolean",
@@ -792,13 +792,14 @@
                           }
                         },
                         "required": [
-                          "switch_name",
-                          "network_io_control_status"
+                          "cluster_tag",
+                          "network_io_control_status",
+                          "tag_value"
                         ],
                         "additionalProperties": false
                       }
-                    },
-                    "ignore_disconnected_hosts": {
+                      },
+                      "ignore_disconnected_hosts": {
                       "type": "boolean",
                       "default": false,
                       "description": "ignore disconnected hosts caused exceptions."
@@ -809,10 +810,7 @@
                       "description": "ignore all host caused exceptions."
                     }
                   },
-                  "minProperties": 1,
-                  "required": [
-                    "__GLOBAL__"
-                  ]
+                  "minProperties": 1
                 }
               },
               "required": [
