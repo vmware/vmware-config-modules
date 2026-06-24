@@ -14,6 +14,7 @@ from config_modules_vmware.framework.auth.contexts.base_context import BaseConte
 from config_modules_vmware.framework.auth.contexts.vc_context import VcenterContext
 from config_modules_vmware.framework.clients.common import consts
 from config_modules_vmware.framework.clients.vcenter.vc_vmomi_client import VcVmomiClient
+from config_modules_vmware.framework.clients.vcenter.vc_rest_client import VcRestClient
 from config_modules_vmware.framework.logging.logger_adapter import LoggerAdapter
 from config_modules_vmware.framework.models.controller_models.metadata import ControllerMetadata
 from config_modules_vmware.framework.models.output_models.compliance_response import ComplianceStatus
@@ -85,13 +86,15 @@ class DVSNetworkIOControlPolicy(BaseController):
         :rtype: Tuple
         """
         vc_vmomi_client = context.vc_vmomi_client()
+        vc_rest_client = context.vc_rest_client()
         errors = []
         try:
-            result = self.__get_all_dv_switch_network_io_control_policy(vc_vmomi_client)
+            result = self.__get_all_dv_switches_by_tag(vc_vmomi_client, vc_rest_client)
+        
+        
         except Exception as e:
             logger.exception(f"An error occurred: {e}")
             errors.append(str(e))
-            result = []
         return result, errors
 
     def set(self, context: VcenterContext, desired_values: Dict) -> Tuple[str, List[Any]]:
@@ -123,6 +126,190 @@ class DVSNetworkIOControlPolicy(BaseController):
         :rtype: Tuple
         """
         pass  # pylint: disable=unnecessary-pass
+
+    def __get_all_dvswitches(self, vc_vmomi_client: VcVmomiClient):
+            """Retrieve all distributed virtual switches."""
+            logger.info("\nEnumerating dvSwitches...")
+            all_dv_switches = vc_vmomi_client.get_objects_by_vimtype(vim.DistributedVirtualSwitch)
+
+            logger.info(f"Found {len(all_dv_switches)} dvSwitch(es)")
+            return all_dv_switches
+
+    def __get_all_dvswitches_by_tag(self, vc_vmomi_client: VcVmomiClient, vc_rest_client: VcRestClient):
+        """Retrieve all distributed virtual switches."""
+
+        result_list = []
+
+        logger.info("\nEnumerating dvSwitches...")
+        result = self.__get_dvswitch_tag_mappings(vc_vmomi_client, vc_rest_client)
+        logger.info(f"Found: {result}")
+
+        for mapping in result:
+            dvSwitch = mapping.get("switch_name", "")
+            nioc_status = mapping.get("nioc_status", "")
+            clusters = mapping.get("clusters", "")
+            result_list.append({"switch_name": dvSwitch, "nioc_status": nioc_status, "clusters": clusters})
+
+        logger.info(f"result_list: {result_list}")
+        return result_list
+
+    def __get_clusters_for_dvswitch(self, dvswitch):
+        """Get all clusters associated with a dvSwitch."""
+        clusters = {}
+
+        if not hasattr(dvswitch.config, 'host') or not dvswitch.config.host:
+            return clusters
+
+        for host_member in dvswitch.config.host:
+            try:
+                host = host_member.config.host
+
+                if host and host.parent:
+                    parent = host.parent
+
+                    # Check if parent is a cluster
+                    if isinstance(parent, vim.ClusterComputeResource):
+                        cluster_name = parent.name
+                        cluster_moid = parent._moId
+
+                        if cluster_name not in clusters:
+                            clusters[cluster_name] = {
+                                'object': parent,
+                                'moid': cluster_moid,
+                                'hosts': []
+                            }
+
+                        clusters[cluster_name]['hosts'].append(host.name)
+
+            except Exception as e:
+                logger.info(f"Warning: Error processing host: {e}")
+                continue
+
+        return clusters
+
+
+    def __get_dvswitch_tag_mappings(self, vc_vmomi_client: VcVmomiClient, vc_rest_client: VcRestClient) -> List[Dict]:
+        """Main method to map all dvSwitches to cluster tags."""
+        mapping = []
+
+        # Get all dvSwitches
+        dvswitches = self.__get_all_dvswitches(vc_vmomi_client)
+
+        for dvs in dvswitches:
+            dvs_name = dvs.name
+            dvs_uuid = dvs.uuid
+            network_io_control_status = dvs.config.networkResourceManagementEnabled
+
+            logger.info(f"\nProcessing dvSwitch: {dvs_name}")
+
+            # Get clusters for this dvSwitch
+            clusters = self.__get_clusters_for_dvswitch(dvs)
+
+            if not clusters:
+                logger.info(f"No clusters found for {dvs_name}")
+                switch_obj = {
+                    'switch_name': dvs_name,
+                    'uuid': dvs_uuid,
+                    'nioc_status': network_io_control_status,
+                    'clusters': [],
+                    'all_tags': []
+                }
+                mapping.append(switch_obj)
+                continue
+
+            logger.info(f"Found {len(clusters)} cluster(s): {', '.join(clusters.keys())}")
+
+            # Get tags for each cluster
+            cluster_info = []
+            all_tags = {}
+
+            for cluster_name, cluster_data in clusters.ietms():
+                logger.info(f"retrieving tags for cluster: {cluster_name}")
+
+                tags = self..__get_tags_for_cluster(cluster_data['moid'], vc_rest_client)
+
+                cluster_info.append({
+                    'cluster_name': cluster_name,
+                    'cluster_moid': cluster_data['moid'],
+                    'host_count': len(cluster_data['hosts']),
+                    'hosts': cluster_data['hosts'],
+                    'tags': tags
+                })
+
+                #Aggregate unique tags
+                for tag in tags:
+                    tag_key = f"{tag['category_name']}:{tag['tag_name']}"
+                    if tag_key not in all tags:
+                        all_tags[tag_key] = {
+                            'tag_name': tag['tag_name'],
+                            'category_name': tag['category_name'],
+                            'description': tag['description'],
+                            'clusters': []
+                        }
+                    all_tags[tag_key]['clusters'].append(cluster_name)
+                
+                logger.debug(f"Found {len(tags)} tag(s)")
+
+                switch_obj - {
+                    'switch_name': dvs_name,
+                    'uuid': dvs_uuid,
+                    'nioc_status': network_io_control_status,
+                    'clusters': cluster_info,
+                    'all_tags': list(all_tags.values())
+                }
+                mapping.append(switch_obj)
+            logger.info(f"Mapping: {mapping}")
+            return mapping
+
+    def __get_tag_info(self, tag_id, vc_rest_client: VcRestClient) -> List[Dict]:
+        tag_url = vc_rest_client.get_base_url() + f"api/cis/tagging/tag/{tag_id}"
+
+        try:
+            tag_data = vc_rest_client.get_helper(tag_url, raise_for_status=True)
+            logger.info(f"tag_info: {tag_data}")
+            cat_url = vc_rest_client.get_base_url() + f"api/cis/tagging/category/{tag_data['category_id']}"
+            cat_data = vc_rest_client.get_helper(cat_url, raise_for_status=True)
+            logger.info(f"tag_category: {cat_data}")
+            cat_name = cat_data["name"]
+        except:
+            logger.info(f"Warning: could not retrieve tag details{tag_id}: {e}")
+
+            return {
+                "tag_id": tag_id,
+                "tag_name": tag_data["name"],
+                "category_name": cat_name,
+                "description": tag_data.get("description:", "").strip() or "-"
+            }
+
+
+    def __get_tags_for_cluster(self, cluster_moid, vc_rest_client: VcRestClient) -> List[Dict]
+        """Retrieve all tags attached to a cluster. """
+        tags = []
+
+
+        try:
+            #get tag-associations from vCenter
+            url = vc_rest_client.get_base_url() + 'api/cis/tagging/tag-association?action=list-attached-tags'
+            payload = {"object_id":{"id": cluster_moid, "type":"ClusterComputeResource"}}
+            tag_ids_resp = vc_rest_client.post_helper(url, body=payload, raise_for_status=True)
+
+            #Get all tags attached to this cluster
+            for tag_id in tag_ids_resp:
+                try:
+                    logger.debug(f"Getting tag info for: {tatg_id}")
+                    tag_info = self.__get_tag_info(tag_id, vc_rest_client)
+                    logger.debug(f"Tag Details: {tag_info}")
+                    tags.append(tag_info)
+
+                except Exception as e:
+                    logger.info(f"Warning: Could not retrieve tag  {tag_id}: {e}")
+                    continue
+
+        except:
+            logger.info(f"Warning: Could not retrieve tags for cluster {cluster_moid}: {e}")
+
+        logger.info(f"Tags: {tags}")
+        return tags
 
     def __get_all_dv_switch_network_io_control_policy(self, vc_vmomi_client: VcVmomiClient) -> List[Dict]:
         """
@@ -157,15 +344,28 @@ class DVSNetworkIOControlPolicy(BaseController):
         .. code-block:: json
 
             {
-              "__GLOBAL__": {
-                "network_io_control_status": false
-              },
-              "__OVERRIDES__": [
+              "network_io_control_status": [              
                 {
-                  "switch_name": "Switch-A",
-                  "network_io_control_status": true
+                "cluster_tag": "cluster_type",
+                "tag_value": "edge",
+                "network_io_control_status": false
+                },
+                {
+                "cluster_tag": "cluster_type",
+                "tag_value": "management",
+                "network_io_control_status": true
+                },
+                {
+                "cluster_tag": "cluster_type",
+                "tag_value": "tenant",
+                "network_io_control_status": true
+                },
+                {
+                "cluster_tag": "cluster_type",
+                "tag_value": "micro",
+                "network_io_control_status": true
                 }
-              ],
+                ],
               "ignore_disconnected_hosts": true
             }
 
@@ -179,8 +379,10 @@ class DVSNetworkIOControlPolicy(BaseController):
         errors = []
         previous = []
         current = []
-        desired_global_network_io_control_value = desired_values.get(GLOBAL, {}).get(DESIRED_KEY)
-        overrides = desired_values.get(OVERRIDES, [])
+
+        desired_global_network_io_control_value = desired_values.get(DESIRED_KEY,{})
+        overrides = desired_global_network_io_control_value
+
         ignore_disconnected_hosts = desired_values.get(IGNORE_DISCONNECTED_HOSTS, False)
         ignore_host_exception = desired_values.get(IGNORE_HOST_EXCEPTION, False)
         # desired_network_io_control_value = desired_values.get(DESIRED_KEY)
@@ -252,38 +454,58 @@ class DVSNetworkIOControlPolicy(BaseController):
         :return:
         :meta private:
         """
+
+        logger.debug(f"desired_values: {desired_values}")
+        logger.debug(f"switch_configs: {switch_configs}")
         non_compliant_items = []
+        invalid_items -[]
+        desired_configs = []
+
         # convert to dictionary for easy access
         configs_by_switch_name = {config.get(SWITCH_NAME): config for config in switch_configs}
+        logger.debug(f"Checking: {configs_by_switch_name}")
 
-        global_desired_value = desired_values.get(GLOBAL, {}).get(DESIRED_KEY)
-        overrides = desired_values.get(OVERRIDES, [])
+        #global_desired_value = desired_values.get(GLOBAL, {}).get(DESIRED_KEY)
+        global_desired_value = desired_values.get(DESIRED_KEY,{})
+        logger.info(f"global_desired_value {global_desired_value}"),
+        overrides = global_desired_value
+        logger.debug(f"Overrides {overrides}")
 
-        # Check global non-compliance
-        non_compliant_global = [config for config in switch_configs if config.get(DESIRED_KEY) != global_desired_value]
-        if non_compliant_global:
-            non_compliant_items.extend(non_compliant_global)
-
-        # Remove non-compliant override config if exists from global
+        #Build tag mapping from overrides
+        tag_mapping = {}
         for override in overrides:
-            override_switch_name = override.get(SWITCH_NAME)
-            for config in non_compliant_global:
-                if config.get(SWITCH_NAME) == override_switch_name:
-                    non_compliant_items.remove(config)
-        desired_configs = [{**item, DESIRED_KEY: global_desired_value} for item in non_compliant_items]
+            tag_name = override.get("tag_value", None)
+            nioc_status = override.get("network_io_control_status", None)
+            if tag_name is not None and nioc_status is not None:
+                tag_mapping[tag_name] - nioc_status
 
-        # Check overrides for non-compliance
-        for switch_override in overrides:
-            switch_name = switch_override.get(SWITCH_NAME)
-            desired_value = switch_override.get(DESIRED_KEY)
+        logger.debug(f"tag_mapping" {tag_mapping})
 
-            # Find the configuration for the current switch
-            config = configs_by_switch_name.get(switch_name)
-            if config and config.get(DESIRED_KEY) != desired_value:
-                non_compliant_items.append(config)
-                desired_configs.append({SWITCH_NAME: switch_name, DESIRED_KEY: desired_value})
 
-        return non_compliant_items, desired_configs
+
+        for config in switch_configs:
+            found_tag = False
+            logger.debug(f"config: {config}")
+            if not config.get("clusters"):
+                logger.info(f"Skipping switch {config.get('switch_name')} as no clusters are associated")
+                continue
+            for tag in config["clusters"][0]["tags"]:
+                logger.debug(f"tag: {tag}")
+                tag_name = tag.get("tag_name", None)
+                if tag_name in tag_mapping:
+                    logger.debug(f"Found tag {tag_name}")
+                    found_tag = true
+                    desired_nioc = tag_mapping[tag_name]
+                    if desired_nioc != config["nioc_status"]:
+                        non_compliant_items.append({SWITCH_NAME: config["switch_name"], DESIRED_KEY: config["nioc_status"]})
+                        desired_configs.append({SWITCH_NAME: config["switch_name"], DESIRED_KEY: desired_nioc})
+            logger.debug(f"non_compliant_items: {non_compliant_items}")
+            if not found_tag:
+                invalid_items.append({SWITCH_NAME: config["switch_name"], DESIRED_KEY: config["nioc_status"]})
+
+        logger.debug(f"non_compliant_items: {non_compliant_items}")
+        
+        return non_compliant_items, invalid_items, desired_configs
 
     def check_compliance(self, context: VcenterContext, desired_values: Dict) -> Dict:
         """
@@ -298,15 +520,24 @@ class DVSNetworkIOControlPolicy(BaseController):
         """
         logger.info("Checking compliance")
         dv_switch_network_io_control_configs, errors = self.get(context=context)
+        invalid_items = []
 
         if errors:
             return {consts.STATUS: ComplianceStatus.FAILED, consts.ERRORS: errors}
 
-        non_compliant_configs, desired_configs = self.__get_non_compliant_configs(
+        non_compliant_configs, invalid_items, desired_configs = self.__get_non_compliant_configs(
             dv_switch_network_io_control_configs, desired_values
         )
 
-        if non_compliant_configs:
+
+        if len(invalid_items) > 0:
+            result = {
+                consts.STATUS: ComplianceStatus.FAILED,
+                consts.CURRENT: non_compliant_configs,
+                consts.DESIRED: desired_configs,
+                const.ERRORS: f"Failed to validate NIOC settings. No matching tags found for: {invalid_items}"
+            }
+        elif non_compliant_configs:
             result = {
                 consts.STATUS: ComplianceStatus.NON_COMPLIANT,
                 consts.CURRENT: non_compliant_configs,
@@ -344,33 +575,6 @@ class DVSNetworkIOControlPolicy(BaseController):
         :return: Dict of status and current/desired value(for non_compliant) or errors (for failure).
         :rtype: Dict
         """
-        logger.info("Running remediation")
-        result = self.check_compliance(context, desired_values)
-
-        if result[consts.STATUS] == ComplianceStatus.COMPLIANT:
-            return {consts.STATUS: RemediateStatus.SKIPPED, consts.ERRORS: [consts.CONTROL_ALREADY_COMPLIANT]}
-        elif result[consts.STATUS] == ComplianceStatus.FAILED:
-            errors = result[consts.ERRORS]
-            return {consts.STATUS: RemediateStatus.FAILED, consts.ERRORS: errors}
-
-        vc_vmomi_client = context.vc_vmomi_client()
-        previous, current, errors = self.__set_network_io_control_policy_for_all_dv_switches(
-            vc_vmomi_client, desired_values
-        )
-
-        if not errors:
-            status = RemediateStatus.SUCCESS
-            result = {consts.STATUS: status, consts.OLD: previous, consts.NEW: current}
-        else:
-            if previous:
-                status = RemediateStatus.PARTIAL
-                result = {
-                    consts.STATUS: status,
-                    consts.OLD: previous,
-                    consts.NEW: current,
-                    consts.ERRORS: errors,
-                }
-            else:
-                result = {consts.STATUS: RemediateStatus.FAILED, consts.ERRORS: errors}
-
-        return result
+        logger.info("Remediation is not implemented. Manual intervention is required")
+        errors = [consts.REMEDIATION_SKIPPED_MESSAGE]
+        return {consts.STATUS: RemediateStatus.SKIPPED, consts.ERRORS: errors}
