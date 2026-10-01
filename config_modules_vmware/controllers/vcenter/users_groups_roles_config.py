@@ -4,6 +4,7 @@ import re
 from typing import Any
 from typing import Dict
 from typing import List
+from typing import Optional
 from typing import Tuple
 
 from pyVmomi import vim  # pylint: disable=E0401
@@ -137,11 +138,13 @@ class UsersGroupsRolesConfig(BaseController):
                 return True
         return False
 
-    def _get_global_permissions(self, context: VcenterContext) -> List:
+    def _get_global_permissions(self, context: VcenterContext, exclude_patterns: Optional[List] = None) -> List:
         """Get global permissions through interbal APIs.
 
         :param context: Product context instance.
         :type context: VcenterContext
+        :param exclude_patterns: Compiled patterns for principals to exclude.
+        :type exclude_patterns: Optional[List]
         :return: List of dictionary (with keys-'role', 'name', 'type', and 'propagate') objects.
         :rtype: List
         """
@@ -154,6 +157,9 @@ class UsersGroupsRolesConfig(BaseController):
         vc_invsvc_mob3_client = context.vc_invsvc_mob3_client()
         global_permissions = vc_users_groups_roles_utils.get_global_permissions(vc_invsvc_mob3_client)
         for global_permission in global_permissions:
+            if exclude_patterns and self._should_filter(global_permission.get(NAME), exclude_patterns):
+                logger.debug(f"Skip this excluded global permission: {global_permission}")
+                continue
             global_permission[ROLE] = role_id_name_map[global_permission.get(ROLE_ID)]
             del global_permission[ROLE_ID]
             global_users_roles.append(global_permission)
@@ -204,11 +210,13 @@ class UsersGroupsRolesConfig(BaseController):
                 vc_users_roles.append(vc_permission)
         return vc_users_roles
 
-    def get(self, context: VcenterContext) -> Tuple[Dict[str, list], List[Any]]:
+    def get(self, context: VcenterContext, exclude_patterns: Optional[List] = None) -> Tuple[Dict[str, list], List[Any]]:
         """Get roles for users and groups.
 
         :param context: Product context instance.
         :type context: VcenterContext
+        :param exclude_patterns: Compiled patterns for principals to exclude before role lookup
+        :type exclude_patterns: Optional[List]
         :return: Tuple of list of dictionary (with keys-'role', 'name', 'type', and 'propagate') objects and a list of error messages.
         :rtype: Tuple
         """
@@ -219,7 +227,7 @@ class UsersGroupsRolesConfig(BaseController):
 
         try:
             # get global permissions
-            global_users_roles = self._get_global_permissions(context)
+            global_users_roles = self._get_global_permissions(context, exclude_patterns)
             if global_users_roles:
                 result[GLOBAL_CONFIG] = global_users_roles
             logger.debug(f"Get global permissions: {global_users_roles}")
@@ -448,14 +456,14 @@ class UsersGroupsRolesConfig(BaseController):
         """
 
         logger.info("Running check compliance for vCenter users_groups_roles control")
-        current_values, errors = self.get(context=context)
+        exclude_user_patterns = desired_values.get(EXCLUDE_USER_PATTERNS, [])
+        patterns = self._load_user_exclude_patterns(exclude_user_patterns) if exclude_user_patterns else []
+        current_values, errors = self.get(context=context, exclude_patterns=patterns)
         if errors:
             return {consts.STATUS: ComplianceStatus.FAILED, consts.ERRORS: errors}
 
         # check if need to exclude local users.
-        exclude_user_patterns = desired_values.get(EXCLUDE_USER_PATTERNS, [])
         if exclude_user_patterns:
-            patterns = self._load_user_exclude_patterns(exclude_user_patterns)
             current_values = self._exclude_users(current_values, patterns)
 
         # Compare the current and desired value. If not same, return "NON_COMPLIANT" with values.
@@ -521,15 +529,16 @@ class UsersGroupsRolesConfig(BaseController):
         :rtype: Dict
         """
         logger.info("Running remediation")
-        current_values, errors = self.get(context=context)
+        exclude_user_patterns = desired_values.get(EXCLUDE_USER_PATTERNS, [])
+        patterns = self._load_user_exclude_patterns(exclude_user_patterns) if exclude_user_patterns else []
+        current_values, errors = self.get(context=context, exclude_patterns=patterns)
+        
 
         if errors:
             return {consts.STATUS: RemediateStatus.FAILED, consts.ERRORS: errors}
 
         # check if need to exclude local users.
-        exclude_user_patterns = desired_values.get(EXCLUDE_USER_PATTERNS, [])
         if exclude_user_patterns:
-            patterns = self._load_user_exclude_patterns(exclude_user_patterns)
             current_values = self._exclude_users(current_values, patterns)
         remediate_configs, errors = self._find_drifts(current_values, desired_values)
         logger.debug(f"Current configs: {current_values}, Desired configs: {desired_values}")
